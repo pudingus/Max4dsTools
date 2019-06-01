@@ -1,6 +1,6 @@
 --4ds importer plugin for 3dsmax by Mr F
 
-utility MafiaImport "4DS Import v3"
+utility MafiaImport "4DS Import v3.1"
 (
 	button btn "Import" pos:[55,10] width:50
 	
@@ -29,20 +29,20 @@ utility MafiaImport "4DS Import v3"
 
 					for m=1 to mats do
 					(
-						mat = standard()
+						mat = MafMat()
 						mat.name = "4DSMat"+(m as string)
 						
-						settings = ReadLong f
-						mat.ambient.red = (ReadFloat f)*255
-						mat.ambient.green = (ReadFloat f)*255
-						mat.ambient.blue = (ReadFloat f)*255
-						mat.diffuse.red = (ReadFloat f)*255
-						mat.diffuse.green = (ReadFloat f)*255
-						mat.diffuse.blue = (ReadFloat f)*255
-						mat.selfIllumColor.red = (ReadFloat f)*255
-						mat.selfIllumColor.green = (ReadFloat f)*255
-						mat.selfIllumColor.blue = (ReadFloat f)*255
-						mat.opacity = (ReadFloat f)*100
+						settings = ReadLong f						
+						mat.delegate.ambient.red = (ReadFloat f)*255
+						mat.delegate.ambient.green = (ReadFloat f)*255
+						mat.delegate.ambient.blue = (ReadFloat f)*255
+						mat.delegate.diffuse.red = (ReadFloat f)*255
+						mat.delegate.diffuse.green = (ReadFloat f)*255
+						mat.delegate.diffuse.blue = (ReadFloat f)*255
+						mat.delegate.selfIllumColor.red = (ReadFloat f)*255
+						mat.delegate.selfIllumColor.green = (ReadFloat f)*255
+						mat.delegate.selfIllumColor.blue = (ReadFloat f)*255
+						mat.delegate.opacity = (ReadFloat f)*100
 						
 						--HasColor = (bit.get settings 8)
 						--HasDiff = (bit.get settings 22)
@@ -58,6 +58,11 @@ utility MafiaImport "4DS Import v3"
 						Mask = (bit.get settings 30) 
 						--AddBlend= (bit.get settings 25)
 						--AddBlend2= (bit.get settings 31)
+							
+						mat.useMips = (bit.get settings 24)
+						mat.useAddBlend = (bit.get settings 32)
+						mat.useColorKey = (bit.get settings 30)
+						mat.useAnim = (bit.get settings 27)
 						
 						--sets = "!" + (HasColor as string) + " " + (HasDiff as string) +" "+ (HasEnv as string) +" "+ (HasAlpha as string) +" "+ (Anim as string) +" "+ (TwoSided as string) +" "+ (AddEffect as string) +" "+ (Mask as string) +" "+ (AddBlend as string) +" "+ (AddBlend2 as string)						sets="!"
 						--sets = "!"
@@ -71,8 +76,8 @@ utility MafiaImport "4DS Import v3"
 						--MessageBox (sets)
 						if HasEnv==true do
 						(
-							mat.reflectionMapEnable=true
-							mat.reflectionMapAmount = (ReadFloat f)*100
+							mat.delegate.reflectionMapEnable=true
+							mat.delegate.reflectionMapAmount = (ReadFloat f)*100
 							b = readbyte f
 							envtexname=""
 								for bb=1 to b do
@@ -81,14 +86,14 @@ utility MafiaImport "4DS Import v3"
 								)
 								envtex = bitmaptex()
 								envtex.filename = envtexname
-								mat.reflectionMap = envtex;
+								mat.delegate.reflectionMap = envtex;
 								--MessageBox (envtexname)
 						)
 						
 							b = readbyte f
 							if b!=0 do
 							(
-								mat.diffuseMapEnable=true
+								mat.delegate.diffuseMapEnable=true
 								difftexname=""
 								for bb=1 to b do
 								(
@@ -96,13 +101,13 @@ utility MafiaImport "4DS Import v3"
 								)
 								difftex = bitmaptex()
 								difftex.filename = difftexname
-								mat.diffuseMap = difftex;
+								mat.delegate.diffuseMap = difftex;
 								showTextureMap mat on
 							)
 						
 							if HasAlpha==true do
 							(
-								mat.opacityMapEnable=true
+								mat.delegate.opacityMapEnable=true
 								b = readbyte f
 								alphatexname=""
 									for bb=1 to b do
@@ -111,7 +116,7 @@ utility MafiaImport "4DS Import v3"
 									)
 									alphatex = bitmaptex()
 									alphatex.filename = alphatexname
-									mat.opacityMap = alphatex;
+									mat.delegate.opacityMap = alphatex;
 							)
 							
 							if Anim==true do
