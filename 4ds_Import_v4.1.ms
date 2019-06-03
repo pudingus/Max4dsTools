@@ -18,11 +18,10 @@ utility MafiaImport "4DS Import v4.1"
 
 			f = fopen file "rb"
 			-- FILE START
-			header = ReadLong f
-			mark = ReadShort f
-			--if mark!=29 do MessageBox "4DS mark is not 29 - strange"
-			something0 = ReadLong f
-			something1 = ReadLong f
+			fourcc = ReadLong f
+			version = ReadShort f
+			if version!=29 do MessageBox "4DS version is not 29 - strange"
+			timestamp = ReadLongLong f
 
 			-- MATERIALS
 			mats = ReadShort f
@@ -32,7 +31,22 @@ utility MafiaImport "4DS Import v4.1"
 				mat = MafMat()
 				mat.name = "4DSMat"+(m as string)
 
-				settings = ReadLong f
+				flags = ReadLong f
+
+				HasEnv = ((bit.get flags 20) or (bit.get flags 9))
+				HasAlpha = (bit.get flags 31)
+				Anim = (bit.get flags 27)
+				Mask = (bit.get flags 30)
+
+				mat.useMips = (bit.get flags 24)
+				mat.useAddBlend = (bit.get flags 32)
+				mat.useAddRefl = (bit.get flags 11)
+				mat.diffReflAxis = (bit.get flags 13)
+				mat.useColorKey = (bit.get flags 30)
+				mat.useAnim = (bit.get flags 27)
+				mat.useAnimAlpha = (bit.get flags 26)
+
+
 				mat.delegate.ambient.red = (ReadFloat f)*255
 				mat.delegate.ambient.green = (ReadFloat f)*255
 				mat.delegate.ambient.blue = (ReadFloat f)*255
@@ -44,87 +58,62 @@ utility MafiaImport "4DS Import v4.1"
 				mat.delegate.selfIllumColor.blue = (ReadFloat f)*255
 				mat.delegate.opacity = (ReadFloat f)*100
 
-				--HasColor = (bit.get settings 8)
-				--HasDiff = (bit.get settings 22)
-				HasEnv = ((bit.get settings (32-12)) or (bit.get settings (32-23)))
-				HasAlpha = (bit.get settings 31)
-				--AddEnv = (bit.get settings 5)
-				--EnvSigned = (bit.get settings 6)
-				--EnvAddSmooth = (bit.get settings 7)
-				--Smoothing = (bit.get settings 8)
-				Anim = (bit.get settings (32-5))
-				--TwoSided = (bit.get settings 28)
-				--AddEffect = (bit.get settings 9)
-				Mask = (bit.get settings 30)
-				--AddBlend= (bit.get settings 25)
-				--AddBlend2= (bit.get settings 31)
-
-				mat.useMips = (bit.get settings 24)
-				mat.useAddBlend = (bit.get settings 32)
-				mat.useColorKey = (bit.get settings 30)
-				mat.useAnim = (bit.get settings 27)
-
-				--sets = "!" + (HasColor as string) + " " + (HasDiff as string) +" "+ (HasEnv as string) +" "+ (HasAlpha as string) +" "+ (Anim as string) +" "+ (TwoSided as string) +" "+ (AddEffect as string) +" "+ (Mask as string) +" "+ (AddBlend as string) +" "+ (AddBlend2 as string)						sets="!"
-				--sets = "!"
-				--for o=0 to 31 do
-				--(
-					--	if (bit.get settings (32-o))==true do sets=sets+"1"
-					--	if (bit.get settings (32-o))==false do sets=sets+"0"
-				--)
-
-				--sets=(HasEnv as string) + " "+ (HasAlpha as string) + " "+ (Anim as string) + " "+ (Mask as string)
-				--MessageBox (sets)
 				if HasEnv==true do
 				(
 					mat.delegate.reflectionMapEnable=true
 					mat.delegate.reflectionMapAmount = (ReadFloat f)*100
-					b = readbyte f
-					envtexname=""
-					for bb=1 to b do
+					nameLength = readbyte f
+					envMapName=""
+					for bb=1 to nameLength do
 					(
-						envtexname = envtexname + (bit.intAsChar (readbyte f))
+						envMapName = envMapName + (bit.intAsChar (readbyte f))
 					)
 					envtex = bitmaptex()
-					envtex.filename = envtexname
+					envtex.filename = envMapName
 					mat.delegate.reflectionMap = envtex;
-					--MessageBox (envtexname)
+					--MessageBox (envMapName)
 				)
 
-				b = readbyte f
-				if b!=0 do
+				diffMapNameLength = readbyte f
+				if diffMapNameLength!=0 do
 				(
 					mat.delegate.diffuseMapEnable=true
-					difftexname=""
-					for bb=1 to b do
+					diffMapName=""
+					for bb=1 to diffMapNameLength do
 					(
-						difftexname = difftexname + (bit.intAsChar (readbyte f))
+						diffMapName = diffMapName + (bit.intAsChar (readbyte f))
 					)
-					difftex = bitmaptex()
-					difftex.filename = difftexname
-					mat.delegate.diffuseMap = difftex;
+					diffMap = bitmaptex()
+					diffMap.filename = diffMapName
+					mat.delegate.diffuseMap = diffMap;
 					showTextureMap mat on
 				)
 
 				if HasAlpha==true do
 				(
 					mat.delegate.opacityMapEnable=true
-					b = readbyte f
-					alphatexname=""
-					for bb=1 to b do
+					alphaMapNameLength = readbyte f
+					alphaMapName=""
+					for bb=1 to alphaMapNameLength do
 					(
-						alphatexname = alphatexname + (bit.intAsChar (readbyte f))
+						alphaMapName = alphaMapName + (bit.intAsChar (readbyte f))
 					)
 					alphatex = bitmaptex()
-					alphatex.filename = alphatexname
+					alphatex.filename = alphaMapName
 					mat.delegate.opacityMap = alphatex;
 				)
 
 				if Anim==true do
 				(
-					for bb=1 to 18 do
-					(
-						readbyte f
-					)
+					--for bb=1 to 18 do
+					--(
+					--	readbyte f
+					--)
+					mat.animFrames = ReadLong f
+					ReadShort f
+					mat.animDelay = ReadLong f
+					ReadLong f
+					ReadLong f
 				)
 
 
@@ -145,50 +134,50 @@ utility MafiaImport "4DS Import v4.1"
 				isBBRD=false
 				--noHier=false
 
-				oclass = ReadByte f
-				--	if oclass==1 do
+				frameType = ReadByte f
+				--	if frameType==1 do
 				--	(
-				--		oclass=ReadByte f
-				--		if oclass==0 do
+				--		frameType=ReadByte f
+				--		if frameType==0 do
 				--		(
-				--			oclass=ReadByte f
-				--			if (oclass==0 or oclass==128) do
+				--			frameType=ReadByte f
+				--			if (frameType==0 or frameType==128) do
 				--			(
-				--				oclass=ReadByte f
-				--				if oclass==42 do oclass=704643073
+				--				frameType=ReadByte f
+				--				if frameType==42 do frameType=704643073
 				--			)
 				--		)
-				--		if oclass==05 do
+				--		if frameType==05 do
 				--		(
-				--			oclass=ReadByte f
-				--			if oclass==0 do
+				--			frameType=ReadByte f
+				--			if frameType==0 do
 				--			(
-				--				oclass=ReadByte f
-				--				if oclass==42 do oclass=704644609
+				--				frameType=ReadByte f
+				--				if frameType==42 do frameType=704644609
 				--			)
 				--		)
 				--	)
 
 
-				if oclass==1 do --default object
+				if frameType==1 do --default object
 				(
-					preclass = ReadByte f
+					visualType = ReadByte f
 
-					if preclass==2 do isSngm=true
+					if visualType==2 do isSngm=true   --Singlemesh
 					-- 3 SNGMRPH
-					if preclass==3 do
+					if visualType==3 do    --Singlemorph
 					(
 						isSngm=true
 						isMorph=true
 					)
-					if preclass==4 do isBBRD=true
-					if preclass==5 do isMorph=true
-					if preclass==6 do isGlow=true
-					if preclass==8 do isMirror=true
+					if visualType==4 do isBBRD=true   --Billboard
+					if visualType==5 do isMorph=true
+					if visualType==6 do isGlow=true
+					if visualType==8 do isMirror=true
 
-					postclass = ReadShort f
+					visualFlags = ReadShort f
 
-					--if (postclass==0) and (preclass==6) do noHier=true
+					--if (visualFlags==0) and (visualType==6) do noHier=true
 				)
 
 
@@ -226,29 +215,28 @@ utility MafiaImport "4DS Import v4.1"
 				--	rotation.y=tmp
 				--	rotation.z = rotation.z - 180
 
-				--MessageBox (oclass as string)
+				--MessageBox (frameType as string)
 
-				if oclass==1 do
+				cullingFlags = ReadByte f
+
+				nameLength = ReadByte f
+				meshname=""
+				for bb=1 to nameLength do
 				(
+					meshname = meshname + (bit.intAsChar (readbyte f))
+				)
 
-					--default object
-					mark = ReadByte f
-					--if mark!=9 do MessageBox "Object mark is not 9: strange"
-					b = readbyte f
-					meshname=""
-					for bb=1 to b do
-					(
-						meshname = meshname + (bit.intAsChar (readbyte f))
-					)
-					--MessageBox meshname
-					--if o>100 do MessageBox ("Default object: "+meshname)
-					b = readbyte f
-					subtype=""
-					for bb=1 to b do
-					(
-						subtype = subtype + (bit.intAsChar (readbyte f))
-					)
+				userPropertiesLength = ReadByte f
+				userProperties=""
+				for bb=1 to userPropertiesLength do
+				(
+					userProperties = userProperties + (bit.intAsChar (readbyte f))
+				)
 
+				--FRAME_VISUAL
+				if frameType==1 do
+				(
+					--VISUAL_OBJECT
 					if (isGlow==false) and (isMirror==false) do
 					(
 						dupl = ReadShort f
@@ -275,25 +263,24 @@ utility MafiaImport "4DS Import v4.1"
 						)
 						else
 						(
-							lod = ReadByte f
+							numLods = ReadByte f
 
 
-							for l=1 to lod do
+							for l=1 to numLods do
 							(
-								ReadShort f
-								ReadShort f
+								ReadFloat f  --clipping range
 
 								mesh = editable_mesh()
 								if parent_!=0 do mesh.parent=parent_
 								meshop.setMapSupport mesh 1 true
 
-								verts = ReadShort f #unsigned
-								setNumVerts mesh verts
-								setNumTVerts mesh verts
+								numVerts = ReadShort f #unsigned
+								setNumVerts mesh numVerts
+								setNumTVerts mesh numVerts
 								p3 = point3 0 0 0
 
 
-								for ve=0 to (verts-1) do
+								for ve=0 to (numVerts-1) do
 								(
 									vx=ReadFloat f
 									vy=ReadFloat f
@@ -315,17 +302,17 @@ utility MafiaImport "4DS Import v4.1"
 								)
 
 
-								surfs = ReadByte f
+								numFaceGroups = ReadByte f
 								mult = MultiMaterial()
-								mult.numsubs=surfs
+								mult.numsubs=numFaceGroups
 								lasttris=0
 
-								for s=1 to surfs do
+								for s=1 to numFaceGroups do
 								(
-									tris = ReadShort f #unsigned
-									setNumFaces mesh ((getNumFaces mesh)+tris) true
+									numFaces = ReadShort f #unsigned
+									setNumFaces mesh ((getNumFaces mesh)+numFaces) true
 
-									for t=1 to tris do
+									for t=1 to numFaces do
 									(
 										v0=(ReadShort f #unsigned)+1
 										v1=(ReadShort f #unsigned)+1
@@ -335,7 +322,7 @@ utility MafiaImport "4DS Import v4.1"
 										--setTVFace mesh t v0 v1 v2
 									)
 
-									lasttris=lasttris+tris
+									lasttris=lasttris+numFaces
 
 									matnum = (ReadShort f)
 									if matnum>0 do mult[s] = Mafia_Material[matnum]
@@ -372,6 +359,7 @@ utility MafiaImport "4DS Import v4.1"
 
 								mesh.material = mult
 
+								--Singlemesh
 								if isSngm==true do
 								(
 									bones=ReadByte f
@@ -571,25 +559,9 @@ utility MafiaImport "4DS Import v4.1"
 
 				)
 
-				if oclass==6 do
+				--FRAME_DUMMY
+				if frameType==6 do
 				(
-					--dummy
-					mark = ReadByte f
-					--if mark!=9 do MessageBox "Object mark is not 9: strange"
-					b = readbyte f
-					meshname=""
-					for bb=1 to b do
-					(
-						meshname = meshname + (bit.intAsChar (readbyte f))
-					)
-					--MessageBox ("Dummy: "+meshname)
-					b = readbyte f
-					subtype=""
-					for bb=1 to b do
-					(
-						subtype = subtype + (bit.intAsChar (readbyte f))
-					)
-
 					mesh=dummy()
 					if parent_!=0 do mesh.parent=parent_
 
@@ -626,24 +598,13 @@ utility MafiaImport "4DS Import v4.1"
 					)
 				)
 
-
-				if oclass==5 do
+				--FRAME_SECTOR
+				if frameType==5 do
 				(
-					--MessageBox ((ftell f) as string)
-					--sector
-					mark = ReadByte f
-					--if mark!=125 do MessageBox "Object mark is not 125: strange"
-					b = readbyte f
-					meshname=""
-					for bb=1 to b do
-					(
-						meshname = meshname + (bit.intAsChar (readbyte f))
-					)
-					--MessageBox ("Sector: "+meshname)
-					for bb=1 to 9 do
-					(
-						readbyte f
-					)
+
+					ReadLong f --always 2049
+					ReadLong f --always 0
+
 
 					verts = ReadLong f
 					faces = ReadLong f
@@ -669,7 +630,6 @@ utility MafiaImport "4DS Import v4.1"
 					if parent_!=0 do mesh.parent=parent_
 					setNumVerts mesh verts
 					setNumFaces mesh faces true
-
 
 
 					for ve=0 to (verts-1) do
@@ -713,24 +673,35 @@ utility MafiaImport "4DS Import v4.1"
 					dmaxz = ReadFloat f
 					--mesh.boxsize=[(abs (dminx-dmaxx)),(abs (dminy-dmaxy)),(abs (dminz-dmaxz))]
 
-					windows = ReadByte f
-					for bb=1 to windows do
+					numPortals = ReadByte f
+					for bb=1 to numPortals do
 					(
-						verts=readbyte f
-							readbyte f
-						for bb=1 to 7 do
+						numVerts = readbyte f --numVertices
+						readlong f  --always 4
+						readlong f
+						readlong f
+						readlong f
+						readlong f  --flags?
+
+						nearRange = readfloat f
+						farRange = readfloat f
+
+						pmesh = Editable_mesh()
+						pmesh.name = meshname+"__PORTAL"+(bb as string)
+						setNumVerts pmesh verts
+
+						for cc=1 to numVerts do
 						(
-							readbyte f
+							vx = readfloat f
+							vy = readfloat f
+							vz = readfloat f
+							setVert pmesh (cc+1) vx (vz) vy--fucking max' yz swaping
 						)
-						for bb=1 to 16 do
-						(
-							readbyte f
-						)
-						ReadFloat f
-						for bb=1 to (verts*12) do
-						(
-							readbyte f
-						)
+
+						modp = MafSubtype()
+						modp.subtypeName = "Portal"
+						addmodifier pmesh modp
+
 					)
 
 					modf = MafSubtype()
@@ -739,8 +710,8 @@ utility MafiaImport "4DS Import v4.1"
 
 				)
 
-
-				if oclass==10 do
+				--FRAME_JOINT
+				if frameType==10 do
 				(
 					-- bone
 					mark = ReadByte f
@@ -785,7 +756,8 @@ utility MafiaImport "4DS Import v4.1"
 					ReadLong f
 				)
 
-				if oclass==7 do
+				--FRAME_TARGET
+				if frameType==7 do
 				(
 					-- target
 					mark = ReadByte f
