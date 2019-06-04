@@ -1,7 +1,25 @@
 --4ds importer plugin for 3dsmax by Mr F
 
+
+
 utility MafiaImport "4DS Import v4.1"
 (
+	fn ApplyTransformations nmesh par pos scl rot = (
+		if par != 0 then
+		(
+			in coordsys parent nmesh.pos = pos
+			in coordsys local scale nmesh scl
+			in coordsys parent rotate nmesh (rot*nmesh.parent.rotation)--(eulerangles rotation.x rotation.y rotation.z)
+		)
+		else
+		(
+			in coordsys world nmesh.pos = pos
+			in coordsys world scale nmesh scl
+			in coordsys world rotate nmesh rot
+		)
+	)
+
+
 	button btn "Import" pos:[55,10] width:50
 
 	on btn pressed do
@@ -183,7 +201,7 @@ utility MafiaImport "4DS Import v4.1"
 
 				--general block
 
-				mesh = 0
+				nmesh = 0
 
 				parent_=0
 
@@ -197,6 +215,7 @@ utility MafiaImport "4DS Import v4.1"
 				x = ReadFloat f
 				y = ReadFloat f
 				z = ReadFloat f
+				pos = point3 x z y
 
 				sx = ReadFloat f
 				sy = ReadFloat f
@@ -243,23 +262,8 @@ utility MafiaImport "4DS Import v4.1"
 						if dupl!=0 then --MessageBox "Duplicate!"
 						(
 							--MessageBox "Duplicate!"
-							mesh = reference Mafia_Object[dupl]
-							if parent_!=0 then
-							(
-								in coordsys parent mesh.pos.x = x
-								in coordsys parent mesh.pos.y = z
-								in coordsys parent mesh.pos.z = y --fucking max' yz swaping
-								in coordsys local scale mesh scaletion
-								in coordsys parent rotate mesh (rotation*mesh.parent.rotation)--(eulerangles rotation.x rotation.y rotation.z)
-							)
-							else
-							(
-								in coordsys world mesh.pos.x = x
-								in coordsys world mesh.pos.y = z
-								in coordsys world mesh.pos.z = y --fucking max' yz swaping
-								in coordsys world scale mesh scaletion
-								in coordsys world rotate mesh rotation
-							)
+							nmesh = reference Mafia_Object[dupl]
+							ApplyTransformations nmesh parent_ pos scaletion rotation
 						)
 						else
 						(
@@ -270,94 +274,81 @@ utility MafiaImport "4DS Import v4.1"
 							(
 								ReadFloat f  --clipping range
 
-								mesh = editable_mesh()
-								if parent_!=0 do mesh.parent=parent_
-								meshop.setMapSupport mesh 1 true
-
-								numVerts = ReadShort f #unsigned
-								setNumVerts mesh numVerts
-								setNumTVerts mesh numVerts
-								p3 = point3 0 0 0
 
 
-								for ve=0 to (numVerts-1) do
+								verts_array = #()
+								normals_array = #()
+								tverts_array = #()
+								faces_array = #()
+
+								verts_count = readshort f #unsigned
+
+								verts_array.count = verts_count
+								normals_array.count = verts_count
+								tverts_array.count = verts_count
+
+								for i = 1 to verts_count do
 								(
-									vx=ReadFloat f
-									vy=ReadFloat f
-									vz=ReadFloat f
-									vnx=ReadFloat f
-									vny=ReadFloat f
-									vnz=ReadFloat f
-									vu=ReadFloat f
-									vv=ReadFloat f
-									setVert mesh (ve+1) vx (vz) vy--fucking max' yz swaping
-									p3.x = vnx
-									p3.y = (vnz)
-									p3.z = vny--fucking max' yz swaping
-									setNormal mesh (ve+1) p3
-									p3.x = vu
-									p3.y = (1-vv)
-									p3.z = 0
-									setTVert mesh (ve+1) p3
+									x = readfloat f; y = readfloat f; z = readfloat f
+									norm_x = readfloat f; norm_y = readfloat f; norm_z = readfloat f
+									u = readfloat f; v = readfloat f
+									verts_array[i] = [x, z, y]
+									normals_array[i] = [norm_x, norm_z, norm_y]
+									tverts_array[i] = [u, 1-v, 0]
 								)
 
 
-								numFaceGroups = ReadByte f
+
+								facegroups_count = readbyte f #unsigned
+
 								mult = MultiMaterial()
-								mult.numsubs=numFaceGroups
-								lasttris=0
+								mult.numsubs=facegroups_count
 
-								for s=1 to numFaceGroups do
-								(
-									numFaces = ReadShort f #unsigned
-									setNumFaces mesh ((getNumFaces mesh)+numFaces) true
+								material_array = #()
 
-									for t=1 to numFaces do
-									(
-										v0=(ReadShort f #unsigned)+1
-										v1=(ReadShort f #unsigned)+1
-										v2=(ReadShort f #unsigned)+1
-										setFace mesh (t+lasttris) v0 v2 v1
-										setFaceMatID mesh (t+lasttris) s
-										--setTVFace mesh t v0 v1 v2
+								totalCount = 1
+								for i = 1 to facegroups_count do (
+
+									faces_count = readshort f #unsigned
+									for j = 1 to faces_count do (
+										a = readshort f #unsigned
+										b = readshort f #unsigned
+										c = readshort f #unsigned
+										--vertex indexes in face are counted from 1 in 3ds Max
+										append faces_array [a+1, c+1, b+1]
+										append material_array i
+										--setFaceMatID nmesh totalCount i
+										totalCount = totalCount + 1
 									)
-
-									lasttris=lasttris+numFaces
-
 									matnum = (ReadShort f)
-									if matnum>0 do mult[s] = Mafia_Material[matnum]
-									--if matnum==0 do mult[s]=standard()
+									if matnum>0 do mult[i] = Mafia_Material[matnum]
 								)
 
-								buildTVFaces mesh
 
-								for fa=1 to mesh.numfaces do
-								(
-									setTVFace mesh fa (getface mesh fa)
-								)
-								update mesh
+								nmesh = mesh vertices:verts_array faces:faces_array materialIDs:material_array tverts:tverts_array
 
-								if l==1 do mesh.name = meshname
-								if l>1 do mesh.name = "LOD"+((l-1) as string)+meshname
 
-								if parent_!=0 then
-								(
-									in coordsys parent mesh.pos.x = x
-									in coordsys parent mesh.pos.y = z
-									in coordsys parent mesh.pos.z = y --fucking max' yz swaping
-									in coordsys local scale mesh scaletion
-									in coordsys world rotate mesh (rotation*mesh.parent.rotation)--(eulerangles rotation.x rotation.y rotation.z)
-								)
-								else
-								(
-									in coordsys world mesh.pos.x = x
-									in coordsys world mesh.pos.y = z
-									in coordsys world mesh.pos.z = y --fucking max' yz swaping
-									in coordsys world scale mesh scaletion
-									in coordsys world rotate mesh rotation
-								)
+								if parent_!=0 do nmesh.parent=parent_
 
-								mesh.material = mult
+
+								if l==1 do nmesh.name = meshname
+								if l>1 do nmesh.name = "LOD"+((l-1) as string)+meshname
+
+								/*"Note: The optional tverts array feature is currently broken.
+									The texture vertices are set correctly,
+									but no texture faces are built internally. Until this gets fixed,
+									you can work around by building the texture faces yourself:"
+								*/
+								buildTVFaces nmesh
+								for i = 1 to nmesh.numfaces do(setTVFace nmesh i (getFace nmesh i))
+
+
+								ApplyTransformations nmesh parent_ pos scaletion rotation
+
+
+								nmesh.material = mult
+
+
 
 								--Singlemesh
 								if isSngm==true do
@@ -481,28 +472,13 @@ utility MafiaImport "4DS Import v4.1"
 						--	ReadFloat f
 						--)
 
-						mesh=dummy()
-						if parent_!=0 do mesh.parent=parent_
+						nmesh=dummy()
+						if parent_!=0 do nmesh.parent=parent_
 
-						mesh.boxsize=[1,1,1]
+						nmesh.boxsize=[1,1,1]
 
-						mesh.name = meshname
-						if parent_!=0 then
-						(
-							in coordsys parent mesh.pos.x = x
-							in coordsys parent mesh.pos.y = z
-							in coordsys parent mesh.pos.z = y --fucking max' yz swaping
-							in coordsys local scale mesh scaletion
-							in coordsys parent rotate mesh (rotation*mesh.parent.rotation)
-						)
-						else
-						(
-							in coordsys world mesh.pos.x = x
-							in coordsys world mesh.pos.y = z
-							in coordsys world mesh.pos.z = y --fucking max' yz swaping
-							in coordsys world scale mesh scaletion
-							in coordsys world rotate mesh rotation
-						)
+						nmesh.name = meshname
+						ApplyTransformations nmesh parent_ pos scaletion rotation
 					)
 
 					if isMirror==true do
@@ -515,18 +491,18 @@ utility MafiaImport "4DS Import v4.1"
 
 						verts=ReadLong f
 						faces=ReadLong f
-						mesh = editable_mesh()
-						mesh.name=meshname
-						if parent_!=0 do mesh.parent=parent_
-						setNumVerts mesh verts
-						setNumFaces mesh faces true
+						nmesh = editable_mesh()
+						nmesh.name=meshname
+						if parent_!=0 do nmesh.parent=parent_
+						setNumVerts nmesh verts
+						setNumFaces nmesh faces true
 
 						for ve=0 to (verts-1) do
 						(
 							vx=ReadFloat f
 							vy=ReadFloat f
 							vz=ReadFloat f
-							setVert mesh (ve+1) vx (vz) vy--fucking max' yz swaping
+							setVert nmesh (ve+1) vx (vz) vy--fucking max' yz swaping
 						)
 
 						for t=1 to faces do
@@ -534,26 +510,11 @@ utility MafiaImport "4DS Import v4.1"
 							v0=(ReadShort f)+1
 							v1=(ReadShort f)+1
 							v2=(ReadShort f)+1
-							setFace mesh t v0 v2 v1
+							setFace nmesh t v0 v2 v1
 						)
 
 
-						if parent_!=0 then
-						(
-							in coordsys parent mesh.pos.x = x
-							in coordsys parent mesh.pos.y = z
-							in coordsys parent mesh.pos.z = y --fucking max' yz swaping
-							in coordsys local scale mesh scaletion
-							in coordsys parent rotate mesh (rotation*mesh.parent.rotation)--(eulerangles rotation.x rotation.y rotation.z)
-						)
-						else
-						(
-							in coordsys world mesh.pos.x = x
-							in coordsys world mesh.pos.y = z
-							in coordsys world mesh.pos.z = y --fucking max' yz swaping
-							in coordsys world scale mesh scaletion
-							in coordsys world rotate mesh rotation
-						)
+						ApplyTransformations nmesh parent_ pos scaletion rotation
 
 					)
 
@@ -562,8 +523,8 @@ utility MafiaImport "4DS Import v4.1"
 				--FRAME_DUMMY
 				if frameType==6 do
 				(
-					mesh=dummy()
-					if parent_!=0 do mesh.parent=parent_
+					nmesh=dummy()
+					if parent_!=0 do nmesh.parent=parent_
 
 					--for bb=1 to 24 do
 					--(
@@ -576,24 +537,20 @@ utility MafiaImport "4DS Import v4.1"
 					dmaxx = ReadFloat f
 					dmaxy = ReadFloat f
 					dmaxz = ReadFloat f
-					mesh.boxsize=[(abs (dminx-dmaxx)),(abs (dminy-dmaxy)),(abs (dminz-dmaxz))]
+					nmesh.boxsize=[(abs (dminx-dmaxx)),(abs (dminy-dmaxy)),(abs (dminz-dmaxz))]
 
-					mesh.name = meshname
+					nmesh.name = meshname
 					if parent_!=0 then
 					(
-						in coordsys parent mesh.pos.x = x
-						in coordsys parent mesh.pos.y = z
-						in coordsys parent mesh.pos.z = y --fucking max' yz swaping
-						in coordsys parent scale mesh (scaletion*mesh.parent.scale)
-						in coordsys parent rotate mesh (rotation*mesh.parent.rotation)
+						in coordsys parent nmesh.pos = pos
+						in coordsys parent scale nmesh (scaletion*nmesh.parent.scale)
+						in coordsys parent rotate nmesh (rotation*nmesh.parent.rotation)
 					)
 					else
 					(
-						in coordsys world mesh.pos.x = x
-						in coordsys world mesh.pos.y = z
-						in coordsys world mesh.pos.z = y --fucking max' yz swaping
-						in coordsys world scale mesh scaletion
-						in coordsys world rotate mesh rotation
+						in coordsys world nmesh.pos = pos
+						in coordsys world scale nmesh scaletion
+						in coordsys world rotate nmesh rotation
 
 					)
 				)
@@ -625,11 +582,11 @@ utility MafiaImport "4DS Import v4.1"
 					--(
 					--	readbyte f
 					--)
-					mesh = editable_mesh()
-					mesh.name=meshname
-					if parent_!=0 do mesh.parent=parent_
-					setNumVerts mesh verts
-					setNumFaces mesh faces true
+					nmesh = editable_mesh()
+					nmesh.name=meshname
+					if parent_!=0 do nmesh.parent=parent_
+					setNumVerts nmesh verts
+					setNumFaces nmesh faces true
 
 
 					for ve=0 to (verts-1) do
@@ -637,7 +594,7 @@ utility MafiaImport "4DS Import v4.1"
 						vx=ReadFloat f
 						vy=ReadFloat f
 						vz=ReadFloat f
-						setVert mesh (ve+1) vx (vz) vy--fucking max' yz swaping
+						setVert nmesh (ve+1) vx (vz) vy--fucking max' yz swaping
 					)
 
 					for t=1 to faces do
@@ -645,25 +602,10 @@ utility MafiaImport "4DS Import v4.1"
 						v0=(ReadShort f)+1
 						v1=(ReadShort f)+1
 						v2=(ReadShort f)+1
-						setFace mesh t v0 v2 v1
+						setFace nmesh t v0 v2 v1
 					)
 
-					if parent_!=0 then
-					(
-						in coordsys parent mesh.pos.x = x
-						in coordsys parent mesh.pos.y = z
-						in coordsys parent mesh.pos.z = y --fucking max' yz swaping
-						in coordsys local scale mesh scaletion
-						in coordsys parent rotate mesh (rotation*mesh.parent.rotation)--(eulerangles rotation.x rotation.y rotation.z)
-					)
-					else
-					(
-						in coordsys world mesh.pos.x = x
-						in coordsys world mesh.pos.y = z
-						in coordsys world mesh.pos.z = y --fucking max' yz swaping
-						in coordsys world scale mesh scaletion
-						in coordsys world rotate mesh rotation
-					)
+					ApplyTransformations nmesh parent_ pos scaletion rotation
 
 					dminx = ReadFloat f
 					dminy = ReadFloat f
@@ -706,7 +648,7 @@ utility MafiaImport "4DS Import v4.1"
 
 					modf = MafSubtype()
 					modf.subtypeName = "Sektor"
-					addmodifier mesh modf
+					addmodifier nmesh modf
 
 				)
 
@@ -732,22 +674,7 @@ utility MafiaImport "4DS Import v4.1"
 					mesh.name=meshname
 					mesh.boxsize=[0.1,0.1,0.1]
 					if parent_!=0 do mesh.parent=parent_
-					if parent_!=0 then
-					(
-						in coordsys parent mesh.pos.x = x
-						in coordsys parent mesh.pos.y = z
-						in coordsys parent mesh.pos.z = y --fucking max' yz swaping
-						in coordsys local scale mesh scaletion
-						in coordsys parent rotate mesh (rotation*mesh.parent.rotation)--(eulerangles rotation.x rotation.y rotation.z)
-					)
-					else
-					(
-						in coordsys world mesh.pos.x = x
-						in coordsys world mesh.pos.y = z
-						in coordsys world mesh.pos.z = y --fucking max' yz swaping
-						in coordsys world scale mesh scaletion
-						in coordsys world rotate mesh rotation
-					)
+					ApplyTransformations nmesh parent_ pos scaletion rotation
 					for b=1 to 64 do
 					(
 						--rotation matrix
@@ -779,23 +706,7 @@ utility MafiaImport "4DS Import v4.1"
 					mesh.name=meshname
 					mesh.boxsize=[1,1,1]
 					if parent_!=0 do mesh.parent=parent_
-					if parent_!=0 then
-					(
-						in coordsys parent mesh.pos.x = x
-						in coordsys parent mesh.pos.y = z
-						in coordsys parent mesh.pos.z = y --fucking max' yz swaping
-						in coordsys local scale mesh scaletion
-						in coordsys parent rotate mesh (rotation*mesh.parent.rotation)--(eulerangles rotation.x rotation.y rotation.z)
-
-					)
-					else
-					(
-						in coordsys world mesh.pos.x = x
-						in coordsys world mesh.pos.y = z
-						in coordsys world mesh.pos.z = y --fucking max' yz swaping
-						in coordsys world scale mesh scaletion
-						in coordsys world rotate mesh rotation
-					)
+					ApplyTransformations nmesh parent_ pos scaletion rotation
 
 					ReadByte f
 					ReadByte f
@@ -815,7 +726,7 @@ utility MafiaImport "4DS Import v4.1"
 				--addmodifier mesh modf
 				--print "kekrrrr"
 
-				Mafia_Object = append Mafia_Object mesh
+				Mafia_Object = append Mafia_Object nmesh
 				--MessageBox (meshname+((ftell f)as string))
 
 			)
