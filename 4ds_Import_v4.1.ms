@@ -487,14 +487,15 @@ utility MafiaImport "4DS Import v4.1"
 
 				--MessageBox (frameType as string)
 
-				cullingFlags = ReadByte f
+				cullingFlags = ReadByte f #unsigned
 
-				nameLength = ReadByte f
+				nameLength = ReadByte f #unsigned
 				meshname = readText f nameLength
 
-				userPropertiesLength = ReadByte f
+				userPropertiesLength = ReadByte f #unsigned
 				userProperties = readText f userPropertiesLength
 
+				cyp = "idk"
 
 				--VISUAL OBJECT
 				if objectType == 1 do
@@ -605,6 +606,8 @@ utility MafiaImport "4DS Import v4.1"
 
 						modp = MafSubtype()
 						modp.subtypeName = "Portal"
+						modp.nearRange = nearRange
+						modp.farRange = farRange
 						addmodifier pmesh modp
 
 						p.parent = nmesh
@@ -612,11 +615,9 @@ utility MafiaImport "4DS Import v4.1"
 						append portals_array p
 					)
 
-					group portals_array name:"PORTALS"
+					--group portals_array name:"PORTALS"
 
-					modf = MafSubtype()
-					modf.subtypeName = "Sektor"
-					addmodifier nmesh modf
+					cyp = "Sektor"
 
 				)
 
@@ -718,6 +719,12 @@ utility MafiaImport "4DS Import v4.1"
 				--modf.subtypeName = "Sektorrrr"
 				--addmodifier mesh modf
 				--print "kekrrrr"
+				
+				
+				modf = MafSubtype()
+				modf.subtypeName = cyp
+				modf.cullFlags = cullingFlags
+				addmodifier nmesh modf
 
 				Mafia_Object = append Mafia_Object nmesh
 				--MessageBox (meshname+((ftell f)as string))
