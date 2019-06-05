@@ -12,6 +12,7 @@ utility MafiaImport "4DS Import v4.1"
 	--local parentID
 	local meshname = ""
 	local nmesh
+	local godMat
 
 	fn ReadText f _length = (
 		local result = ""
@@ -29,6 +30,11 @@ utility MafiaImport "4DS Import v4.1"
 	)
 
 	fn ReadMats f numMats = (
+
+		numsubs = numMats + 1
+		godMat = multimaterial numsubs:numsubs
+		godmat[1] = undefined
+
 		for m=1 to numMats do
 		(
 			mat = MafMat()
@@ -108,10 +114,12 @@ utility MafiaImport "4DS Import v4.1"
 			)
 
 
+			godMat[m+1] = mat
 			append Mafia_Material mat
 			--b = box()
 			--b.material=mat
 		)
+
 	)
 
 	--parent local parent
@@ -164,11 +172,13 @@ utility MafiaImport "4DS Import v4.1"
 
 	fn ReadStandardMesh f parentID = (
 		duplicateID = ReadShort f
+		local baseMesh
 		if duplicateID != 0 then --MessageBox "Duplicate!"
 		(
 			--MessageBox "Duplicate!"
 			nmesh = reference Mafia_Object[duplicateID]
 			ApplyTransformations nmesh parentID pos scaletion rotation
+			baseMesh = nmesh
 		)
 		else
 		(
@@ -177,9 +187,7 @@ utility MafiaImport "4DS Import v4.1"
 
 			for l=1 to numLods do
 			(
-				ReadFloat f  --clipping range
-
-
+				clippingRange = ReadFloat f  --clipping range
 
 				verts_array = #()
 				normals_array = #()
@@ -189,7 +197,7 @@ utility MafiaImport "4DS Import v4.1"
 				verts_count = readshort f #unsigned
 
 				verts_array.count = verts_count
-				normals_array.count = verts_count
+				--normals_array.count = verts_count
 				tverts_array.count = verts_count
 
 				for i = 1 to verts_count do
@@ -198,16 +206,17 @@ utility MafiaImport "4DS Import v4.1"
 					norm_x = readfloat f; norm_y = readfloat f; norm_z = readfloat f
 					u = readfloat f; v = readfloat f
 					verts_array[i] = [x, z, y]
-					normals_array[i] = [norm_x, norm_z, norm_y]
+
+					p3 = point3 norm_x norm_z norm_y
+					append normals_array p3
 					tverts_array[i] = [u, 1-v, 0]
 				)
 
 
-
 				facegroups_count = readbyte f #unsigned
 
-				mult = MultiMaterial()
-				mult.numsubs=facegroups_count
+				--mult = MultiMaterial()
+				--mult.numsubs=facegroups_count
 
 				material_array = #()
 
@@ -221,45 +230,108 @@ utility MafiaImport "4DS Import v4.1"
 						c = readshort f #unsigned
 						--vertex indexes in face are counted from 1 in 3ds Max
 						append faces_array [a+1, c+1, b+1]
-						append material_array i
+						--append material_array i
 						--setFaceMatID nmesh totalCount i
 						totalCount = totalCount + 1
 					)
 					matnum = (ReadShort f)
-					if matnum>0 do mult[i] = Mafia_Material[matnum]
+
+					for j = 1 to faces_count do (
+						append material_array (matnum+1)
+					)
 				)
 
 
-				nmesh = mesh vertices:verts_array faces:faces_array materialIDs:material_array tverts:tverts_array
+				nmesh = mesh vertices:verts_array faces:faces_array tverts:tverts_array
+
+				for i = 1 to verts_count do
+				(
+					normal = normals_array[i]
+					setNormal nmesh i normal
+				)
+
+				buildTVFaces nmesh
+
+				for i = 1 to nmesh.numfaces do (
+					id = material_array[i]
+					print ("** face id: " + (i as string) + " -- mat id: " + id as string)
+					setFaceMatID nmesh i id
+					setTVFace nmesh i (getFace nmesh i)
+				)
+
+				-- Create an edit_normals modifier
+				-- (because setting them with setnormal() doesn't seem to work...)
+
+
 
 				nmesh.wirecolor = color 0 0 0
-
 
 				if parentID!=0 do nmesh.parent=parentID
 
 
-				if l==1 do nmesh.name = meshname
-				if l>1 do nmesh.name = "LOD"+((l-1) as string)+meshname
+				if l==1 then (
+					nmesh.name = meshname
+					baseMesh = nmesh
+				)
+				if l > 1 then (
+					nmesh.name = "LOD"+((l-1) as string)+meshname
+
+				)
+
+
+
+
+
 
 				/*"Note: The optional tverts array feature is currently broken.
 					The texture vertices are set correctly,
 					but no texture faces are built internally. Until this gets fixed,
 					you can work around by building the texture faces yourself:"
 				*/
-				buildTVFaces nmesh
-				for i = 1 to nmesh.numfaces do(setTVFace nmesh i (getFace nmesh i))
+				--buildTVFaces nmesh
+				--for i = 1 to nmesh.numfaces do(setTVFace nmesh i (getFace nmesh i))
 
 
 				ApplyTransformations2 nmesh parentID pos scaletion rotation
 
+				/*
+				mesh_norm = edit_normals()
+				addmodifier nmesh mesh_norm
+				max modify mode
+				modpanel.setcurrentobject mesh_norm
 
-				nmesh.material = mult
+				for i = 1 to nmesh.numfaces do
+				(
+					for j in 1 to 3 do
+					(
+						local n = mesh_norm.getnormalid i j
+						local v = mesh_norm.getvertexid i j
+						mesh_norm.setnormal n normals_array[v]
+					)
+				)*/
+
+
+				if l > 1 then (
+					lmod = MafLOD()
+					lmod.lodMesh = nmesh
+					lmod.lodNum = l
+					lmod.lodDist = clippingRange
+					addmodifier baseMesh lmod
+
+					lsmod = MafSubtype()
+					lsmod.subtypeName = "LOD"
+					addmodifier nmesh lsmod
+				)
+
+
+				nmesh.material = godMat
 			)
 		)
+		baseMesh
 	)
 
 	fn ReadSingleMesh f parentID = (
-		ReadStandardMesh f
+		nmesh=ReadStandardMesh f
 
 		bones=ReadByte f
 		ReadLong f
@@ -346,12 +418,12 @@ utility MafiaImport "4DS Import v4.1"
 	)
 
 	fn ReadMorph f parentID = (
-		ReadStandardMesh f
+		nmesh=ReadStandardMesh f
 		ReadBaseMorph f
 	)
 
 	fn ReadBillboard f parentID = (
-		ReadStandardMesh f
+		nmesh=ReadStandardMesh f
 		ReadByte f   --axis
 		ReadByte f
 		ReadByte f
@@ -500,7 +572,7 @@ utility MafiaImport "4DS Import v4.1"
 				--VISUAL OBJECT
 				if objectType == 1 do
 				(
-					if visualType == 0 do ReadStandardMesh f parentID
+					if visualType == 0 do nmesh=ReadStandardMesh f parentID
 					if visualType == 2 do ReadSingleMesh f parentID
 					if visualType == 3 do ReadSingleMorph f parentID
 					if visualType == 4 do ReadBillboard f parentID
@@ -509,7 +581,7 @@ utility MafiaImport "4DS Import v4.1"
 					if visualType == 8 do ReadMirror f parentID
 				)
 
-				--FRAME_SECTOR
+				--SECTOR
 				if objectType==5 do
 				(
 
@@ -621,7 +693,7 @@ utility MafiaImport "4DS Import v4.1"
 
 				)
 
-				--FRAME_DUMMY
+				--DUMMY
 				if objectType==6 do
 				(
 					nmesh=dummy()
@@ -644,25 +716,9 @@ utility MafiaImport "4DS Import v4.1"
 					ApplyTransformations3 nmesh parentID pos scaletion rotation
 				)
 
-					--FRAME_TARGET
+				--TARGET
 				if objectType==7 do
 				(
-					-- target
-					mark = ReadByte f
-					b = readbyte f
-					meshname=""
-					for bb=1 to b do
-					(
-						meshname = meshname + (bit.intAsChar (readbyte f))
-					)
-
-					b = readbyte f
-					subtype=""
-					for bb=1 to b do
-					(
-						subtype = subtype + (bit.intAsChar (readbyte f))
-					)
-
 					nmesh=dummy()
 					nmesh.name=meshname
 					nmesh.boxsize=[1,1,1]
@@ -677,27 +733,11 @@ utility MafiaImport "4DS Import v4.1"
 					(
 						ReadShort f
 					)
-
 				)
 
-				--FRAME_JOINT
+				--BONE
 				if objectType==10 do
 				(
-					-- bone
-					mark = ReadByte f
-					b = readbyte f
-					meshname=""
-					for bb=1 to b do
-					(
-						meshname = meshname + (bit.intAsChar (readbyte f))
-					)
-					b = readbyte f
-					subtype=""
-					for bb=1 to b do
-					(
-						subtype = subtype + (bit.intAsChar (readbyte f))
-					)
-
 					nmesh=dummy()
 					nmesh.name=meshname
 					nmesh.boxsize=[0.1,0.1,0.1]
@@ -719,11 +759,12 @@ utility MafiaImport "4DS Import v4.1"
 				--modf.subtypeName = "Sektorrrr"
 				--addmodifier mesh modf
 				--print "kekrrrr"
-				
-				
+
+
 				modf = MafSubtype()
 				modf.subtypeName = cyp
 				modf.cullFlags = cullingFlags
+				modf.userParams = userProperties
 				addmodifier nmesh modf
 
 				Mafia_Object = append Mafia_Object nmesh

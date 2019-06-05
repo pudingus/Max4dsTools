@@ -78,6 +78,11 @@ fn writeMaterial f mat =
 			--sets += (bit.set 0 16 true)
 			--sets += (bit.set 0 31 true)
 		)
+
+		if (mat.useColorKey or mat.useAddBlend or mat.delegate.opacityMapEnable) then (
+			sets += (bit.set 0 16 1)
+		)
+
 		isAddRefl = mat.useAddRefl
 		isDiffReflAxis = mat.diffReflAxis
 		mat = mat[#Standard]
@@ -283,18 +288,16 @@ fn nowgo pbar file =
 	scenemats2 = #()
 	for mat in scenematerials do
 	(
-		if (classof mat == standard) or (classof mat == MafMat) then scenemats2 = append scenemats2 mat
-		if (classof mat == multimaterial) do
+		if (classof mat == multimaterial) then
 		(
-			for i = 1 to mat.numSubs do
+			for i = 2 to mat.numSubs do
 			(
-				approve = true
-				for j = 1 to scenemats2.count do
-				(
-					if mat[i] == scenemats2[j] then approve = false
-				)
-				if approve == true then scenemats2 = append scenemats2 mat[i]
+				append scenemats2 mat[i]
+				print (mat[i] as string)
 			)
+		)
+		else (
+			MessageBox "fuck"
 		)
 	)
 
@@ -304,10 +307,14 @@ fn nowgo pbar file =
 --		if (classof mat == standard) or (classof mat == MafMat) then numMats += 1
 --	)
 	numMats = scenemats2.count
+	print (numMats as string)
+
+
 
 	-- Materials
-	WriteShort f (numMats + 1)
+	WriteShort f numMats
 
+	/* WHAT THE FUCK
 	WriteLong f 0 -- flags
 	--ambient
 	WriteFloat f 0
@@ -326,6 +333,7 @@ fn nowgo pbar file =
 
 	--diff
 	WriteByte f 0
+	*/
 
 	scenemats = scenemats2--#()
 
@@ -334,6 +342,7 @@ fn nowgo pbar file =
 --		if (classof mat == standard) or (classof mat == MafMat)  do
 --		(
 			writeMaterial f mat
+			print (mat.name as string)
 			--scenemats = append scenemats mat
 --		)
 /*		if classof mat == multimaterial do
@@ -366,7 +375,7 @@ fn nowgo pbar file =
 					stype = mods[mm].subtypeName
 				)
 			)
-			if ((obj.ishidden == false) and (stype != "Portal")) then count=count+1
+			if ((obj.ishidden == false) and (stype != "Portal") and (stype != "LOD")) then count=count+1
 
 		)
 	)
@@ -396,7 +405,7 @@ fn nowgo pbar file =
 			)
 		)
 
-		if  (( (Superclassof obj == Geometryclass  and classof obj != TargetObject) or classof obj == Dummy)) and ((obj.ishidden == false) and (stype != "Portal")) then
+		if  (( (Superclassof obj == Geometryclass  and classof obj != TargetObject) or classof obj == Dummy)) and ((obj.ishidden == false) and (stype != "Portal") and (stype != "LOD")) then
 		(
 			objnum += 1
 			parentArray = append parentArray obj
@@ -447,7 +456,7 @@ fn nowgo pbar file =
 				WriteFloat f q.z
 				WriteFloat f q.y
 			)
-			
+
 			if modf == undefined then (
 				if stype == "Sektor" then
 				(
@@ -462,8 +471,8 @@ fn nowgo pbar file =
 				writebyte f cullingFlags #unsigned
 			)
 
-			
-			
+
+
 			WriteByte f obj.name.count #unsigned  --write name length
 			WriteString f obj.name       --write name
 			fseek f ((ftell f)-1) #seek_set               --maybe to rewrite null termination?
@@ -478,7 +487,8 @@ fn nowgo pbar file =
 			--		stype = mods[mm].subtypeName
 			--	)
 			--)
-			WriteMString f stype         --write user parameters
+			userParams = modf.userParams
+			WriteMString f userParams        --write user parameters
 
 
 
@@ -502,7 +512,13 @@ fn nowgo pbar file =
 					writeshort f ((vi.y - 1) as integer) #unsigned
 				)
 
-				for i = 1 to 6 do writefloat f 0    --bounding box
+				--for i = 1 to 6 do writefloat f 0    --bounding box
+				writefloat f obj.min.x
+				writefloat f obj.min.z
+				writefloat f obj.min.y
+				writefloat f obj.max.x
+				writefloat f obj.max.z
+				writefloat f obj.max.y
 
 
 				numportals = 0
@@ -534,8 +550,9 @@ fn nowgo pbar file =
 				for portal in portals_array do (
 					writebyte f (portal.numverts) #unsigned
 					print ("portal: " + portal.name + "   numverts: " + (portal.numverts as string))
-					for j = 1 to 5 do writelong f 0  #unsigned  --unknown
-						
+					writelong f 4  #unsigned  --always 4
+					for j = 1 to 4 do writelong f 0  #unsigned  --unknown
+
 					mods = portal.modifiers
 					local modp
 					for mm = 1 to mods.count do
@@ -545,16 +562,16 @@ fn nowgo pbar file =
 							modp = mods[mm]
 						)
 					)
-					
+
 					nearRange = 0
 					farRange = 0
 					if (modp != undefined) then (
 						nearRange = modp.nearRange
 						farRange = modp.farRange
 					)
-					
+
 					print ("nearRange: " + (nearRange as string) + " -- farRange: " + (farRange as string))
-					
+
 					writefloat f nearRange   --nearrange
 					writefloat f farRange  --farrange
 
@@ -608,10 +625,11 @@ fn nowgo pbar file =
 						if ilod>1 then lodmesh = lodMods[ilod-1].lodMesh
 						if ilod>1 then lodobj = lodMods[ilod-1].lodMesh
 
+						--lodmesh = lodobj
 						lodmesh = snapshotAsMesh lodobj--convertToMesh (copy lodobj)
-						SplitVertsByNormals lodmesh
-						if meshop.getMapSupport lodmesh 1 do
-						SplitVertsByMapVerts lodmesh
+						--SplitVertsByNormals lodmesh
+						--if meshop.getMapSupport lodmesh 1 do
+						--SplitVertsByMapVerts lodmesh
 						if ilod==1 then m=lodmesh
 
 						--WriteShort f 0
@@ -624,7 +642,7 @@ fn nowgo pbar file =
 						)
 
 						-- VERTICES
-						verts=getnumverts lodmesh
+						verts= getnumverts lodmesh
 						WriteShort f verts #unsigned
 
 						in coordsys world
@@ -650,7 +668,7 @@ fn nowgo pbar file =
 								--p01 = p01 * (inverse obj.transform)--(inverse obj.rotation)
 								--p01 = normalize p01
 								--p01 = [0,1,0]
-								WriteFloat f p01.x
+								WriteFloat f p01.x    --WRITE NORMALS
 								WriteFloat f p01.z
 								WriteFloat f p01.y
 								if meshop.getMapSupport lodmesh 1 then (
@@ -689,58 +707,131 @@ fn nowgo pbar file =
 								x01=(p01.x-1) as integer
 								y01=(p01.y-1) as integer
 								z01=(p01.z-1) as integer
-								WriteShort f y01
 								WriteShort f x01
 								WriteShort f z01
+								WriteShort f y01
 							)
 							WriteShort f 1
 						)
 
 						if usematids==true do
 						(
-							--faces_array = GetNodeFacesByMatID lodmesh
-
-
-
-
-							---------
-							hasFaceMatID = #{}
+							isMatIdUsed = #{}
 							faces=getnumfaces lodmesh
 							for i=1 to faces do
 							(
 								id = getFaceMatID lodmesh i
-								hasFaceMatID[id] = true
+								isMatIdUsed[id] = true
 							)
-							hasFaceMatID = hasFaceMatID as array
+							isMatIdUsed = isMatIdUsed as array
 
-							WriteByte f hasFaceMatID.count -- facegroups
+							numFacegroups = isMatIdUsed.count
+							WriteByte f numFacegroups -- facegroups
 
-							mIdFaces = #()
-							for i = 1 to hasFaceMatID.count do
+							facegroupFaces = #()
+							facegroupMats = #()
+							facegroupMats.count = numFacegroups
+							for i = 1 to numFacegroups do
 							(
-								mIdFaces[i] = #()
+								facegroupFaces[i] = #()
 								for j = 1 to faces do
 								(
 									id = getFaceMatID lodmesh j
-									if id == hasFaceMatID[i] then mIdFaces[i] =append mIdFaces[i] j
+									if id == isMatIdUsed[i] then (
+										facegroupFaces[i] =append facegroupFaces[i] j
+										facegroupMats[i] = id
+									)
 								)
 							)
 
-							for i = 1 to hasFaceMatID.count do
+
+							for i = 1 to numFacegroups do
 							(
 								--faces=getnumfaces m
-								faces = mIdFaces[i].count
+								faces = facegroupFaces[i].count
 								WriteShort f faces #unsigned
 
 								for j=1 to faces do
 								(
-									p01=GetFace lodmesh (mIdFaces[i])[j]
+									p01=GetFace lodmesh (facegroupFaces[i])[j]
 									x01=(p01.x-1) as integer
 									y01=(p01.y-1) as integer
 									z01=(p01.z-1) as integer
-									WriteShort f y01
 									WriteShort f x01
 									WriteShort f z01
+									WriteShort f y01
+								)
+								matid = ((facegroupMats[i]) - 1)
+								WriteShort f matid #unsigned
+								/*
+								if lodobj.material == undefined then WriteShort f 1
+								if lodobj.material != undefined do
+								(
+									chosen = 1
+									for s = 1 to scenemats.count do
+									(
+										if (classof lodobj.material == standard) or (classof lodobj.material == MafMat) do
+										(
+											if scenemats[s] == lodobj.material then chosen = s + 1
+										)
+										if classof lodobj.material == multimaterial do
+										(
+											if scenemats[s] == (lodobj.material)[i] then chosen = s + 1--WriteShort f (s+1)
+										)
+									)
+									WriteShort f chosen
+								)
+								*/
+
+							)
+
+
+
+
+
+
+
+
+/*
+							---------
+							isMatIdUsed = #{}
+							faces=getnumfaces lodmesh
+							for i=1 to faces do
+							(
+								id = getFaceMatID lodmesh i
+								isMatIdUsed[id] = true
+							)
+							isMatIdUsed = isMatIdUsed as array
+
+							numFacegroups = isMatIdUsed.count
+							WriteByte f numFacegroups -- facegroups
+
+							facegroupFaces = #()
+							for i = 1 to numFacegroups do
+							(
+								facegroupFaces[i] = #()
+								for j = 1 to faces do
+								(
+									id = getFaceMatID lodmesh j
+									if id == isMatIdUsed[i] then facegroupFaces[i] =append facegroupFaces[i] j
+								)
+							)
+
+							for i = 1 to numFacegroups do
+							(
+								--faces=getnumfaces m
+								faces = facegroupFaces[i].count
+								WriteShort f faces #unsigned
+
+								for j=1 to faces do
+								(
+									p01=GetFace lodmesh (facegroupFaces[i])[j]
+									x01=(p01.x-1) as integer
+									y01=(p01.y-1) as integer
+									z01=(p01.z-1) as integer
+									WriteShort f x01
+									WriteShort f z01
+									WriteShort f y01
 								)
 								-- material
 								if lodobj.material == undefined then WriteShort f 1
@@ -761,6 +852,8 @@ fn nowgo pbar file =
 									WriteShort f chosen
 								)
 							)
+
+							*/
 						)
 						delete lodmesh
 
