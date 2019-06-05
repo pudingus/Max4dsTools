@@ -9,7 +9,7 @@ classID:#(0x5e873b7d, 0x41b38bb7)
 		farRange type:#float ui:ui_farRange
 
 		cullFlags type:#integer ui:ui_cullFlags
-		userParams type:#string ui:ui_userParams
+		userParams type:#string default:"" ui:ui_userParams
 	)
 	rollout params "4DS Subtype"
 	(

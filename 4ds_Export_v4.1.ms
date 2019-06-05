@@ -23,18 +23,18 @@
 -- 32 opacityMapEnable
 -- 32 addblend
 
-fn compareFN v1 v2 =
-(
-	r = 0
-	if v1.lodNum > v2.lodNum then r = 1
-	if v1.lodNum < v2.lodNum then r = -1
-	r
-)
 
 fn WriteText f _text = (
-	writebyte f _text.count #unsigned
-	for i = 1 to _text.count do
-		writebyte f (bit.charasint _text[i])
+	if _text == undefined then (
+		MessageBox "writetext undefined"
+		print "writetext undefined"
+		writebyte f 0 #unsigned
+	)
+	else (
+		writebyte f _text.count #unsigned
+		for i = 1 to _text.count do
+			writebyte f (bit.charasint _text[i])
+	)
 )
 
 fn writeMaterial f mat =
@@ -228,8 +228,9 @@ fn nowgo pbar file =
 			)
 		)
 
-		if  (( (Superclassof obj == Geometryclass  and classof obj != TargetObject) or classof obj == Dummy)) and ((obj.ishidden == false) and (stype != "Portal") and (stype != "LOD")) then
+		if  (( (Superclassof obj == Geometryclass  and classof obj != TargetObject) or classof obj == Dummy)) and ((stype != "Portal") and (stype != "LOD")) then
 		(
+			print (" *******  " + ((obj.name) as string))
 			objnum += 1
 			parentArray = append parentArray obj
 
@@ -293,20 +294,7 @@ fn nowgo pbar file =
 
 
 
-			WriteByte f obj.name.count #unsigned  --write name length
-			WriteString f obj.name       --write name
-			fseek f ((ftell f)-1) #seek_set               --maybe to rewrite null termination?
-			--WriteByte f 0
-
-			--mods = obj.modifiers
-			--stype = ""
-			--for mm = 1 to mods.count do
-			--(
-			--	if classof mods[mm] == MafSubtype then
-			--	(
-			--		stype = mods[mm].subtypeName
-			--	)
-			--)
+			writetext f obj.name
 			userParams = modf.userParams
 			writetext f userParams        --write user parameters
 
@@ -424,7 +412,6 @@ fn nowgo pbar file =
 
 				else
 				(
-
 					WriteShort f 0        --not duplicate
 
 					lodMods = #()
@@ -433,73 +420,45 @@ fn nowgo pbar file =
 						if classof mods[mm] == MafLOD then lodMods = append lodMods mods[mm]
 					)
 
-					qsort lodMods compareFN
+					numLods = lodMods.count + 1
+					WriteByte f numLods
 
-					WriteByte f (lodMods.count+1)  --write num lods
+					lodmesh = obj
 
-					lodmesh = m
-					lodobj = obj
-
-					for ilod = 1 to (lodMods.count+1) do
+					for ilod = 1 to numLods do
 					(
-						if ilod>1 then lodmesh = lodMods[ilod-1].lodMesh
-						if ilod>1 then lodobj = lodMods[ilod-1].lodMesh
+						if ilod > 1 then lodmesh = lodMods[ilod-1].lodMesh
 
 
-						lodmesh = snapshotAsMesh lodobj--convertToMesh (copy lodobj)
-
-						if ilod==1 then m=lodmesh
-
-						--WriteShort f 0
-						--WriteShort f 0--17786 -- lod distance
-						if (lodMods.count==0) or (ilod==(lodMods.count+1)) then WriteLong f 0
-						if (lodMods.count > 0) and (ilod<(lodMods.count+1)) do
-						(
-							loddist = lodMods[ilod].lodDist
-							WriteFloat f (loddist*1000)
+						if (ilod == 1 and numLods > 1) then (
+							writefloat f 700  --lod distance
 						)
+						else writefloat f 0
 
 						-- VERTICES
-						verts= getnumverts lodmesh
-						WriteShort f verts #unsigned
+						numVerts= getnumverts lodmesh
+						WriteShort f numVerts #unsigned
 
-						in coordsys world
+
+						for i=1 to numVerts do
 						(
-							for i=1 to verts do
-							(
-								p01=GetVert lodmesh i
-								--p01 -= obj.pos
-								p01 = p01 * (inverse obj.transform)--(inverse obj.rotation)
-								WriteFloat f p01.x
-								WriteFloat f p01.z
-								WriteFloat f p01.y
-								p01=GetNormal lodmesh i
+							--WRITE VERTEX
+							p3 = meshop.GetVert lodmesh i
+							--inverse object transformation matrix
+							in coordsys world p3 = p3 * (inverse obj.transform)--(inverse obj.rotation)
 
-								WriteFloat f p01.x    --WRITE NORMALS
-								WriteFloat f p01.z
-								WriteFloat f p01.y
-								if meshop.getMapSupport lodmesh 1 then (
-									face = ( (meshOp.getFacesUsingVert lodmesh #{i}) as array )[1]
-									faceverts1 = getFace lodmesh face
-									faceverts = #(faceverts1.x,faceverts1.y,faceverts1.z)
-									corrVert = 1
-									for j = 1 to faceverts.count do
-									(
-										if faceverts[j] == i then corrVert = j
-									)
-									mapface = meshOp.getMapFace lodmesh 1 face
-									mapvert = mapface[corrVert]
-									p01 = meshOp.getMapVert lodmesh 1 mapvert
-									--p01=GetTVert m i
-									WriteFloat f p01.x
-									WriteFloat f (1-p01.y)
-									--WriteFloat f 0
-									--WriteFloat f 0
-								) else (
-									WriteFloat f 0
-									WriteFloat f 0
-								)
-							)
+							WriteFloat f p3.x
+							WriteFloat f p3.z
+							WriteFloat f p3.y
+
+							p3 = GetNormal lodmesh i
+							WriteFloat f p3.x    --WRITE NORMALS
+							WriteFloat f p3.z
+							WriteFloat f p3.y
+
+							p3 = gettvert lodmesh i
+							WriteFloat f p3.x    --WRITE UV
+							WriteFloat f (1-p3.y)
 						)
 
 
@@ -531,9 +490,6 @@ fn nowgo pbar file =
 							)
 						)
 
-						--for i = facegroupFaces.count to 1 by -1 collect facegroupFaces[i]
-						--for i = facegroupMats.count to 1 by -1 collect facegroupMats[i]
-
 						--for i = 1 to numFacegroups do
 						for i = numFacegroups to 1 by - 1 do
 						(
@@ -555,11 +511,8 @@ fn nowgo pbar file =
 							WriteShort f matid #unsigned
 
 						)
-
-
-						delete lodmesh
-					) -- end for lods
-				) -- end ifdummy check
+					)
+				)
 			)
 
 			progress += percent
