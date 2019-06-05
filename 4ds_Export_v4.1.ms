@@ -31,21 +31,10 @@ fn compareFN v1 v2 =
 	r
 )
 
-fn WriteMString f texname =
-(
-	lastSlash = 1
-	for i = 1 to texname.count do
-	(
-		if texname[i] == "\\" then lastSlash = i+1
-	)
-	news = ""
-	for i = lastSlash to texname.count do
-	(
-		append news texname[i]
-	)
-	WriteByte f news.count
-	WriteString f news
-	fseek f ((ftell f)-1) #seek_set
+fn WriteText f _text = (
+	writebyte f _text.count #unsigned
+	for i = 1 to _text.count do
+		writebyte f (bit.charasint _text[i])
 )
 
 fn writeMaterial f mat =
@@ -128,15 +117,15 @@ fn writeMaterial f mat =
 	if mat.reflectionMapEnable == true do
 	(
 		WriteFloat f (mat.reflectionMapAmount/100.0)
-		WriteMString f mat.reflectionMap.filename
+		writetext f mat.reflectionMap.filename
 	)
 
 	--diffuse map
 	if mat.diffuseMapEnable == false then WriteByte f 0
-	if mat.diffuseMapEnable == true then WriteMString f mat.diffusemap.filename
+	if mat.diffuseMapEnable == true then writetext f mat.diffusemap.filename
 
 	--opacity map
-	if mat.opacityMapEnable == true do WriteMString f mat.opacitymap.filename
+	if mat.opacityMapEnable == true do writetext f mat.opacitymap.filename
 
 	if isAnim == true do
 	(
@@ -149,132 +138,6 @@ fn writeMaterial f mat =
 	)
 )
 
-fn SplitVertsByNormals theMesh =
-(
-	verts = getNumVerts theMesh
-	for v = 1 to verts do
-	(
-		vfaces = (meshop.getFacesUsingVert theMesh #{v}) as array
-		useit = true
-		smgr = undefined
-		--if vfaces.count == 1 then useit = true
-		if vfaces.count > 1 do
-		(
-			for vf = 1 to vfaces.count do
-			(
-				if smgr == undefined then smgr = getFaceSmoothGroup theMesh vfaces[vf]
-				if (getFaceSmoothGroup theMesh vfaces[vf]) != smgr do
-				(
-					theVertPos = getVert theMesh v
-					newIndex = theMesh.numverts+1
-					setNumVerts theMesh newIndex true
-					setVert theMesh newIndex theVertPos
-					fc = getFace theMesh vfaces[vf]
-					if v==fc.x then setFace theMesh vfaces[vf] [newIndex,fc.y,fc.z]
-					if v==fc.y then setFace theMesh vfaces[vf] [fc.x,newIndex,fc.z]
-					if v==fc.z then setFace theMesh vfaces[vf] [fc.x,fc.y,newIndex]
-				)
-			)
-		)
-
-		--if useit == false do
-		--(
-		--)
-
-	)
-	update theMesh
-)
-
-
-arr = #()
-
---following one function written not by me. unfortunately i forgot where did i get it
-fn SplitVertsByMapVerts theMesh =
-(
-
-	--first collect two arrays of bitarrays - one containing the map vertices for each mesh vertex,
-	--the other containing the faces using each mesh vertex:
-	--convertToMesh theMesh
-	lastVert = theMesh.numverts
-	lastFace = theMesh.numfaces
-	VertsUsage = for v = 1 to lastVert collect #{}
-	FaceUsage = for v = 1 to lastVert collect #{}
-	for f = 1 to lastFace do
-	(
-		theFace = getFace theMesh f
-		theMapFace = meshop.getMapFace theMesh 1 f
-		append VertsUsage[theFace.x] theMapFace.x
-		append VertsUsage[theFace.y] theMapFace.y
-		append VertsUsage[theFace.z] theMapFace.z
-		append FaceUsage [theFace.x] f
-		append FaceUsage [theFace.y] f
-		append FaceUsage [theFace.z] f
-	)
-	--Now we can go though the mesh vertex array and see if we have 2 or more map vertices.
-	--If yes, we count from 2 to the number of map verts and create new mesh vertices with the
-	--same position as the current mesh vertex. Then we go through the list of collected faces
-	--using that vertex and see which of the 3 components matches the current vertex and its
-	--corresponding map vertex matches the current map vertex. We repoint that component of the face
-	--to the new mesh vertex. Thus, for each previously existing map vertex, we get a new mesh vertex
-	--at the end of the vertex list.
-
-	arr = #()
-
-	for v = 1 to VertsUsage.count do
-	(
-		theMapVertsArray = VertsUsage[v] as array
-		if theMapVertsArray.count > 1 do
-		(
-			theFacesArray = FaceUsage[v] as array
-			theVertPos = getVert theMesh v
-			vertNorm = getNormal theMesh v
-			/*vfaces = (meshop.getFacesUsingVert theMesh #{v}) as array
-			useit = true
-			smgr = undefined
-			--if vfaces.count == 1 then useit = true
-			if vfaces.count > 1 do
-			(
-				for vf = 1 to vfaces.count do
-				(
-					if smgr == undefined then smgr = getFaceSmoothGroup theMesh vfaces[vf]
-					if (getFaceSmoothGroup theMesh vfaces[vf]) != smgr then useit = false
-				)
-			)
-			if useit == true then arr = append arr #(v,vertNorm)*/
-			arr = append arr #(v,vertNorm)
-			for mapv = 2 to theMapVertsArray.count do
-			(
-				theMapVert = theMapVertsArray[mapv]
-				newIndex = theMesh.numverts+1
-				setNumVerts theMesh newIndex true
-				setVert theMesh newIndex theVertPos
-				--setNormal theMesh newIndex vertNorm
-				arr = append arr #(newIndex,vertNorm)
-				for f in theFacesArray do
-				(
-					theFaceDef = getFace theMesh f
-					theMapFaceDef = meshOp.getMapFace theMesh 1 f
-					if theMapFaceDef.x == theMapVert and theFaceDef.x == v do
-					(
-						theFaceDef.x = newIndex
-						setFace theMesh f theFaceDef
-					)
-					if theMapFaceDef.y == theMapVert and theFaceDef.y == v do
-					(
-						theFaceDef.y = newIndex
-						setFace theMesh f theFaceDef
-					)
-					if theMapFaceDef.z == theMapVert and theFaceDef.z == v do
-					(
-						theFaceDef.z = newIndex
-						setFace theMesh f theFaceDef
-					)
-				)--end f loop
-			)--end v loop
-		)
-	)
-	update theMesh
-)
 
 fn nowgo pbar file =
 (
@@ -301,58 +164,18 @@ fn nowgo pbar file =
 		)
 	)
 
---	numMats = 0
---	for mat in scenemats2 do
---	(
---		if (classof mat == standard) or (classof mat == MafMat) then numMats += 1
---	)
 	numMats = scenemats2.count
 	print (numMats as string)
 
-
-
 	-- Materials
 	WriteShort f numMats
-
-	/* WHAT THE FUCK
-	WriteLong f 0 -- flags
-	--ambient
-	WriteFloat f 0
-	WriteFloat f 0
-	WriteFloat f 0
-	--diffuse
-	WriteFloat f 1
-	WriteFloat f 1
-	WriteFloat f 1
-	--emission / selfIllum
-	WriteFloat f 0
-	WriteFloat f 0
-	WriteFloat f 0
-	--opacity
-	WriteFloat f 1
-
-	--diff
-	WriteByte f 0
-	*/
 
 	scenemats = scenemats2--#()
 
 	for mat in scenemats2 do
 	(
---		if (classof mat == standard) or (classof mat == MafMat)  do
---		(
-			writeMaterial f mat
-			print (mat.name as string)
-			--scenemats = append scenemats mat
---		)
-/*		if classof mat == multimaterial do
-		(
-			for i = 1 to mat.numSubs do
-			(
-				writeMaterial f mat[i]
-				scenemats = append scenemats mat[i]
-			)
-		)*/
+		writeMaterial f mat
+		print (mat.name as string)
 	)
 
 	-- Objects
@@ -422,9 +245,6 @@ fn nowgo pbar file =
 			)
 			if ((classof obj != Dummy) and (stype != "Sektor")) then
 			(
-		--		m = convertToMesh (copy obj)--snapshotAsMesh obj
-		--		SplitVertsByNormals m
-		--		SplitVertsByMapVerts m
 				WriteLong f 704643073
 			)
 
@@ -488,7 +308,7 @@ fn nowgo pbar file =
 			--	)
 			--)
 			userParams = modf.userParams
-			WriteMString f userParams        --write user parameters
+			writetext f userParams        --write user parameters
 
 
 
@@ -625,11 +445,9 @@ fn nowgo pbar file =
 						if ilod>1 then lodmesh = lodMods[ilod-1].lodMesh
 						if ilod>1 then lodobj = lodMods[ilod-1].lodMesh
 
-						--lodmesh = lodobj
+
 						lodmesh = snapshotAsMesh lodobj--convertToMesh (copy lodobj)
-						--SplitVertsByNormals lodmesh
-						--if meshop.getMapSupport lodmesh 1 do
-						--SplitVertsByMapVerts lodmesh
+
 						if ilod==1 then m=lodmesh
 
 						--WriteShort f 0
@@ -656,18 +474,7 @@ fn nowgo pbar file =
 								WriteFloat f p01.z
 								WriteFloat f p01.y
 								p01=GetNormal lodmesh i
-								for a = 1 to arr.count do
-								(
-									if (arr[a])[1] == i do
-									(
 
-										p01 = (arr[a])[2]
-									--	print "!"
-									)
-								)
-								--p01 = p01 * (inverse obj.transform)--(inverse obj.rotation)
-								--p01 = normalize p01
-								--p01 = [0,1,0]
 								WriteFloat f p01.x    --WRITE NORMALS
 								WriteFloat f p01.z
 								WriteFloat f p01.y
@@ -695,15 +502,48 @@ fn nowgo pbar file =
 							)
 						)
 
-						useMatIDs = true
-						if usematids==false do
+
+						isMatIdUsed = #{}
+						faces=getnumfaces lodmesh
+						for i=1 to faces do
 						(
-							WriteByte f 1
-							faces=getnumfaces lodmesh
+							id = getFaceMatID lodmesh i
+							isMatIdUsed[id] = true
+						)
+						isMatIdUsed = isMatIdUsed as array
+
+						numFacegroups = isMatIdUsed.count
+						WriteByte f numFacegroups -- facegroups
+
+						facegroupFaces = #()
+						facegroupMats = #()
+						facegroupMats.count = numFacegroups
+						for i = 1 to numFacegroups do
+						(
+							facegroupFaces[i] = #()
+							for j = 1 to faces do
+							(
+								id = getFaceMatID lodmesh j
+								if id == isMatIdUsed[i] then (
+									facegroupFaces[i] =append facegroupFaces[i] j
+									facegroupMats[i] = id
+								)
+							)
+						)
+
+						--for i = facegroupFaces.count to 1 by -1 collect facegroupFaces[i]
+						--for i = facegroupMats.count to 1 by -1 collect facegroupMats[i]
+
+						--for i = 1 to numFacegroups do
+						for i = numFacegroups to 1 by - 1 do
+						(
+							--faces=getnumfaces m
+							faces = facegroupFaces[i].count
 							WriteShort f faces #unsigned
+
 							for j=1 to faces do
 							(
-								p01=GetFace lodmesh j
+								p01=GetFace lodmesh (facegroupFaces[i])[j]
 								x01=(p01.x-1) as integer
 								y01=(p01.y-1) as integer
 								z01=(p01.z-1) as integer
@@ -711,155 +551,14 @@ fn nowgo pbar file =
 								WriteShort f z01
 								WriteShort f y01
 							)
-							WriteShort f 1
+							matid = ((facegroupMats[i]) - 1)
+							WriteShort f matid #unsigned
+
 						)
 
-						if usematids==true do
-						(
-							isMatIdUsed = #{}
-							faces=getnumfaces lodmesh
-							for i=1 to faces do
-							(
-								id = getFaceMatID lodmesh i
-								isMatIdUsed[id] = true
-							)
-							isMatIdUsed = isMatIdUsed as array
 
-							numFacegroups = isMatIdUsed.count
-							WriteByte f numFacegroups -- facegroups
-
-							facegroupFaces = #()
-							facegroupMats = #()
-							facegroupMats.count = numFacegroups
-							for i = 1 to numFacegroups do
-							(
-								facegroupFaces[i] = #()
-								for j = 1 to faces do
-								(
-									id = getFaceMatID lodmesh j
-									if id == isMatIdUsed[i] then (
-										facegroupFaces[i] =append facegroupFaces[i] j
-										facegroupMats[i] = id
-									)
-								)
-							)
-
-
-							for i = 1 to numFacegroups do
-							(
-								--faces=getnumfaces m
-								faces = facegroupFaces[i].count
-								WriteShort f faces #unsigned
-
-								for j=1 to faces do
-								(
-									p01=GetFace lodmesh (facegroupFaces[i])[j]
-									x01=(p01.x-1) as integer
-									y01=(p01.y-1) as integer
-									z01=(p01.z-1) as integer
-									WriteShort f x01
-									WriteShort f z01
-									WriteShort f y01
-								)
-								matid = ((facegroupMats[i]) - 1)
-								WriteShort f matid #unsigned
-								/*
-								if lodobj.material == undefined then WriteShort f 1
-								if lodobj.material != undefined do
-								(
-									chosen = 1
-									for s = 1 to scenemats.count do
-									(
-										if (classof lodobj.material == standard) or (classof lodobj.material == MafMat) do
-										(
-											if scenemats[s] == lodobj.material then chosen = s + 1
-										)
-										if classof lodobj.material == multimaterial do
-										(
-											if scenemats[s] == (lodobj.material)[i] then chosen = s + 1--WriteShort f (s+1)
-										)
-									)
-									WriteShort f chosen
-								)
-								*/
-
-							)
-
-
-
-
-
-
-
-
-/*
-							---------
-							isMatIdUsed = #{}
-							faces=getnumfaces lodmesh
-							for i=1 to faces do
-							(
-								id = getFaceMatID lodmesh i
-								isMatIdUsed[id] = true
-							)
-							isMatIdUsed = isMatIdUsed as array
-
-							numFacegroups = isMatIdUsed.count
-							WriteByte f numFacegroups -- facegroups
-
-							facegroupFaces = #()
-							for i = 1 to numFacegroups do
-							(
-								facegroupFaces[i] = #()
-								for j = 1 to faces do
-								(
-									id = getFaceMatID lodmesh j
-									if id == isMatIdUsed[i] then facegroupFaces[i] =append facegroupFaces[i] j
-								)
-							)
-
-							for i = 1 to numFacegroups do
-							(
-								--faces=getnumfaces m
-								faces = facegroupFaces[i].count
-								WriteShort f faces #unsigned
-
-								for j=1 to faces do
-								(
-									p01=GetFace lodmesh (facegroupFaces[i])[j]
-									x01=(p01.x-1) as integer
-									y01=(p01.y-1) as integer
-									z01=(p01.z-1) as integer
-									WriteShort f x01
-									WriteShort f z01
-									WriteShort f y01
-								)
-								-- material
-								if lodobj.material == undefined then WriteShort f 1
-								if lodobj.material != undefined do
-								(
-									chosen = 1
-									for s = 1 to scenemats.count do
-									(
-										if (classof lodobj.material == standard) or (classof lodobj.material == MafMat) do
-										(
-											if scenemats[s] == lodobj.material then chosen = s + 1
-										)
-										if classof lodobj.material == multimaterial do
-										(
-											if scenemats[s] == (lodobj.material)[i] then chosen = s + 1--WriteShort f (s+1)
-										)
-									)
-									WriteShort f chosen
-								)
-							)
-
-							*/
-						)
 						delete lodmesh
-
 					) -- end for lods
-
-
 				) -- end ifdummy check
 			)
 
@@ -921,4 +620,4 @@ utility MafiaExport "4DS Export v4.1"
 --And all the ladies are like "Yes, yes".
 --Another system under stress stress.
 --Forget about it, lose that dress dress.
---Oh, give me a hug!
+--Oh, give me a hug!z
