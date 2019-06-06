@@ -242,20 +242,24 @@ utility MafiaImport "4DS Import v4.1"
 				)
 
 
-				nmesh = mesh vertices:verts_array faces:faces_array tverts:tverts_array
+				--nmesh = mesh vertices:verts_array faces:faces_array tverts:tverts_array
+				nmesh = mesh vertices:verts_array faces:faces_array materialIDs:material_array tverts:tverts_array
 
-				for i = 1 to verts_count do
-				(
-					normal = normals_array[i]
-					setNormal nmesh i normal
-				)
+
+
+				--setting normals for some reason crashes 3ds max
+				--for i = 1 to verts_count do
+				--(
+				--	normal = normals_array[i]
+				--	setNormal nmesh i normal
+				--)
 
 				buildTVFaces nmesh
 
 				for i = 1 to nmesh.numfaces do (
-					id = material_array[i]
-					print ("** face id: " + (i as string) + " -- mat id: " + id as string)
-					setFaceMatID nmesh i id
+					--id = material_array[i]
+					--print ("** face id: " + (i as string) + " -- mat id: " + id as string)
+					--setFaceMatID nmesh i id
 					setTVFace nmesh i (getFace nmesh i)
 				)
 
@@ -292,7 +296,79 @@ utility MafiaImport "4DS Import v4.1"
 				--for i = 1 to nmesh.numfaces do(setTVFace nmesh i (getFace nmesh i))
 
 
-				ApplyTransformations2 nmesh parentID pos scaletion rotation
+				--ApplyTransformations2 nmesh parentID pos scaletion rotation
+
+				/*
+				in coordsys parent rotate nmesh rotation
+
+				if parentID != 0 then
+				(
+					in coordsys world nmesh.pos = (pos + nmesh.parent.pos)
+				)
+				else (
+					in coordsys world nmesh.pos = pos
+					--in coordsys world nmesh.rotation = rotation
+
+				)*/
+
+
+				matrix = matrix3 [scaletion.x, 0, 0] [0, scaletion.y, 0] [0, 0, scaletion.z] [pos.x, pos.y, pos.z]
+				rotMatrix = ((inverse rotation) as matrix3)
+
+				if parentID != 0 then
+				(
+					nmesh.transform = (rotMatrix*matrix*nmesh.parent.transform)
+				)
+				else (
+					nmesh.transform = (rotMatrix*matrix)
+				)
+
+
+
+
+
+				--in coordsys world nmesh.pos = pos
+
+
+
+
+
+				--in coordsys parent nmesh.pos = pos
+
+
+				--in coordsys parent move nmesh pos
+				--in coordsys parent rotate nmesh rotation
+
+				--in coordsys parent nmesh.scale = scaletion
+				--in coordsys parent nmesh.rotation = rotation
+
+				/*
+				if parentID != 0 then
+				(
+					in coordsys parent nmesh.pos = pos
+				)
+				else
+				(
+					in coordsys world nmesh.pos = pos
+				)
+				*/
+
+
+
+				/*
+				if parentID != 0 then
+				(
+					in coordsys parent nmesh.pos = pos
+					in coordsys local scale nmesh scaletion
+					in coordsys world rotate nmesh (rotation*nmesh.parent.rotation)--(eulerangles rotation.x rotation.y rotation.z)
+				)
+				else
+				(
+					in coordsys world nmesh.pos = pos
+					in coordsys world scale nmesh scaletion
+					in coordsys world rotate nmesh rotation
+				)
+				*/
 
 				/*
 				mesh_norm = edit_normals()
@@ -566,6 +642,8 @@ utility MafiaImport "4DS Import v4.1"
 
 				userPropertiesLength = ReadByte f #unsigned
 				userProperties = readText f userPropertiesLength
+
+				print (" ****** " + meshname)
 
 				cyp = "idk"
 
