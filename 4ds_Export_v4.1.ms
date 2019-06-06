@@ -252,12 +252,16 @@ fn nowgo pbar file =
 
 			-- general block
 			 -- hierarchy
+			parentID = 0
 			if obj.parent == undefined then WriteShort f 0
 			if obj.parent != undefined do
 			(
 				for p = 1 to parentArray.count do
 				(
-					if parentArray[p] == obj.parent then WriteShort f p
+					if parentArray[p] == obj.parent then (
+						WriteShort f p
+						parentID = p
+					)
 				)
 			)
 			in coordsys parent
@@ -442,12 +446,9 @@ fn nowgo pbar file =
 
 						for i=1 to numVerts do
 						(
-							--WRITE VERTEX
-							p3 = meshop.GetVert lodmesh i
-							--inverse object transformation matrix
-							in coordsys world p3 = p3 * (inverse obj.transform)--(inverse obj.rotation)
 
-							WriteFloat f p3.x
+							in coordsys local p3 = GetVert lodmesh i
+							WriteFloat f p3.x	--WRITE VERTEX
 							WriteFloat f p3.z
 							WriteFloat f p3.y
 
