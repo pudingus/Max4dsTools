@@ -198,7 +198,7 @@ fn nowgo pbar file =
 					stype = mods[mm].subtypeName
 				)
 			)
-			if ((obj.ishidden == false) and (stype != "Portal") and (stype != "LOD")) then count=count+1
+			if ((stype != "Portal") and (stype != "LOD")) then count=count+1
 
 		)
 	)
@@ -421,23 +421,31 @@ fn nowgo pbar file =
 					lodMods = #()
 					for mm = 1 to mods.count do
 					(
-						if classof mods[mm] == MafLOD then lodMods = append lodMods mods[mm]
+						if classof mods[mm] == MafLOD then insertItem mods[mm] lodMods 1 --append lodMods mods[mm]
 					)
 
-					numLods = lodMods.count + 1
+
+					numLods = lodMods.count
 					WriteByte f numLods
 
-					lodmesh = obj
+					print ("numlods: " + (numlods as string))
+
+					lodmesh = obj.mesh
 
 					for ilod = 1 to numLods do
 					(
-						if ilod > 1 then lodmesh = lodMods[ilod-1].lodMesh
+						print ("ilod: " + (ilod as string))
+						lodmod = lodMods[ilod]
+						print ("lodnum: " + (lodmod.lodNum as string))
+						if ilod > 1 then lodmesh = lodmod.lodMesh.mesh
 
 
-						if (ilod == 1 and numLods > 1) then (
-							writefloat f 700  --lod distance
-						)
-						else writefloat f 0
+						--if (ilod == 1 and numLods > 1) then (
+					--		writefloat f 700  --lod distance
+						--)
+						--else writefloat f 0
+
+						writefloat f (lodmod.lodDist)
 
 						-- VERTICES
 						numVerts= getnumverts lodmesh

@@ -13,6 +13,7 @@ utility MafiaImport "4DS Import v4.1"
 	local meshname = ""
 	local nmesh
 	local godMat
+	local lod_layers
 
 	fn ReadText f _length = (
 		local result = ""
@@ -34,6 +35,7 @@ utility MafiaImport "4DS Import v4.1"
 		numsubs = numMats + 1
 		godMat = multimaterial numsubs:numsubs
 		godmat[1] = undefined
+		godmat.name = "MAFIA_MATERIALS"
 
 		for m=1 to numMats do
 		(
@@ -241,10 +243,8 @@ utility MafiaImport "4DS Import v4.1"
 					)
 				)
 
-
 				--nmesh = mesh vertices:verts_array faces:faces_array tverts:tverts_array
 				nmesh = mesh vertices:verts_array faces:faces_array materialIDs:material_array tverts:tverts_array
-
 
 
 				--setting normals for some reason crashes 3ds max
@@ -263,9 +263,6 @@ utility MafiaImport "4DS Import v4.1"
 					setTVFace nmesh i (getFace nmesh i)
 				)
 
-				-- Create an edit_normals modifier
-				-- (because setting them with setnormal() doesn't seem to work...)
-
 
 
 				nmesh.wirecolor = color 0 0 0
@@ -273,43 +270,39 @@ utility MafiaImport "4DS Import v4.1"
 				if parentID!=0 do nmesh.parent=parentID
 
 
-				if l==1 then (
-					nmesh.name = meshname
+				if l == 1 then (
 					baseMesh = nmesh
+					nmesh.name = meshname
 				)
 				if l > 1 then (
-					nmesh.name = "LOD"+((l-1) as string)+meshname
+					nmesh.name = meshname+"__LOD"+((l-1) as string)
+					hide nmesh
+				)
 
+				/*
+				if numLods > 1 then (
+					nmesh.name = meshname+"_LOD"+((l-1) as string)
+				)
+				else (
+					nmesh.name = meshname
+				)*/
+
+				if numLods > 1 then (
+					if lod_layers[l] == undefined then (
+						layer = LayerManager.newLayerFromName ("LOD LAYER " + ((l-1) as string))
+						layer.addnode nmesh
+						append lod_layers layer
+					)
+					else (
+						layer = lod_layers[l]
+						layer.addnode nmesh
+					)
 				)
 
 
-
-
-
-
-				/*"Note: The optional tverts array feature is currently broken.
-					The texture vertices are set correctly,
-					but no texture faces are built internally. Until this gets fixed,
-					you can work around by building the texture faces yourself:"
-				*/
-				--buildTVFaces nmesh
-				--for i = 1 to nmesh.numfaces do(setTVFace nmesh i (getFace nmesh i))
 
 
 				--ApplyTransformations2 nmesh parentID pos scaletion rotation
-
-				/*
-				in coordsys parent rotate nmesh rotation
-
-				if parentID != 0 then
-				(
-					in coordsys world nmesh.pos = (pos + nmesh.parent.pos)
-				)
-				else (
-					in coordsys world nmesh.pos = pos
-					--in coordsys world nmesh.rotation = rotation
-
-				)*/
 
 
 				matrix = matrix3 [scaletion.x, 0, 0] [0, scaletion.y, 0] [0, 0, scaletion.z] [pos.x, pos.y, pos.z]
@@ -324,53 +317,9 @@ utility MafiaImport "4DS Import v4.1"
 				)
 
 
-
-
-
-				--in coordsys world nmesh.pos = pos
-
-
-
-
-
-				--in coordsys parent nmesh.pos = pos
-
-
-				--in coordsys parent move nmesh pos
-				--in coordsys parent rotate nmesh rotation
-
-				--in coordsys parent nmesh.scale = scaletion
-				--in coordsys parent nmesh.rotation = rotation
-
 				/*
-				if parentID != 0 then
-				(
-					in coordsys parent nmesh.pos = pos
-				)
-				else
-				(
-					in coordsys world nmesh.pos = pos
-				)
-				*/
-
-
-
-				/*
-				if parentID != 0 then
-				(
-					in coordsys parent nmesh.pos = pos
-					in coordsys local scale nmesh scaletion
-					in coordsys world rotate nmesh (rotation*nmesh.parent.rotation)--(eulerangles rotation.x rotation.y rotation.z)
-				)
-				else
-				(
-					in coordsys world nmesh.pos = pos
-					in coordsys world scale nmesh scaletion
-					in coordsys world rotate nmesh rotation
-				)
-				*/
-
-				/*
+				-- Create an edit_normals modifier
+				-- (because setting them with setnormal() doesn't seem to work...)
 				mesh_norm = edit_normals()
 				addmodifier nmesh mesh_norm
 				max modify mode
@@ -386,14 +335,17 @@ utility MafiaImport "4DS Import v4.1"
 					)
 				)*/
 
+				lmod = MafLOD()
+				lmod.lodNum = (l-1)
+				lmod.lodDist = clippingRange
 
 				if l > 1 then (
-					lmod = MafLOD()
 					lmod.lodMesh = nmesh
-					lmod.lodNum = l
-					lmod.lodDist = clippingRange
-					addmodifier baseMesh lmod
+				)
 
+				addmodifier baseMesh lmod
+
+				if l > 1 then (
 					lsmod = MafSubtype()
 					lsmod.subtypeName = "LOD"
 					addmodifier nmesh lsmod
@@ -588,6 +540,9 @@ utility MafiaImport "4DS Import v4.1"
 
 			sector_layer = LayerManager.newLayerFromName "Sectors"
 			portal_layer = LayerManager.newLayerFromName "Portals"
+			dummy_layer = LayerManager.newLayerFromName "Dummies"
+
+			lod_layers = #()
 
 			objs = ReadShort f
 			for o=1 to objs do
@@ -792,6 +747,10 @@ utility MafiaImport "4DS Import v4.1"
 
 					nmesh.name = meshname
 					ApplyTransformations3 nmesh parentID pos scaletion rotation
+
+					dummy_layer.addnode nmesh
+
+					hide nmesh
 				)
 
 				--TARGET
