@@ -21,12 +21,29 @@ utility MafiaImport "4DS Import v4.1"
 		result
 	)
 
+	fn ReadPoint3 f = (
+		x = ReadFloat f
+		y = ReadFloat f
+		z = ReadFloat f
+		p3 = point3 x y z
+		p3
+	)
+
+	fn ReadPoint2 f = (
+		x = ReadFloat f
+		y = ReadFloat f
+		p2 = point2 x y
+		p2
+	)
+
 	fn ReadHeader f = (
 		fourcc = ReadLong f
 		version = ReadShort f
 		if version!=29 do MessageBox "4DS version is not 29 - strange"
 		timestamp = ReadLongLong f
 	)
+
+
 
 	fn ReadMats f numMats = (
 
@@ -212,14 +229,20 @@ utility MafiaImport "4DS Import v4.1"
 				tverts_array = #()
 				faces_array = #()
 
-				verts_count = readshort f #unsigned
+				numVerts = readshort f #unsigned
 
-				verts_array.count = verts_count
-				--normals_array.count = verts_count
-				tverts_array.count = verts_count
-
-				for i = 1 to verts_count do
+				for i = 1 to numVerts do
 				(
+					vert = ReadPoint3 f
+					append verts_array [vert.x, vert.z, vert.y]
+
+					normal = ReadPoint3 f
+					append normals_array (point3 normal.x normal.z normal.y)
+
+					uv = ReadPoint2 f
+					append tverts_array [uv.x, 1-uv.y, 0]
+
+					/*
 					x = readfloat f; y = readfloat f; z = readfloat f
 					norm_x = readfloat f; norm_y = readfloat f; norm_z = readfloat f
 					u = readfloat f; v = readfloat f
@@ -228,34 +251,35 @@ utility MafiaImport "4DS Import v4.1"
 					p3 = point3 norm_x norm_z norm_y
 					append normals_array p3
 					tverts_array[i] = [u, 1-v, 0]
+					*/
 				)
 
 
-				facegroups_count = readbyte f #unsigned
+				numFacegroups = readbyte f #unsigned
 
 				--mult = MultiMaterial()
-				--mult.numsubs=facegroups_count
+				--mult.numsubs=numFacegroups
 
 				material_array = #()
 
 				totalCount = 1
-				for i = 1 to facegroups_count do (
+				for i = 1 to numFacegroups do (
 
-					faces_count = readshort f #unsigned
-					for j = 1 to faces_count do (
+					numFaces = readshort f #unsigned
+					for j = 1 to numFaces do (
 						a = readshort f #unsigned
 						b = readshort f #unsigned
 						c = readshort f #unsigned
-						--vertex indexes in face are counted from 1 in 3ds Max
-						append faces_array [a+1, c+1, b+1]
+
+						append faces_array [a+1, c+1, b+1]	--face vertex indexes are 1-based in 3ds Max
 						--append material_array i
 						--setFaceMatID nmesh totalCount i
 						totalCount = totalCount + 1
 					)
 					matnum = (ReadShort f)
 
-					for j = 1 to faces_count do (
-						append material_array (matnum+1)
+					for j = 1 to numFaces do (
+						append material_array (matnum+1)	-- coz nomaterial is 0 in mafia, but 1 in max
 					)
 				)
 
@@ -370,12 +394,17 @@ utility MafiaImport "4DS Import v4.1"
 
 		bones=ReadByte f
 		ReadLong f
+
+		dmin = ReadPoint3 f
+		dmax = ReadPoint3 f
+		/*
 		dminx = ReadFloat f
 		dminy = ReadFloat f
 		dminz = ReadFloat f
 		dmaxx = ReadFloat f
 		dmaxy = ReadFloat f
 		dmaxz = ReadFloat f
+		*/
 
 		for bo=1 to bones do
 		(
@@ -387,12 +416,17 @@ utility MafiaImport "4DS Import v4.1"
 			ReadLong f
 			numfloats=ReadLong f
 			numbone=ReadLong f
+
+			dmin = ReadPoint3 f
+			dmax = ReadPoint3 f
+			/*
 			dminx = ReadFloat f
 			dminy = ReadFloat f
 			dminz = ReadFloat f
 			dmaxx = ReadFloat f
 			dmaxy = ReadFloat f
 			dmaxz = ReadFloat f
+			*/
 			for b=1 to numfloats do
 			(
 				ReadFloat f
@@ -413,12 +447,19 @@ utility MafiaImport "4DS Import v4.1"
 			for bb=1 to (morphPoses*morphedVerts) do
 			(
 				-- morph bounds
+
+				smin = ReadPoint3 f
+				smax = ReadPoint3 f
+
+
+				/*
 				sminx=ReadFloat f
 				sminy=ReadFloat f
 				sminz=ReadFloat f
 				smaxx=ReadFloat f
 				smaxy=ReadFloat f
 				smaxz=ReadFloat f
+				*/
 			)
 
 			ReadByte f
@@ -430,17 +471,29 @@ utility MafiaImport "4DS Import v4.1"
 		)
 
 		-- min/max
+		dmin = ReadPoint3 f
+		dmax = ReadPoint3 f
+
+		/*
 		dminx = ReadFloat f
 		dminy = ReadFloat f
 		dminz = ReadFloat f
 		dmaxx = ReadFloat f
 		dmaxy = ReadFloat f
 		dmaxz = ReadFloat f
+		*/
 
+
+		v = ReadPoint3 f 	-- ?
+
+		/*
 		vx = ReadFloat f
 		vy = ReadFloat f
 		vz = ReadFloat f
-		vvv = ReadFloat f
+		*/
+
+
+		vvv = ReadFloat f	-- ?
 
 		--ReadByte f
 		--MessageBox ((ftell f) as string)
@@ -493,29 +546,54 @@ utility MafiaImport "4DS Import v4.1"
 			ReadFloat f
 		)
 
-		verts=ReadLong f
-		faces=ReadLong f
+		numVerts=ReadLong f
+		numFaces=ReadLong f
+		verts_array = #()
+		faces_array = #()
+
+		for i = 1 to numVerts do (
+			p3 = ReadPoint3 f
+			append verts_array [p3.x, p3.z, p3.y]
+		)
+
+		for i = 1 to numFaces do (
+			p3 = ReadPoint3 f      --face vertex index
+			append faces_array [p3.x, p3.z, p3.y]
+		)
+
+		nmesh = mesh vertices:verts_array faces:faces_array
+		nmesh.name = mobj._name
+		if mobj._parentID!=0 do nmesh.parent=mobj._parentID
+
+
+
+		/*
+
+		numVerts=ReadLong f
+		numFaces=ReadLong f
 		nmesh = editable_mesh()
 		nmesh.name=mobj._name
 		if mobj._parentID!=0 do nmesh.parent=mobj._parentID
-		setNumVerts nmesh verts
-		setNumFaces nmesh faces true
+		setNumVerts nmesh numVerts
+		setNumFaces nmesh numFaces true
 
-		for ve=0 to (verts-1) do
+		for ve=0 to (numVerts-1) do
 		(
 			vx=ReadFloat f
 			vy=ReadFloat f
 			vz=ReadFloat f
-			setVert nmesh (ve+1) vx (vz) vy--fucking max' yz swaping
+			setVert nmesh (ve+1) vx vz vy--fucking max' yz swaping
 		)
 
-		for t=1 to faces do
+		for t=1 to numFaces do
 		(
 			v0=(ReadShort f)+1
 			v1=(ReadShort f)+1
 			v2=(ReadShort f)+1
 			setFace nmesh t v0 v2 v1
 		)
+
+		*/
 
 
 		--ApplyTransformations nmesh mobj._parentID pos scaletion rotation
@@ -531,13 +609,18 @@ utility MafiaImport "4DS Import v4.1"
 		--	readbyte f
 		--)
 
+		/*
 		dminx = ReadFloat f
 		dminy = ReadFloat f
 		dminz = ReadFloat f
 		dmaxx = ReadFloat f
 		dmaxy = ReadFloat f
-		dmaxz = ReadFloat f
-		nmesh.boxsize=[(abs (dminx-dmaxx)),(abs (dminy-dmaxy)),(abs (dminz-dmaxz))]
+		dmaxz = ReadFloat f*/
+
+		dmin = ReadPoint3 f
+		dmax = ReadPoint3 f
+
+		nmesh.boxsize=[(abs (dmin.x-dmax.x)),(abs (dmin.y-dmax.y)),(abs (dmin.z-dmax.z))]
 
 		nmesh.name = mobj._name
 		--ApplyTransformations3 nmesh mobj._parentID pos scaletion rotation
@@ -563,10 +646,8 @@ utility MafiaImport "4DS Import v4.1"
 		faces_array = #()
 
 		for i = 1 to verts do (
-			x = readfloat f
-			y = readfloat f
-			z = readfloat f
-			append verts_array [x, z, y]
+			vert = ReadPoint3 f
+			append verts_array [vert.x, vert.z, vert.y]
 		)
 
 		for i = 1 to faces do (
@@ -588,13 +669,8 @@ utility MafiaImport "4DS Import v4.1"
 
 		nmesh.wirecolor = (color 255 199 0)
 
-		dminx = ReadFloat f
-		dminy = ReadFloat f
-		dminz = ReadFloat f
-		dmaxx = ReadFloat f
-		dmaxy = ReadFloat f
-		dmaxz = ReadFloat f
-		--mesh.boxsize=[(abs (dminx-dmaxx)),(abs (dminy-dmaxy)),(abs (dminz-dmaxz))]
+		dmin = ReadPoint3 f
+		dmax = ReadPoint3 f
 
 		portals_array = #()
 
@@ -614,20 +690,18 @@ utility MafiaImport "4DS Import v4.1"
 			pmesh = mesh numverts:numVerts numfaces:10
 			pmesh.name = mobj._name+"__PORTAL"+(bb as string)
 
-			verts_array = #()
+			vertIds_array = #()
 
 			for cc=1 to numVerts do
 			(
-				vx = readfloat f
-				vy = readfloat f
-				vz = readfloat f
-				setVert pmesh cc vx vz vy
-				append verts_array cc
+				vert = ReadPoint3 f
+				setVert pmesh cc vert.x vert.z vert.y
+				append vertIds_array cc
 			)
 
 			p = convertToPoly pmesh
 
-			polyop.createPolygon p verts_array
+			polyop.createPolygon p vertIds_array
 
 			--verts_list = #()
 			--for cc=1 to p.numVerts do
@@ -692,6 +766,8 @@ utility MafiaImport "4DS Import v4.1"
 		ReadLong f
 	)
 
+
+
 	struct MObject
 	(
 		_parentID,
@@ -711,15 +787,12 @@ utility MafiaImport "4DS Import v4.1"
 		if parentID > 0 do parentID = Mafia_Object[parentID]
 		mobj._parentID = parentID
 
-		x = ReadFloat f
-		y = ReadFloat f
-		z = ReadFloat f
-		mobj._offset = point3 x z y
 
-		sx = ReadFloat f
-		sy = ReadFloat f
-		sz = ReadFloat f
-		mobj._scale = point3 sx sz sy
+		pos = ReadPoint3 f
+		mobj._offset = point3 pos.x pos.z pos.y
+
+		scl = ReadPoint3 f
+		mobj._scale = point3 scl.x scl.z scl.y
 
 		rw = ReadFloat f
 		rx = ReadFloat f
