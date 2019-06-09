@@ -6,14 +6,12 @@ utility MafiaImport "4DS Import v4.1"
 (
 	local Mafia_Material
 	local Mafia_Object
-	local pos
-	local scaletion
-	local rotation
-	--local parentID
-	local meshname = ""
 	local nmesh
 	local godMat
 	local lod_layers
+	local dummy_layer
+	local sector_layer
+	local portal_layer
 
 	fn ReadText f _length = (
 		local result = ""
@@ -124,6 +122,23 @@ utility MafiaImport "4DS Import v4.1"
 
 	)
 
+	fn ApplyTransform nmesh mobj = (
+		pos = mobj._offset
+		scaletion = mobj._scale
+		rotation = mobj._rotation
+		parentID = mobj._parentID
+		matrix = matrix3 [scaletion.x, 0, 0] [0, scaletion.y, 0] [0, 0, scaletion.z] [pos.x, pos.y, pos.z]
+		rotMatrix = ((inverse rotation) as matrix3)
+
+		if parentID != 0 then
+		(
+			nmesh.transform = (rotMatrix*matrix*nmesh.parent.transform)
+		)
+		else (
+			nmesh.transform = (rotMatrix*matrix)
+		)
+	)
+
 	--parent local parent
 	fn ApplyTransformations nmesh par pos scl rot = (
 		if par != 0 then
@@ -172,14 +187,15 @@ utility MafiaImport "4DS Import v4.1"
 		)
 	)
 
-	fn ReadStandardMesh f parentID = (
+	fn ReadStandardMesh f mobj = (
 		duplicateID = ReadShort f
 		local baseMesh
 		if duplicateID != 0 then --MessageBox "Duplicate!"
 		(
 			--MessageBox "Duplicate!"
 			nmesh = reference Mafia_Object[duplicateID]
-			ApplyTransformations nmesh parentID pos scaletion rotation
+			--ApplyTransformations nmesh mobj._parentID pos scaletion rotation
+			ApplyTransform nmesh mobj
 			baseMesh = nmesh
 		)
 		else
@@ -267,24 +283,24 @@ utility MafiaImport "4DS Import v4.1"
 
 				nmesh.wirecolor = color 0 0 0
 
-				if parentID!=0 do nmesh.parent=parentID
+				if mobj._parentID!=0 do nmesh.parent=mobj._parentID
 
 
 				if l == 1 then (
 					baseMesh = nmesh
-					nmesh.name = meshname
+					nmesh.name = mobj._name
 				)
 				if l > 1 then (
-					nmesh.name = meshname+"__LOD"+((l-1) as string)
+					nmesh.name = mobj._name+"__LOD"+((l-1) as string)
 					hide nmesh
 				)
 
 				/*
 				if numLods > 1 then (
-					nmesh.name = meshname+"_LOD"+((l-1) as string)
+					nmesh.name = mobj._name+"_LOD"+((l-1) as string)
 				)
 				else (
-					nmesh.name = meshname
+					nmesh.name = mobj._name
 				)*/
 
 				if numLods > 1 then (
@@ -302,19 +318,10 @@ utility MafiaImport "4DS Import v4.1"
 
 
 
-				--ApplyTransformations2 nmesh parentID pos scaletion rotation
+				--ApplyTransformations2 nmesh mobj._parentID pos scaletion rotation
 
 
-				matrix = matrix3 [scaletion.x, 0, 0] [0, scaletion.y, 0] [0, 0, scaletion.z] [pos.x, pos.y, pos.z]
-				rotMatrix = ((inverse rotation) as matrix3)
-
-				if parentID != 0 then
-				(
-					nmesh.transform = (rotMatrix*matrix*nmesh.parent.transform)
-				)
-				else (
-					nmesh.transform = (rotMatrix*matrix)
-				)
+				ApplyTransform nmesh mobj
 
 
 				/*
@@ -358,8 +365,8 @@ utility MafiaImport "4DS Import v4.1"
 		baseMesh
 	)
 
-	fn ReadSingleMesh f parentID = (
-		nmesh=ReadStandardMesh f
+	fn ReadSingleMesh f mobj = (
+		nmesh=ReadStandardMesh f mobj
 
 		bones=ReadByte f
 		ReadLong f
@@ -393,7 +400,7 @@ utility MafiaImport "4DS Import v4.1"
 		)
 	)
 
-	fn ReadBaseMorph f parentID = (
+	fn ReadBaseMorph f mobj = (
 		-- morph
 		morphPoses = ReadByte f
 		morphVGroups = ReadByte f
@@ -440,17 +447,17 @@ utility MafiaImport "4DS Import v4.1"
 		--MessageBox ((ftell f) as string)
 	)
 
-	fn ReadSingleMorph f parentID = (
-		ReadSingleMesh f
-		ReadBaseMorph f
+	fn ReadSingleMorph f mobj = (
+		ReadSingleMesh f mobj
+		ReadBaseMorph f mobj
 	)
 
-	fn ReadMorph f parentID = (
-		nmesh=ReadStandardMesh f
-		ReadBaseMorph f
+	fn ReadMorph f mobj = (
+		nmesh=ReadStandardMesh f mobj
+		ReadBaseMorph f mobj
 	)
 
-	fn ReadBillboard f parentID = (
+	fn ReadBillboard f mobj = (
 		nmesh=ReadStandardMesh f
 		ReadByte f   --axis
 		ReadByte f
@@ -459,7 +466,7 @@ utility MafiaImport "4DS Import v4.1"
 		ReadByte f   --axis mode
 	)
 
-	fn ReadGlow f parentID = (
+	fn ReadGlow f mobj = (
 
 		b = ReadByte f
 		for bb=1 to b do
@@ -469,16 +476,17 @@ utility MafiaImport "4DS Import v4.1"
 		)
 
 		nmesh=dummy()
-		if parentID!=0 do nmesh.parent=parentID
+		if mobj._parentID!=0 do nmesh.parent=mobj._parentID
 
 		nmesh.boxsize=[1,1,1]
 
-		nmesh.name = meshname
-		ApplyTransformations nmesh parentID pos scaletion rotation
+		nmesh.name = mobj._name
+		--ApplyTransformations nmesh mobj._parentID pos scaletion rotation
+		ApplyTransform nmesh mobj
 
 	)
 
-	fn ReadMirror f parentID = (
+	fn ReadMirror f mobj = (
 
 		for bb=1 to 30 do
 		(
@@ -488,8 +496,8 @@ utility MafiaImport "4DS Import v4.1"
 		verts=ReadLong f
 		faces=ReadLong f
 		nmesh = editable_mesh()
-		nmesh.name=meshname
-		if parentID!=0 do nmesh.parent=parentID
+		nmesh.name=mobj._name
+		if mobj._parentID!=0 do nmesh.parent=mobj._parentID
 		setNumVerts nmesh verts
 		setNumFaces nmesh faces true
 
@@ -510,9 +518,226 @@ utility MafiaImport "4DS Import v4.1"
 		)
 
 
-		ApplyTransformations nmesh parentID pos scaletion rotation
+		--ApplyTransformations nmesh mobj._parentID pos scaletion rotation
+		ApplyTransform nmesh mobj
 	)
 
+	fn ReadDummy f mobj = (
+		nmesh=dummy()
+		if mobj._parentID!=0 do nmesh.parent=mobj._parentID
+
+		--for bb=1 to 24 do
+		--(
+		--	readbyte f
+		--)
+
+		dminx = ReadFloat f
+		dminy = ReadFloat f
+		dminz = ReadFloat f
+		dmaxx = ReadFloat f
+		dmaxy = ReadFloat f
+		dmaxz = ReadFloat f
+		nmesh.boxsize=[(abs (dminx-dmaxx)),(abs (dminy-dmaxy)),(abs (dminz-dmaxz))]
+
+		nmesh.name = mobj._name
+		--ApplyTransformations3 nmesh mobj._parentID pos scaletion rotation
+
+		ApplyTransform nmesh mobj
+
+
+		dummy_layer.addnode nmesh
+
+		hide nmesh
+	)
+
+	fn ReadSector f mobj = (
+		ReadLong f --always 2049
+		ReadLong f --always 0
+
+
+		verts = ReadLong f
+		faces = ReadLong f
+
+
+		verts_array = #()
+		faces_array = #()
+
+		for i = 1 to verts do (
+			x = readfloat f
+			y = readfloat f
+			z = readfloat f
+			append verts_array [x, z, y]
+		)
+
+		for i = 1 to faces do (
+			a = readshort f #unsigned
+			b = readshort f #unsigned
+			c = readshort f #unsigned
+			append faces_array [a+1, c+1, b+1] --vertex indexes in face are counted from 1 in 3ds Max
+		)
+
+		nmesh = mesh vertices:verts_array faces:faces_array
+		nmesh.name = mobj._name
+		if mobj._parentID != 0 do nmesh.parent=mobj._parentID
+
+
+		--ApplyTransformations nmesh mobj._parentID pos scaletion rotation
+		ApplyTransform nmesh mobj
+
+		sector_layer.addnode nmesh
+
+		nmesh.wirecolor = (color 255 199 0)
+
+		dminx = ReadFloat f
+		dminy = ReadFloat f
+		dminz = ReadFloat f
+		dmaxx = ReadFloat f
+		dmaxy = ReadFloat f
+		dmaxz = ReadFloat f
+		--mesh.boxsize=[(abs (dminx-dmaxx)),(abs (dminy-dmaxy)),(abs (dminz-dmaxz))]
+
+		portals_array = #()
+
+		numPortals = ReadByte f
+		for bb=1 to numPortals do
+		(
+			numVerts = readbyte f
+			readlong f  --always 4
+			readlong f
+			readlong f
+			readlong f
+			readlong f  --flags?
+
+			nearRange = readfloat f
+			farRange = readfloat f
+
+			pmesh = mesh numverts:numVerts numfaces:10
+			pmesh.name = mobj._name+"__PORTAL"+(bb as string)
+
+			verts_array = #()
+
+			for cc=1 to numVerts do
+			(
+				vx = readfloat f
+				vy = readfloat f
+				vz = readfloat f
+				setVert pmesh cc vx vz vy
+				append verts_array cc
+			)
+
+			p = convertToPoly pmesh
+
+			polyop.createPolygon p verts_array
+
+			--verts_list = #()
+			--for cc=1 to p.numVerts do
+			--(
+			--	append verts_list (p.verts)
+			--)
+			--result = polyop.capHolesByVert p p.verts
+			--print (result as string)
+
+			p.wirecolor = (color 255 0 199)
+
+
+			portal_layer.addnode p
+
+
+			modp = MafSubtype()
+			modp.subtypeName = "Portal"
+			modp.nearRange = nearRange
+			modp.farRange = farRange
+			addmodifier pmesh modp
+
+			p.parent = nmesh
+
+			append portals_array p
+		)
+
+		--group portals_array name:"PORTALS"
+
+		cyp = "Sektor"
+	)
+
+	fn ReadTarget f mobj = (
+		nmesh=dummy()
+		nmesh.name=mobj._name
+		nmesh.boxsize=[1,1,1]
+		if mobj._parentID!=0 do nmesh.parent=mobj._parentID
+		--ApplyTransformations nmesh mobj._parentID pos scaletion rotation
+		ApplyTransform nmesh mobj
+
+		ReadByte f
+		ReadByte f
+		bob=ReadByte f
+
+		for b=1 to bob do
+		(
+			ReadShort f
+		)
+	)
+
+	fn ReadBone f mobj = (
+		nmesh=dummy()
+		nmesh.name=mobj._name
+		nmesh.boxsize=[0.1,0.1,0.1]
+		if mobj._parentID!=0 do nmesh.parent=mobj._parentID
+		--ApplyTransformations nmesh mobj._parentID pos scaletion rotation
+		ApplyTransform nmesh mobj
+		for b=1 to 64 do
+		(
+			--rotation matrix
+			ReadByte f
+		)
+		ReadLong f
+	)
+
+	struct MObject
+	(
+		_parentID,
+		_offset,
+		_scale,
+		_rotation,
+		_cullingFlags,
+		_name,
+		_params
+	)
+
+	fn ReadBaseObject f = (
+		mobj = MObject()
+
+		parentID = ReadShort f
+		if parentID < 0 do parentID = 0
+		if parentID > 0 do parentID = Mafia_Object[parentID]
+		mobj._parentID = parentID
+
+		x = ReadFloat f
+		y = ReadFloat f
+		z = ReadFloat f
+		mobj._offset = point3 x z y
+
+		sx = ReadFloat f
+		sy = ReadFloat f
+		sz = ReadFloat f
+		mobj._scale = point3 sx sz sy
+
+		rw = ReadFloat f
+		rx = ReadFloat f
+		ry = ReadFloat f
+		rz = ReadFloat f
+		mobj._rotation = quat rx rz ry rw
+
+		mobj._cullingFlags = ReadByte f #unsigned
+
+		nameLength = ReadByte f #unsigned
+		mobj._name = ReadText f nameLength
+
+		paramsLength = ReadByte f #unsigned
+		mobj._params = ReadText f paramsLength
+
+
+		mobj
+	)
 
 	button btn "Import" pos:[55,10] width:50
 
@@ -563,230 +788,35 @@ utility MafiaImport "4DS Import v4.1"
 
 				nmesh = 0
 
-				parentID = 0
+				mobj = ReadBaseObject f
 
-
-				parentID = ReadShort f
-				if parentID < 0 do parentID = 0
-				if parentID > 0 do parentID = Mafia_Object[parentID]
-
-
-				x = ReadFloat f
-				y = ReadFloat f
-				z = ReadFloat f
-				pos = point3 x z y
-
-				sx = ReadFloat f
-				sy = ReadFloat f
-				sz = ReadFloat f
-				scaletion = point3 sx sz sy
-
-				rw = ReadFloat f
-				rx = ReadFloat f
-				ry = ReadFloat f
-				rz = ReadFloat f
-				rotation = quat rx rz ry rw
-
-
-				--MessageBox (frameType as string)
-
-				cullingFlags = ReadByte f #unsigned
-
-				nameLength = ReadByte f #unsigned
-				meshname = readText f nameLength
-
-				userPropertiesLength = ReadByte f #unsigned
-				userProperties = readText f userPropertiesLength
-
-				print (" ****** " + meshname)
+				print (" ****** " + mobj._name)
 
 				cyp = "idk"
 
 				--VISUAL OBJECT
 				if objectType == 1 do
 				(
-					if visualType == 0 do nmesh=ReadStandardMesh f parentID
-					if visualType == 2 do ReadSingleMesh f parentID
-					if visualType == 3 do ReadSingleMorph f parentID
-					if visualType == 4 do ReadBillboard f parentID
-					if visualType == 5 do ReadMorph f parentID
-					if visualType == 6 do ReadGlow f parentID
-					if visualType == 8 do ReadMirror f parentID
+					if visualType == 0 do nmesh=ReadStandardMesh f mobj
+					if visualType == 2 do ReadSingleMesh f mobj
+					if visualType == 3 do ReadSingleMorph f mobj
+					if visualType == 4 do ReadBillboard f mobj
+					if visualType == 5 do ReadMorph f mobj
+					if visualType == 6 do ReadGlow f mobj
+					if visualType == 8 do ReadMirror f mobj
 				)
 
 				--SECTOR
-				if objectType==5 do
-				(
-
-					ReadLong f --always 2049
-					ReadLong f --always 0
-
-
-					verts = ReadLong f
-					faces = ReadLong f
-
-
-					verts_array = #()
-					faces_array = #()
-
-					for i = 1 to verts do (
-						x = readfloat f
-						y = readfloat f
-						z = readfloat f
-						append verts_array [x, z, y]
-					)
-
-					for i = 1 to faces do (
-						a = readshort f #unsigned
-						b = readshort f #unsigned
-						c = readshort f #unsigned
-						append faces_array [a+1, c+1, b+1] --vertex indexes in face are counted from 1 in 3ds Max
-					)
-
-					nmesh = mesh vertices:verts_array faces:faces_array
-					nmesh.name = meshname
-					if parentID != 0 do nmesh.parent=parentID
-
-
-					ApplyTransformations nmesh parentID pos scaletion rotation
-
-					sector_layer.addnode nmesh
-
-					nmesh.wirecolor = (color 255 199 0)
-
-					dminx = ReadFloat f
-					dminy = ReadFloat f
-					dminz = ReadFloat f
-					dmaxx = ReadFloat f
-					dmaxy = ReadFloat f
-					dmaxz = ReadFloat f
-					--mesh.boxsize=[(abs (dminx-dmaxx)),(abs (dminy-dmaxy)),(abs (dminz-dmaxz))]
-
-					portals_array = #()
-
-					numPortals = ReadByte f
-					for bb=1 to numPortals do
-					(
-						numVerts = readbyte f
-						readlong f  --always 4
-						readlong f
-						readlong f
-						readlong f
-						readlong f  --flags?
-
-						nearRange = readfloat f
-						farRange = readfloat f
-
-						pmesh = mesh numverts:numVerts numfaces:10
-						pmesh.name = meshname+"__PORTAL"+(bb as string)
-
-						verts_array = #()
-
-						for cc=1 to numVerts do
-						(
-							vx = readfloat f
-							vy = readfloat f
-							vz = readfloat f
-							setVert pmesh cc vx vz vy
-							append verts_array cc
-						)
-
-						p = convertToPoly pmesh
-
-						polyop.createPolygon p verts_array
-
-						--verts_list = #()
-						--for cc=1 to p.numVerts do
-						--(
-						--	append verts_list (p.verts)
-						--)
-						--result = polyop.capHolesByVert p p.verts
-						--print (result as string)
-
-						p.wirecolor = (color 255 0 199)
-
-
-						portal_layer.addnode p
-
-
-						modp = MafSubtype()
-						modp.subtypeName = "Portal"
-						modp.nearRange = nearRange
-						modp.farRange = farRange
-						addmodifier pmesh modp
-
-						p.parent = nmesh
-
-						append portals_array p
-					)
-
-					--group portals_array name:"PORTALS"
-
-					cyp = "Sektor"
-
-				)
+				if objectType==5 do ReadSector f mobj
 
 				--DUMMY
-				if objectType==6 do
-				(
-					nmesh=dummy()
-					if parentID!=0 do nmesh.parent=parentID
-
-					--for bb=1 to 24 do
-					--(
-					--	readbyte f
-					--)
-
-					dminx = ReadFloat f
-					dminy = ReadFloat f
-					dminz = ReadFloat f
-					dmaxx = ReadFloat f
-					dmaxy = ReadFloat f
-					dmaxz = ReadFloat f
-					nmesh.boxsize=[(abs (dminx-dmaxx)),(abs (dminy-dmaxy)),(abs (dminz-dmaxz))]
-
-					nmesh.name = meshname
-					ApplyTransformations3 nmesh parentID pos scaletion rotation
-
-					dummy_layer.addnode nmesh
-
-					hide nmesh
-				)
+				if objectType==6 do ReadDummy f mobj
 
 				--TARGET
-				if objectType==7 do
-				(
-					nmesh=dummy()
-					nmesh.name=meshname
-					nmesh.boxsize=[1,1,1]
-					if parentID!=0 do nmesh.parent=parentID
-					ApplyTransformations nmesh parentID pos scaletion rotation
-
-					ReadByte f
-					ReadByte f
-					bob=ReadByte f
-
-					for b=1 to bob do
-					(
-						ReadShort f
-					)
-				)
+				if objectType==7 do ReadTarget f mobj
 
 				--BONE
-				if objectType==10 do
-				(
-					nmesh=dummy()
-					nmesh.name=meshname
-					nmesh.boxsize=[0.1,0.1,0.1]
-					if parentID!=0 do nmesh.parent=parentID
-					ApplyTransformations nmesh parentID pos scaletion rotation
-					for b=1 to 64 do
-					(
-						--rotation matrix
-						ReadByte f
-					)
-					ReadLong f
-				)
+				if objectType==10 do ReadBone f mobj
 
 
 
@@ -800,25 +830,15 @@ utility MafiaImport "4DS Import v4.1"
 
 				modf = MafSubtype()
 				modf.subtypeName = cyp
-				modf.cullFlags = cullingFlags
-				modf.userParams = userProperties
+				modf.cullFlags = mobj._cullingFlags
+				modf.userParams = mobj._params
 				addmodifier nmesh modf
 
-				Mafia_Object = append Mafia_Object nmesh
-				--MessageBox (meshname+((ftell f)as string))
-
+				append Mafia_Object nmesh
 			)
 
-			--select (for o in objects where isKindOf o Editable_Mesh collect o)
-			--modPanel.addModToSelection (Normalmodifier flip:on) ui:on
-			--max move
-			--convertTo selection Editable_Patch
-			--convertTo selection  TriMeshGeometry
-			--selection.wirecolor = color 0 0 0
-			--collapsestack selection
 
-
-			MessageBox ("Last object: "+meshname+" ends at "+((ftell f) as string))
+			--MessageBox ("Last object: "+meshname+" ends at "+((ftell f) as string))
 			fclose f
 
 		)
