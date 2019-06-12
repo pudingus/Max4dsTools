@@ -132,7 +132,7 @@ fn nowgo pbar file =
 			for i = 2 to mat.numSubs do
 			(
 				append scenemats2 mat[i]
-				print (mat[i] as string)
+				--print (mat[i] as string)
 			)
 		)
 		else (
@@ -141,7 +141,7 @@ fn nowgo pbar file =
 	)
 
 	numMats = scenemats2.count
-	print (numMats as string)
+	--print (numMats as string)
 
 	-- Materials
 	WriteShort f numMats
@@ -151,7 +151,7 @@ fn nowgo pbar file =
 	for mat in scenemats2 do
 	(
 		writeMaterial f mat
-		print (mat.name as string)
+		--print (mat.name as string)
 	)
 
 	-- Objects
@@ -189,10 +189,14 @@ fn nowgo pbar file =
 		objmod = mods[MafObject]
 		stype = ""
 		if objmod != undefined then stype = objmod.subtypeName
-		
+
 		if  (( (Superclassof obj == Geometryclass and classof obj != TargetObject) or classof obj == Dummy)) and ((mods[MafPortal] == undefined) and (ss != "$lod")) then
 		(
-			print (" *******  " + ((obj.name) as string))
+			--print (" *******  " + ((obj.name) as string))
+
+			--displayTempPrompt ((obj.name) as string) 1000
+
+
 			objnum += 1
 			parentArray = append parentArray obj
 
@@ -234,9 +238,6 @@ fn nowgo pbar file =
 				WriteFloat f obj.scale.x
 				WriteFloat f obj.scale.z
 				WriteFloat f obj.scale.y
-				--rot = obj.rotation as eulerangles
-				--rot.z = -rot.z
-				--q = (rot as quat)
 				q = obj.rotation
 				WriteFloat f q.w
 				WriteFloat f q.x
@@ -298,47 +299,22 @@ fn nowgo pbar file =
 
 				numportals = 0
 				portals_array = #()
-				--pmods_array = #()
-
-				--kek = (obj.children as array)
 
 				for child in obj.children  do (
-					--print (child as string)
-					--mods = child.modifiers
-					/*for mm = 1 to mods.count do
-					(
-						if classof mods[mm] == MafSubtype then
-						(
-							pmod = mods[mm].subtypeName
-						)
-					)*/
 					if child.modifiers[MafPortal] != undefined then (
 						append portals_array child
-						--append pmods_array cmod
 						numportals += 1
-						print (obj.name+" -- portal: "+child.name)
 					)
 				)
-
-				--portals_array = $
 
 				WriteByte f numportals
 				for portal in portals_array do (
 					writebyte f (portal.numverts) #unsigned
-					print ("portal: " + portal.name + "   numverts: " + (portal.numverts as string))
 
 					writelong f 4 #unsigned  						--always 4
 					for j = 1 to 4 do writelong f 0  #unsigned  	--unknown
 
-					/*mods = portal.modifiers
-					local modp
-					for mm = 1 to mods.count do
-					(
-						if classof mods[mm] == MafSubtype then
-						(
-							modp = mods[mm]
-						)
-					)*/
+
 					modp = portal.modifiers[MafPortal]
 
 					nearRange = 0
@@ -348,8 +324,6 @@ fn nowgo pbar file =
 						farRange = modp.farRange
 					)
 
-					print ("nearRange: " + (nearRange as string) + " -- farRange: " + (farRange as string))
-
 					writefloat f nearRange   --nearrange
 					writefloat f farRange  --farrange
 
@@ -358,7 +332,6 @@ fn nowgo pbar file =
 						writefloat f pos.x
 						writefloat f pos.z
 						writefloat f pos.y
-						print ("vert --- " + (pos as string))
 					)
 				)
 
@@ -401,39 +374,14 @@ fn nowgo pbar file =
 
 					numLods = lods_array.count
 					writebyte f numLods
-					print ("numlods: " + (numlods as string))
+					--print ("numlods: " + (numlods as string))
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*
-					lodMods = #()
-					for mm = 1 to mods.count do
-					(
-						if classof mods[mm] == MafLOD then insertItem mods[mm] lodMods 1 --append lodMods mods[mm]
-					)
-
-
-					numLods = lodMods.count
-					WriteByte f numLods
-
-					print ("numlods: " + (numlods as string))*/
 
 					lodmesh = obj.mesh
 
 					for ilod = 1 to numLods do
 					(
-						print ("ilod: " + (ilod as string))
+						--print ("ilod: " + (ilod as string))
 						--lodmod = lodMods[ilod]
 						--lodmod = lods_array[ilod]
 						--print ("lodnum: " + (lodmod.lodNum as string))
@@ -526,7 +474,8 @@ fn nowgo pbar file =
 			)
 
 			progress += percent
-			pbar.value = progress
+			--pbar.value = progress
+			progressUpdate progress
 		)
 	)
 
@@ -534,19 +483,18 @@ fn nowgo pbar file =
 	fclose f
 )
 
-utility MafiaExport "4DS Export v4.1"
-(
-	button b "Export"
-	progressbar pbar
-	label bout "Original author Mr F"
 
-	on b pressed do
-	(
-		file=GetSaveFileName types:"4DS file (*.4ds)|*.4ds|All files (*.*)|*.*"
-		if file!=undefined do
-		(
-			nowgo pbar file
-			pbar.value = 100
-		)
-	)
+------------------------
+---------MAIN-----------
+------------------------
+
+file=GetSaveFileName types:"4DS file (*.4ds)|*.4ds|All files (*.*)|*.*"
+if file!=undefined do
+(
+	--pbar = m4ds_pbar
+	progressStart "4ds exporting"
+	--setProgressCancel false
+	nowgo pbar file
+	progressEnd()
+	--pbar.value = 100
 )

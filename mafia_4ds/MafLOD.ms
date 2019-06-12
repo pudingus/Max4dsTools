@@ -1,6 +1,6 @@
 plugin modifier MafLOD
 name:"4DS LOD"
-classID:#(0x25688ade, 0x191139f7)
+classID:#(0x6b1c55fc, 0xdfe4a7)
 (
 	parameters main rollout:params
 	(
