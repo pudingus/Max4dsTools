@@ -1,29 +1,5 @@
 -- 4ds exporter script by Mr F
 
--- mat flags:
--- 1 default
--- 9 reflectionMapEnable ? alpha reflection?
--- 10 smth about reflmap??
--- 11 additive reflection
--- 13 - ? smth about reflmap?? other formula?
--- 16 additional ??
--- 17 - ?
--- 18  - ?
--- 19 diffuseMapEnable ?
--- 20 reflectionMapEnable ?
--- 21 - ?
--- 22 - ?
--- 23 - ?
--- 24 mipmapping
--- 26 animalpha
--- 27 anim
--- 29 twoSided
--- 30 colorkey
--- 31 - ? smth about reflection ?
--- 32 opacityMapEnable
--- 32 addblend
-
-
 fn WriteText f _text = (
 	if _text == undefined then (
 		MessageBox "writetext undefined"
@@ -211,6 +187,9 @@ fn nowgo pbar file =
 		ss = substring obj.name 1 4
 		mods = obj.modifiers
 		objmod = mods[MafObject]
+		stype = ""
+		if objmod != undefined then stype = objmod.subtypeName
+		
 		if  (( (Superclassof obj == Geometryclass and classof obj != TargetObject) or classof obj == Dummy)) and ((mods[MafPortal] == undefined) and (ss != "$lod")) then
 		(
 			print (" *******  " + ((obj.name) as string))
@@ -282,10 +261,11 @@ fn nowgo pbar file =
 
 
 			writetext f obj.name
-			userParams = objmod.userParams
+
+			userParams = ""
+			if objmod != undefined then userParams = objmod.userParams
+
 			writetext f userParams        --write user parameters
-
-
 
 			if stype == "Sector" then (
 				WriteLong f 2049 #unsigned

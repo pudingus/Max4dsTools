@@ -139,19 +139,21 @@ utility MafiaImport "4DS Import v4.1"
 	)
 
 	fn ApplyTransform nmesh mobj = (
+
 		pos = mobj._offset
 		scaletion = mobj._scale
 		rotation = mobj._rotation
 		parentID = mobj._parentID
-		matrix = matrix3 [scaletion.x, 0, 0] [0, scaletion.y, 0] [0, 0, scaletion.z] [pos.x, pos.y, pos.z]
+		matrix = matrix3 [1, 0, 0] [0, 1, 0] [0, 0, 1] [pos.x, pos.y, pos.z]
+		sclMatrix = matrix3 [scaletion.x, 0, 0] [0, scaletion.y, 0] [0, 0, scaletion.z] [0, 0, 0]
 		rotMatrix = ((inverse rotation) as matrix3)
 
 		if parentID != 0 then
 		(
-			nmesh.transform = (rotMatrix*matrix*nmesh.parent.transform)
+			nmesh.transform = (sclMatrix*rotMatrix*matrix*nmesh.parent.transform)
 		)
 		else (
-			nmesh.transform = (rotMatrix*matrix)
+			nmesh.transform = (sclMatrix*rotMatrix*matrix)
 		)
 	)
 
@@ -314,10 +316,6 @@ utility MafiaImport "4DS Import v4.1"
 
 				lmod = MafLOD()
 				--lmod.lodNum = (l-1)
-				if l == 1 then (
-					lmod.isParent = true
-					print (lmod.isParent as string)
-				)
 				lmod.lodDist = clippingRange
 
 				--if l > 1 then (
