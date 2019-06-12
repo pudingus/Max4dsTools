@@ -12,6 +12,7 @@ utility MafiaImport "4DS Import v4.1"
 	local dummy_layer
 	local sector_layer
 	local portal_layer
+	local cyp
 
 	fn ReadText f _length = (
 		local result = ""
@@ -39,11 +40,9 @@ utility MafiaImport "4DS Import v4.1"
 	fn ReadHeader f = (
 		fourcc = ReadLong f
 		version = ReadShort f
-		if version!=29 do MessageBox "4DS version is not 29 - strange"
+		if version!=29 do MessageBox "Unknown 4DS version - importing might not work correctly"
 		timestamp = ReadLongLong f
 	)
-
-
 
 	fn ReadMats f numMats = (
 
@@ -156,54 +155,6 @@ utility MafiaImport "4DS Import v4.1"
 		)
 	)
 
-	--parent local parent
-	fn ApplyTransformations nmesh par pos scl rot = (
-		if par != 0 then
-		(
-			in coordsys parent nmesh.pos = pos
-			in coordsys local scale nmesh scl
-			in coordsys parent rotate nmesh (rot*nmesh.parent.rotation)--(eulerangles rotation.x rotation.y rotation.z)
-		)
-		else
-		(
-			in coordsys world nmesh.pos = pos
-			in coordsys world scale nmesh scl
-			in coordsys world rotate nmesh rot
-		)
-	)
-
-	--parent local world
-	fn ApplyTransformations2 nmesh par pos scl rot = (
-		if par != 0 then
-		(
-			in coordsys parent nmesh.pos = pos
-			in coordsys local scale nmesh scl
-			in coordsys world rotate nmesh (rot*nmesh.parent.rotation)--(eulerangles rotation.x rotation.y rotation.z)
-		)
-		else
-		(
-			in coordsys world nmesh.pos = pos
-			in coordsys world scale nmesh scl
-			in coordsys world rotate nmesh rot
-		)
-	)
-
-	--parent parent parent     DUMMY
-	fn ApplyTransformations3 nmesh par pos scl rot = (
-		if par != 0 then
-		(
-			in coordsys parent nmesh.pos = pos
-			in coordsys parent scale nmesh (scl*nmesh.parent.scale)
-			in coordsys parent rotate nmesh (rot*nmesh.parent.rotation)--(eulerangles rotation.x rotation.y rotation.z)
-		)
-		else
-		(
-			in coordsys world nmesh.pos = pos
-			in coordsys world scale nmesh scl
-			in coordsys world rotate nmesh rot
-		)
-	)
-
 	fn ReadStandardMesh f mobj = (
 		duplicateID = ReadShort f
 		local baseMesh
@@ -241,17 +192,6 @@ utility MafiaImport "4DS Import v4.1"
 
 					uv = ReadPoint2 f
 					append tverts_array [uv.x, 1-uv.y, 0]
-
-					/*
-					x = readfloat f; y = readfloat f; z = readfloat f
-					norm_x = readfloat f; norm_y = readfloat f; norm_z = readfloat f
-					u = readfloat f; v = readfloat f
-					verts_array[i] = [x, z, y]
-
-					p3 = point3 norm_x norm_z norm_y
-					append normals_array p3
-					tverts_array[i] = [u, 1-v, 0]
-					*/
 				)
 
 
@@ -279,7 +219,7 @@ utility MafiaImport "4DS Import v4.1"
 					matnum = (ReadShort f)
 
 					for j = 1 to numFaces do (
-						append material_array (matnum+1)	-- coz nomaterial is 0 in mafia, but 1 in max
+						append material_array (matnum+1)	-- coz 'nomaterial' is 0 in mafia, but 1 in max
 					)
 				)
 
@@ -307,16 +247,19 @@ utility MafiaImport "4DS Import v4.1"
 
 				nmesh.wirecolor = color 0 0 0
 
-				if mobj._parentID!=0 do nmesh.parent=mobj._parentID
 
+				if mobj._parentID!=0 do nmesh.parent=mobj._parentID
 
 				if l == 1 then (
 					baseMesh = nmesh
 					nmesh.name = mobj._name
+
 				)
 				if l > 1 then (
-					nmesh.name = mobj._name+"__LOD"+((l-1) as string)
-					hide nmesh
+					nmesh.name = "$lod" + ((l-1) as string) + "__" + mobj._name
+					--nmesh.name = mobj._name+"__LOD"+((l-1) as string)
+					--hide nmesh
+
 				)
 
 				/*
@@ -329,23 +272,26 @@ utility MafiaImport "4DS Import v4.1"
 
 				if numLods > 1 then (
 					if lod_layers[l] == undefined then (
-						layer = LayerManager.newLayerFromName ("LOD LAYER " + ((l-1) as string))
+						layer = LayerManager.newLayerFromName ("LOD" + ((l-1) as string) + " LAYER")
 						layer.addnode nmesh
 						append lod_layers layer
+
 					)
 					else (
 						layer = lod_layers[l]
 						layer.addnode nmesh
 					)
+					if l > 1 then layer.ishidden = true
+
+
 				)
 
 
 
-
-				--ApplyTransformations2 nmesh mobj._parentID pos scaletion rotation
-
-
 				ApplyTransform nmesh mobj
+
+				if l > 1 then
+					nmesh.parent = baseMesh
 
 
 				/*
@@ -367,25 +313,30 @@ utility MafiaImport "4DS Import v4.1"
 				)*/
 
 				lmod = MafLOD()
-				lmod.lodNum = (l-1)
+				--lmod.lodNum = (l-1)
+				if l == 1 then (
+					lmod.isParent = true
+					print (lmod.isParent as string)
+				)
 				lmod.lodDist = clippingRange
 
-				if l > 1 then (
-					lmod.lodMesh = nmesh
-				)
+				--if l > 1 then (
+				--	lmod.lodMesh = nmesh
+				--)
 
-				addmodifier baseMesh lmod
+				addmodifier nmesh lmod
 
-				if l > 1 then (
-					lsmod = MafSubtype()
-					lsmod.subtypeName = "LOD"
-					addmodifier nmesh lsmod
-				)
+				--if l > 1 then (
+				--	lsmod = MafSubtype()
+				--	lsmod.subtypeName = "LOD"
+				--	addmodifier nmesh lsmod
+				--)
 
 
 				nmesh.material = godMat
 			)
 		)
+		--cyp = "Mesh"
 		baseMesh
 	)
 
@@ -397,14 +348,6 @@ utility MafiaImport "4DS Import v4.1"
 
 		dmin = ReadPoint3 f
 		dmax = ReadPoint3 f
-		/*
-		dminx = ReadFloat f
-		dminy = ReadFloat f
-		dminz = ReadFloat f
-		dmaxx = ReadFloat f
-		dmaxy = ReadFloat f
-		dmaxz = ReadFloat f
-		*/
 
 		for bo=1 to bones do
 		(
@@ -419,19 +362,13 @@ utility MafiaImport "4DS Import v4.1"
 
 			dmin = ReadPoint3 f
 			dmax = ReadPoint3 f
-			/*
-			dminx = ReadFloat f
-			dminy = ReadFloat f
-			dminz = ReadFloat f
-			dmaxx = ReadFloat f
-			dmaxy = ReadFloat f
-			dmaxz = ReadFloat f
-			*/
+
 			for b=1 to numfloats do
 			(
 				ReadFloat f
 			)
 		)
+		--cyp = "SingleMesh"
 	)
 
 	fn ReadBaseMorph f mobj = (
@@ -447,19 +384,8 @@ utility MafiaImport "4DS Import v4.1"
 			for bb=1 to (morphPoses*morphedVerts) do
 			(
 				-- morph bounds
-
 				smin = ReadPoint3 f
 				smax = ReadPoint3 f
-
-
-				/*
-				sminx=ReadFloat f
-				sminy=ReadFloat f
-				sminz=ReadFloat f
-				smaxx=ReadFloat f
-				smaxy=ReadFloat f
-				smaxz=ReadFloat f
-				*/
 			)
 
 			ReadByte f
@@ -474,40 +400,21 @@ utility MafiaImport "4DS Import v4.1"
 		dmin = ReadPoint3 f
 		dmax = ReadPoint3 f
 
-		/*
-		dminx = ReadFloat f
-		dminy = ReadFloat f
-		dminz = ReadFloat f
-		dmaxx = ReadFloat f
-		dmaxy = ReadFloat f
-		dmaxz = ReadFloat f
-		*/
-
-
 		v = ReadPoint3 f 	-- ?
 
-		/*
-		vx = ReadFloat f
-		vy = ReadFloat f
-		vz = ReadFloat f
-		*/
-
-
 		vvv = ReadFloat f	-- ?
-
-		--ReadByte f
-		--MessageBox ((ftell f) as string)
-		--MessageBox ((ftell f) as string)
 	)
 
 	fn ReadSingleMorph f mobj = (
 		ReadSingleMesh f mobj
 		ReadBaseMorph f mobj
+		--cyp = "SingleMorph"
 	)
 
 	fn ReadMorph f mobj = (
 		nmesh=ReadStandardMesh f mobj
 		ReadBaseMorph f mobj
+		--cyp = "Morph"
 	)
 
 	fn ReadBillboard f mobj = (
@@ -517,6 +424,7 @@ utility MafiaImport "4DS Import v4.1"
 		ReadByte f
 		ReadByte f
 		ReadByte f   --axis mode
+		--cyp = "Billboard"
 	)
 
 	fn ReadGlow f mobj = (
@@ -530,13 +438,11 @@ utility MafiaImport "4DS Import v4.1"
 
 		nmesh=dummy()
 		if mobj._parentID!=0 do nmesh.parent=mobj._parentID
-
 		nmesh.boxsize=[1,1,1]
-
 		nmesh.name = mobj._name
-		--ApplyTransformations nmesh mobj._parentID pos scaletion rotation
-		ApplyTransform nmesh mobj
 
+		ApplyTransform nmesh mobj
+		--cyp = "Glow"
 	)
 
 	fn ReadMirror f mobj = (
@@ -565,72 +471,28 @@ utility MafiaImport "4DS Import v4.1"
 		nmesh.name = mobj._name
 		if mobj._parentID!=0 do nmesh.parent=mobj._parentID
 
-
-
-		/*
-
-		numVerts=ReadLong f
-		numFaces=ReadLong f
-		nmesh = editable_mesh()
-		nmesh.name=mobj._name
-		if mobj._parentID!=0 do nmesh.parent=mobj._parentID
-		setNumVerts nmesh numVerts
-		setNumFaces nmesh numFaces true
-
-		for ve=0 to (numVerts-1) do
-		(
-			vx=ReadFloat f
-			vy=ReadFloat f
-			vz=ReadFloat f
-			setVert nmesh (ve+1) vx vz vy--fucking max' yz swaping
-		)
-
-		for t=1 to numFaces do
-		(
-			v0=(ReadShort f)+1
-			v1=(ReadShort f)+1
-			v2=(ReadShort f)+1
-			setFace nmesh t v0 v2 v1
-		)
-
-		*/
-
-
-		--ApplyTransformations nmesh mobj._parentID pos scaletion rotation
 		ApplyTransform nmesh mobj
+		--cyp = "Mirror"
 	)
 
 	fn ReadDummy f mobj = (
 		nmesh=dummy()
 		if mobj._parentID!=0 do nmesh.parent=mobj._parentID
 
-		--for bb=1 to 24 do
-		--(
-		--	readbyte f
-		--)
-
-		/*
-		dminx = ReadFloat f
-		dminy = ReadFloat f
-		dminz = ReadFloat f
-		dmaxx = ReadFloat f
-		dmaxy = ReadFloat f
-		dmaxz = ReadFloat f*/
-
 		dmin = ReadPoint3 f
 		dmax = ReadPoint3 f
 
-		nmesh.boxsize=[(abs (dmin.x-dmax.x)),(abs (dmin.y-dmax.y)),(abs (dmin.z-dmax.z))]
-
+		nmesh.boxsize=[(abs (dmin.x-dmax.x)),(abs (dmin.z-dmax.z)),(abs (dmin.y-dmax.y))]
 		nmesh.name = mobj._name
-		--ApplyTransformations3 nmesh mobj._parentID pos scaletion rotation
 
 		ApplyTransform nmesh mobj
 
 
+		if dummy_layer == undefined then dummy_layer = LayerManager.newLayerFromName "Dummies"
 		dummy_layer.addnode nmesh
 
 		hide nmesh
+		--cyp = "Dummy"
 	)
 
 	fn ReadSector f mobj = (
@@ -662,9 +524,9 @@ utility MafiaImport "4DS Import v4.1"
 		if mobj._parentID != 0 do nmesh.parent=mobj._parentID
 
 
-		--ApplyTransformations nmesh mobj._parentID pos scaletion rotation
 		ApplyTransform nmesh mobj
 
+		if sector_layer == undefined then sector_layer = LayerManager.newLayerFromName "Sectors"
 		sector_layer.addnode nmesh
 
 		nmesh.wirecolor = (color 255 199 0)
@@ -688,7 +550,8 @@ utility MafiaImport "4DS Import v4.1"
 			farRange = readfloat f
 
 			pmesh = mesh numverts:numVerts numfaces:10
-			pmesh.name = mobj._name+"__PORTAL"+(bb as string)
+			pmesh.name = "$portal" + ((bb-1) as string) + "__" + mobj._name
+			--pmesh.name = mobj._name+"__PORTAL"+(bb as string)
 
 			vertIds_array = #()
 
@@ -714,14 +577,19 @@ utility MafiaImport "4DS Import v4.1"
 			p.wirecolor = (color 255 0 199)
 
 
+			if portal_layer == undefined then portal_layer = LayerManager.newLayerFromName "Portals"
 			portal_layer.addnode p
 
 
-			modp = MafSubtype()
-			modp.subtypeName = "Portal"
-			modp.nearRange = nearRange
-			modp.farRange = farRange
-			addmodifier pmesh modp
+			--modp = MafSubtype()
+			--modp.subtypeName = "Portal"
+			--addmodifier pmesh modp
+
+			modpp = MafPortal()
+			modpp.nearRange = nearRange
+			modpp.farRange = farRange
+			addmodifier p modpp
+
 
 			p.parent = nmesh
 
@@ -730,7 +598,7 @@ utility MafiaImport "4DS Import v4.1"
 
 		--group portals_array name:"PORTALS"
 
-		cyp = "Sektor"
+		cyp = "Sector"
 	)
 
 	fn ReadTarget f mobj = (
@@ -738,7 +606,7 @@ utility MafiaImport "4DS Import v4.1"
 		nmesh.name=mobj._name
 		nmesh.boxsize=[1,1,1]
 		if mobj._parentID!=0 do nmesh.parent=mobj._parentID
-		--ApplyTransformations nmesh mobj._parentID pos scaletion rotation
+
 		ApplyTransform nmesh mobj
 
 		ReadByte f
@@ -749,6 +617,7 @@ utility MafiaImport "4DS Import v4.1"
 		(
 			ReadShort f
 		)
+		--cyp = "Target"
 	)
 
 	fn ReadBone f mobj = (
@@ -756,7 +625,6 @@ utility MafiaImport "4DS Import v4.1"
 		nmesh.name=mobj._name
 		nmesh.boxsize=[0.1,0.1,0.1]
 		if mobj._parentID!=0 do nmesh.parent=mobj._parentID
-		--ApplyTransformations nmesh mobj._parentID pos scaletion rotation
 		ApplyTransform nmesh mobj
 		for b=1 to 64 do
 		(
@@ -764,6 +632,7 @@ utility MafiaImport "4DS Import v4.1"
 			ReadByte f
 		)
 		ReadLong f
+		--cyp = "Bone"
 	)
 
 
@@ -836,9 +705,9 @@ utility MafiaImport "4DS Import v4.1"
 
 			--OBJECTS
 
-			sector_layer = LayerManager.newLayerFromName "Sectors"
-			portal_layer = LayerManager.newLayerFromName "Portals"
-			dummy_layer = LayerManager.newLayerFromName "Dummies"
+			sector_layer = LayerManager.getLayerFromName "Sectors"
+			portal_layer = LayerManager.getLayerFromName "Portals"
+			dummy_layer = LayerManager.getLayerFromName "Dummies"
 
 			lod_layers = #()
 
@@ -848,12 +717,12 @@ utility MafiaImport "4DS Import v4.1"
 
 				objectType = ReadByte f
 				local visualType
-				local visualFlags
+				local renderFlags = 0
 
 				if objectType == 1 do --visual object
 				(
 					visualType = ReadByte f
-					visualFlags = ReadShort f
+					renderFlags = ReadShort f
 				)
 
 
@@ -865,7 +734,7 @@ utility MafiaImport "4DS Import v4.1"
 
 				print (" ****** " + mobj._name)
 
-				cyp = "idk"
+				cyp = ""
 
 				--VISUAL OBJECT
 				if objectType == 1 do
@@ -901,11 +770,12 @@ utility MafiaImport "4DS Import v4.1"
 				--print "kekrrrr"
 
 
-				modf = MafSubtype()
+				modf = MafObject()
 				modf.subtypeName = cyp
+				modf.renderFlags = renderFlags
 				modf.cullFlags = mobj._cullingFlags
 				modf.userParams = mobj._params
-				addmodifier nmesh modf
+				addmodifier nmesh modf before:(nmesh.modifiers.count)
 
 				append Mafia_Object nmesh
 			)

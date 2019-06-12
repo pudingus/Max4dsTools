@@ -188,17 +188,9 @@ fn nowgo pbar file =
 	(
 		if ( (Superclassof obj == Geometryclass  and classof obj != TargetObject) or classof obj == Dummy) then
 		(
-
+			ss = substring obj.name 1 4
 			mods = obj.modifiers
-			stype = ""
-			for mm = 1 to mods.count do
-			(
-				if classof mods[mm] == MafSubtype then
-				(
-					stype = mods[mm].subtypeName
-				)
-			)
-			if ((stype != "Portal") and (stype != "LOD")) then count=count+1
+			if ((mods[MafPortal] == undefined) and (ss != "$lod")) then count=count+1
 
 		)
 	)
@@ -216,26 +208,17 @@ fn nowgo pbar file =
 
 	for obj in $* do
 	(
+		ss = substring obj.name 1 4
 		mods = obj.modifiers
-		stype = ""
-		local modf
-		for mm = 1 to mods.count do
-		(
-			if classof mods[mm] == MafSubtype then
-			(
-				stype = mods[mm].subtypeName
-				modf = mods[mm]
-			)
-		)
-
-		if  (( (Superclassof obj == Geometryclass  and classof obj != TargetObject) or classof obj == Dummy)) and ((stype != "Portal") and (stype != "LOD")) then
+		objmod = mods[MafObject]
+		if  (( (Superclassof obj == Geometryclass and classof obj != TargetObject) or classof obj == Dummy)) and ((mods[MafPortal] == undefined) and (ss != "$lod")) then
 		(
 			print (" *******  " + ((obj.name) as string))
 			objnum += 1
 			parentArray = append parentArray obj
 
 			--object type
-			if stype == "Sektor" then
+			if stype == "Sector" then
 			(
 				WriteByte f 5
 			)
@@ -244,7 +227,7 @@ fn nowgo pbar file =
 			(
 				WriteByte f 6
 			)
-			if ((classof obj != Dummy) and (stype != "Sektor")) then
+			if ((classof obj != Dummy) and (stype != "Sector")) then
 			(
 				WriteLong f 704643073
 			)
@@ -282,8 +265,8 @@ fn nowgo pbar file =
 				WriteFloat f q.y
 			)
 
-			if modf == undefined then (
-				if stype == "Sektor" then
+			if objmod == undefined then (
+				if stype == "Sector" then
 				(
 					WriteByte f 125 #unsigned -- culling flag
 				)
@@ -292,19 +275,19 @@ fn nowgo pbar file =
 				)
 			)
 			else (
-				cullingFlags = modf.cullFlags
+				cullingFlags = objmod.cullFlags
 				writebyte f cullingFlags #unsigned
 			)
 
 
 
 			writetext f obj.name
-			userParams = modf.userParams
+			userParams = objmod.userParams
 			writetext f userParams        --write user parameters
 
 
 
-			if stype == "Sektor" then (
+			if stype == "Sector" then (
 				WriteLong f 2049 #unsigned
 				WriteLong f 0 #unsigned
 				WriteLong f (obj.numverts) #unsigned
@@ -335,24 +318,25 @@ fn nowgo pbar file =
 
 				numportals = 0
 				portals_array = #()
+				--pmods_array = #()
 
 				--kek = (obj.children as array)
 
-				for portal in obj.children  do (
-					--print (portal as string)
-					mods = portal.modifiers
-					pstype = ""
-					for mm = 1 to mods.count do
+				for child in obj.children  do (
+					--print (child as string)
+					--mods = child.modifiers
+					/*for mm = 1 to mods.count do
 					(
 						if classof mods[mm] == MafSubtype then
 						(
-							pstype = mods[mm].subtypeName
+							pmod = mods[mm].subtypeName
 						)
-					)
-					if pstype == "Portal" then (
-						append portals_array portal
+					)*/
+					if child.modifiers[MafPortal] != undefined then (
+						append portals_array child
+						--append pmods_array cmod
 						numportals += 1
-						print (obj.name+" -- portal: "+portal.name)
+						print (obj.name+" -- portal: "+child.name)
 					)
 				)
 
@@ -362,10 +346,11 @@ fn nowgo pbar file =
 				for portal in portals_array do (
 					writebyte f (portal.numverts) #unsigned
 					print ("portal: " + portal.name + "   numverts: " + (portal.numverts as string))
-					writelong f 4  #unsigned  --always 4
-					for j = 1 to 4 do writelong f 0  #unsigned  --unknown
 
-					mods = portal.modifiers
+					writelong f 4 #unsigned  						--always 4
+					for j = 1 to 4 do writelong f 0  #unsigned  	--unknown
+
+					/*mods = portal.modifiers
 					local modp
 					for mm = 1 to mods.count do
 					(
@@ -373,7 +358,8 @@ fn nowgo pbar file =
 						(
 							modp = mods[mm]
 						)
-					)
+					)*/
+					modp = portal.modifiers[MafPortal]
 
 					nearRange = 0
 					farRange = 0
@@ -401,6 +387,8 @@ fn nowgo pbar file =
 
 
 
+
+
 				if classof obj == Dummy then
 				(
 					in coordsys local
@@ -418,6 +406,37 @@ fn nowgo pbar file =
 				(
 					WriteShort f 0        --not duplicate
 
+
+					lods_array = #()
+					append lods_array obj
+					for i = 1 to 9 do (
+						for child in obj.children do (
+							ss = substring child.name 1 5   -- $lod1
+							if ss == ("$lod" + (i as string)) then (
+								append lods_array child
+							)
+						)
+
+					)
+
+					numLods = lods_array.count
+					writebyte f numLods
+					print ("numlods: " + (numlods as string))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
 					lodMods = #()
 					for mm = 1 to mods.count do
 					(
@@ -428,16 +447,17 @@ fn nowgo pbar file =
 					numLods = lodMods.count
 					WriteByte f numLods
 
-					print ("numlods: " + (numlods as string))
+					print ("numlods: " + (numlods as string))*/
 
 					lodmesh = obj.mesh
 
 					for ilod = 1 to numLods do
 					(
 						print ("ilod: " + (ilod as string))
-						lodmod = lodMods[ilod]
-						print ("lodnum: " + (lodmod.lodNum as string))
-						if ilod > 1 then lodmesh = lodmod.lodMesh.mesh
+						--lodmod = lodMods[ilod]
+						--lodmod = lods_array[ilod]
+						--print ("lodnum: " + (lodmod.lodNum as string))
+						if ilod > 1 then lodmesh = lods_array[ilod].mesh
 
 
 						--if (ilod == 1 and numLods > 1) then (
@@ -445,7 +465,8 @@ fn nowgo pbar file =
 						--)
 						--else writefloat f 0
 
-						writefloat f (lodmod.lodDist)
+
+						writefloat f (lods_array[ilod].modifiers[MafLod].lodDist)
 
 						-- VERTICES
 						numVerts= getnumverts lodmesh
@@ -549,37 +570,3 @@ utility MafiaExport "4DS Export v4.1"
 		)
 	)
 )
-
--- rollout i4exp "4DS Export v3"
--- (
--- 	group "4DS Export v3"
--- 	(
--- 		button b "Go"
--- 	--	button d "Split"
--- 		progressbar pbar
--- 		label bout "Original author Mr F"
--- 	)
---
--- 	on b pressed do
--- 	(
--- 		file=GetSaveFileName types:"4DS file (*.4ds)|*.4ds|All files (*.*)|*.*"
--- 	        	if file!=undefined do
--- 		(
--- 			nowgo pbar file
--- 			pbar.value = 100
--- 		)
--- 	)
---
--- 	on d pressed do
--- 	(
--- 		SplitVertsByMapVerts (convertToMesh selection[1])
--- 	)
--- )
-
--- mrfloater = newRolloutFloater "4DS" 320 125
--- addRollout i4exp mrfloater
-
---And all the ladies are like "Yes, yes".
---Another system under stress stress.
---Forget about it, lose that dress dress.
---Oh, give me a hug!z
