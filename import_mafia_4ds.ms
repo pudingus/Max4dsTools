@@ -25,7 +25,7 @@ fn ReadPoint3 f = (
 	x = ReadFloat f
 	y = ReadFloat f
 	z = ReadFloat f
-	p3 = point3 x y z
+	p3 = point3 x z y
 	p3
 )
 
@@ -48,27 +48,43 @@ fn ReadMats f numMats = (
 	numsubs = numMats + 1
 	godMat = multimaterial numsubs:numsubs
 	godmat[1] = undefined
-	godmat.name = "MAFIA_MATERIALS"
+	godmat.name = "$MAFIA_MATERIALS"
 
 	for m=1 to numMats do
 	(
-		mat = MafMat()
+		mat = MafMat4()
 		mat.name = "4DSMat"+(m as string)
 
 		flags = ReadLong f
 
-		HasEnv = ((bit.get flags 20) or (bit.get flags 9))
-		HasAlpha = (bit.get flags 31)
-		Anim = (bit.get flags 27)
-		Mask = (bit.get flags 30)
+		--Diffuse Map
+		mat.delegate.diffuseMapEnable = (bit.get flags 19)
 
+
+		mat.useColoring = (bit.get flags 28)
 		mat.useMips = (bit.get flags 24)
-		mat.useAddBlend = (bit.get flags 32)
-		mat.useAddRefl = (bit.get flags 11)
-		mat.diffReflAxis = (bit.get flags 13)
+		mat.delegate.twoSided = (bit.get flags 29)
+		mat.isAnimatedM = (bit.get flags 27)
+
+
+		--Environment Map
+		mat.delegate.reflectionMapEnable = (bit.get flags 20)
+
+
+		mat.envOverlay = (bit.get flags 9)
+		mat.envMultiply = (bit.get flags 10)
+		mat.envAdditive = (bit.get flags 11)
+		mat.YProj = (bit.get flags 13)
+		mat.YDetail = (bit.get flags 14)
+		mat.ZDetail = (bit.get flags 15)
+
+		--Additional Effect
+		mat.addEffect = (bit.get flags 16)
+		mat.delegate.opacityMapEnable = (bit.get flags 31)
+		--mat.useAlphaMap = (bit.get flags 31)
 		mat.useColorKey = (bit.get flags 30)
-		mat.useAnim = (bit.get flags 27)
-		mat.useAnimAlpha = (bit.get flags 26)
+		mat.useAddBlend = (bit.get flags 32)
+
 
 
 		mat.delegate.ambient.red = (ReadFloat f)*255
@@ -82,32 +98,28 @@ fn ReadMats f numMats = (
 		mat.delegate.selfIllumColor.blue = (ReadFloat f)*255
 		mat.delegate.opacity = (ReadFloat f)*100
 
-		if HasEnv==true do
+		if mat.delegate.reflectionMapEnable == true do
 		(
-			mat.delegate.reflectionMapEnable=true
 			mat.delegate.reflectionMapAmount = (ReadFloat f)*100
 			nameLength = readbyte f
 			envMapName = readtext f namelength
-			envtex = bitmaptex()
-			envtex.filename = envMapName
-			mat.delegate.reflectionMap = envtex;
-			--MessageBox (envMapName)
+			envMap = bitmaptex()
+			envMap.filename = envMapName
+			mat.delegate.reflectionMap = envMap;
 		)
 
 		diffMapNameLength = readbyte f
-		if diffMapNameLength!=0 do
+		if diffMapNameLength != 0 do
 		(
-			mat.delegate.diffuseMapEnable=true
-			diffMapName=readtext f diffMapNameLength
+			diffMapName = readtext f diffMapNameLength
 			diffMap = bitmaptex()
 			diffMap.filename = diffMapName
 			mat.delegate.diffuseMap = diffMap;
 			showTextureMap mat on
 		)
 
-		if HasAlpha==true do
+		if mat.delegate.opacityMapEnable == true do
 		(
-			mat.delegate.opacityMapEnable=true
 			alphaMapNameLength = readbyte f
 			alphaMapName=readtext f alphaMapNameLength
 			alphatex = bitmaptex()
@@ -115,7 +127,7 @@ fn ReadMats f numMats = (
 			mat.delegate.opacityMap = alphatex;
 		)
 
-		if Anim==true do
+		if mat.isAnimatedM == true do
 		(
 			--for bb=1 to 18 do
 			--(
@@ -123,7 +135,7 @@ fn ReadMats f numMats = (
 			--)
 			mat.animFrames = ReadLong f
 			ReadShort f
-			mat.animDelay = ReadLong f
+			mat.animPeriod = ReadLong f
 			ReadLong f
 			ReadLong f
 		)
@@ -156,6 +168,8 @@ fn ApplyTransform nmesh mobj = (
 	)
 )
 
+matidOrder = #()
+
 fn ReadStandardMesh f mobj = (
 	duplicateID = ReadShort f
 	local baseMesh
@@ -186,10 +200,10 @@ fn ReadStandardMesh f mobj = (
 			for i = 1 to numVerts do
 			(
 				vert = ReadPoint3 f
-				append verts_array [vert.x, vert.z, vert.y]
+				append verts_array [vert.x, vert.y, vert.z]
 
 				normal = ReadPoint3 f
-				append normals_array (point3 normal.x normal.z normal.y)
+				append normals_array [normal.x, normal.y, normal.z]
 
 				uv = ReadPoint2 f
 				append tverts_array [uv.x, 1-uv.y, 0]
@@ -203,6 +217,8 @@ fn ReadStandardMesh f mobj = (
 
 			material_array = #()
 
+			matidOrder = #()
+
 			totalCount = 1
 			for i = 1 to numFacegroups do (
 
@@ -213,34 +229,25 @@ fn ReadStandardMesh f mobj = (
 					c = readshort f #unsigned
 
 					append faces_array [a+1, c+1, b+1]	--face vertex indexes are 1-based in 3ds Max
-					--append material_array i
-					--setFaceMatID nmesh totalCount i
+
 					totalCount = totalCount + 1
 				)
 				matnum = (ReadShort f)
+				append matidOrder (matnum+1)
 
 				for j = 1 to numFaces do (
 					append material_array (matnum+1)	-- coz 'nomaterial' is 0 in mafia, but 1 in max
 				)
 			)
 
-			--nmesh = mesh vertices:verts_array faces:faces_array tverts:tverts_array
+
+
 			nmesh = mesh vertices:verts_array faces:faces_array materialIDs:material_array tverts:tverts_array
 
-
-			--setting normals for some reason crashes 3ds max
-			--for i = 1 to verts_count do
-			--(
-			--	normal = normals_array[i]
-			--	setNormal nmesh i normal
-			--)
 
 			buildTVFaces nmesh
 
 			for i = 1 to nmesh.numfaces do (
-				--id = material_array[i]
-				--print ("** face id: " + (i as string) + " -- mat id: " + id as string)
-				--setFaceMatID nmesh i id
 				setTVFace nmesh i (getFace nmesh i)
 			)
 
@@ -263,14 +270,6 @@ fn ReadStandardMesh f mobj = (
 
 			)
 
-			/*
-			if numLods > 1 then (
-				nmesh.name = mobj._name+"_LOD"+((l-1) as string)
-			)
-			else (
-				nmesh.name = mobj._name
-			)*/
-
 			if numLods > 1 then (
 				if lod_layers[l] == undefined then (
 					layer = LayerManager.newLayerFromName ("LOD" + ((l-1) as string) + " LAYER")
@@ -283,8 +282,6 @@ fn ReadStandardMesh f mobj = (
 					layer.addnode nmesh
 				)
 				if l > 1 then layer.ishidden = true
-
-
 			)
 
 
@@ -295,39 +292,35 @@ fn ReadStandardMesh f mobj = (
 				nmesh.parent = baseMesh
 
 
-			/*
-			-- Create an edit_normals modifier
-			-- (because setting them with setnormal() doesn't seem to work...)
-			mesh_norm = edit_normals()
-			addmodifier nmesh mesh_norm
-			max modify mode
-			modpanel.setcurrentobject mesh_norm
 
-			for i = 1 to nmesh.numfaces do
-			(
-				for j in 1 to 3 do
+
+			if MafiaTools.importNormals.checked == true then (
+				-- Create an edit_normals modifier
+				-- (because setting them with setnormal() doesn't seem to work...)
+				mesh_norm = edit_normals()
+				addmodifier nmesh mesh_norm
+				max modify mode
+				modpanel.setcurrentobject mesh_norm
+				for i = 1 to nmesh.numfaces do
 				(
-					local n = mesh_norm.getnormalid i j
-					local v = mesh_norm.getvertexid i j
-					mesh_norm.setnormal n normals_array[v]
+					for j in 1 to 3 do
+					(
+						local n = mesh_norm.getnormalid i j
+						local v = mesh_norm.getvertexid i j
+						--mesh_norm.SetFaceNormalSpecified i j
+						mesh_norm.SetNormalExplicit n
+						mesh_norm.setnormal n normals_array[v]
+					)
 				)
-			)*/
+			)
 
-			lmod = MafLOD()
-			--lmod.lodNum = (l-1)
+			lmod = MafLod4()
+			lmod.matidOrder = matidOrder
 			lmod.lodDist = clippingRange
-
-			--if l > 1 then (
-			--	lmod.lodMesh = nmesh
-			--)
 
 			addmodifier nmesh lmod
 
-			--if l > 1 then (
-			--	lsmod = MafSubtype()
-			--	lsmod.subtypeName = "LOD"
-			--	addmodifier nmesh lsmod
-			--)
+			print (matidOrder as string)
 
 
 			nmesh.material = godMat
@@ -456,12 +449,12 @@ fn ReadMirror f mobj = (
 
 	for i = 1 to numVerts do (
 		p3 = ReadPoint3 f
-		append verts_array [p3.x, p3.z, p3.y]
+		append verts_array [p3.x, p3.y, p3.z]
 	)
 
 	for i = 1 to numFaces do (
 		p3 = ReadPoint3 f      --face vertex index
-		append faces_array [p3.x, p3.z, p3.y]
+		append faces_array [p3.x, p3.y, p3.z]
 	)
 
 	nmesh = mesh vertices:verts_array faces:faces_array
@@ -479,7 +472,7 @@ fn ReadDummy f mobj = (
 	dmin = ReadPoint3 f
 	dmax = ReadPoint3 f
 
-	nmesh.boxsize=[(abs (dmin.x-dmax.x)),(abs (dmin.z-dmax.z)),(abs (dmin.y-dmax.y))]
+	nmesh.boxsize=[(abs (dmin.x-dmax.x)),(abs (dmin.y-dmax.y)),(abs (dmin.z-dmax.z))]
 	nmesh.name = mobj._name
 
 	ApplyTransform nmesh mobj
@@ -506,7 +499,7 @@ fn ReadSector f mobj = (
 
 	for i = 1 to verts do (
 		vert = ReadPoint3 f
-		append verts_array [vert.x, vert.z, vert.y]
+		append verts_array [vert.x, vert.y, vert.z]
 	)
 
 	for i = 1 to faces do (
@@ -555,7 +548,7 @@ fn ReadSector f mobj = (
 		for cc=1 to numVerts do
 		(
 			vert = ReadPoint3 f
-			setVert pmesh cc vert.x vert.z vert.y
+			setVert pmesh cc vert.x vert.y vert.z
 			append vertIds_array cc
 		)
 
@@ -563,13 +556,6 @@ fn ReadSector f mobj = (
 
 		polyop.createPolygon p vertIds_array
 
-		--verts_list = #()
-		--for cc=1 to p.numVerts do
-		--(
-		--	append verts_list (p.verts)
-		--)
-		--result = polyop.capHolesByVert p p.verts
-		--print (result as string)
 
 		p.wirecolor = (color 255 0 199)
 
@@ -577,12 +563,7 @@ fn ReadSector f mobj = (
 		if portal_layer == undefined then portal_layer = LayerManager.newLayerFromName "Portals"
 		portal_layer.addnode p
 
-
-		--modp = MafSubtype()
-		--modp.subtypeName = "Portal"
-		--addmodifier pmesh modp
-
-		modpp = MafPortal()
+		modpp = MafPortal4()
 		modpp.nearRange = nearRange
 		modpp.farRange = farRange
 		addmodifier p modpp
@@ -654,11 +635,8 @@ fn ReadBaseObject f = (
 	mobj._parentID = parentID
 
 
-	pos = ReadPoint3 f
-	mobj._offset = point3 pos.x pos.z pos.y
-
-	scl = ReadPoint3 f
-	mobj._scale = point3 scl.x scl.z scl.y
+	mobj._offset = ReadPoint3 f
+	mobj._scale = ReadPoint3 f
 
 	rw = ReadFloat f
 	rx = ReadFloat f
@@ -677,6 +655,18 @@ fn ReadBaseObject f = (
 
 	mobj
 )
+
+fn setCommandPanelRedraw act =
+(
+	WM_SETREDRAW = 0x000B
+	--windows.sendmessage (windows.getchildhwnd #max "Command Panel")[1] WM_SETREDRAW act 0
+
+	--windows.sendmessage (windows.getMAXHWND()) WM_SETREDRAW act 0
+
+	--windows.sendmessage (windows.getChildHWND #max "Command Panel")[1] WM_SETREDRAW act 0
+
+)
+
 
 
 ------------------------
@@ -715,6 +705,11 @@ if file!=undefined do
 
 	percent = 100.0 / numObjects
 	progress = 0
+
+	with redraw off (
+		--setCommandPanelRedraw 0
+		--disableRefMsgs()
+
 
 
 	for o=1 to numObjects do
@@ -775,18 +770,25 @@ if file!=undefined do
 		--print "kekrrrr"
 
 
-		modf = MafObject()
+		modf = MafObject4()
 		modf.subtypeName = cyp
 		modf.renderFlags = renderFlags
 		modf.cullFlags = mobj._cullingFlags
 		modf.userParams = mobj._params
-		addmodifier nmesh modf before:(nmesh.modifiers.count)
+		--addmodifier nmesh modf before:(nmesh.modifiers.count)
+		addmodifier nmesh modf
 
 		append Mafia_Object nmesh
 
 
 		progress += percent
 		progressUpdate progress
+	)
+	--enableRefMsgs()
+	--setCommandPanelRedraw 1
+	--completeredraw()
+
+
 	)
 
 

@@ -1,5 +1,5 @@
-plugin modifier MafObject
-name:"4DS Base Object"
+plugin modifier MafObject4
+name:"4DS Base Object v4"
 classID:#(0x61e87622, 0x3623b669)
 (
 	parameters main rollout:params

@@ -1,5 +1,5 @@
-plugin modifier MafPortal
-name:"4DS Sector Portal"
+plugin modifier MafPortal4
+name:"4DS Sector Portal v4"
 classID:#(0x4d93c49f, 0x658d5716)
 (
 	parameters main rollout:params
