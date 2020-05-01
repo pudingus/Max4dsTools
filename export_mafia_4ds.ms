@@ -390,6 +390,7 @@ fn nowgo file =
 					)
 				)
 			)
+			
 			in coordsys parent
 			(
 				WritePoint3 f obj.pos
@@ -401,6 +402,22 @@ fn nowgo file =
 				WriteFloat f q.z
 				WriteFloat f q.y
 			)
+			
+			/*otrans = obj.objectTransform 
+			if obj.parent != undefined then
+			(
+				otrans = obj.objectTransform * inverse obj.parent.objectTransform
+			)
+
+			WritePoint3 f otrans.translationpart
+			WritePoint3 f otrans.scalepart
+
+			q = otrans.rotationpart
+			WriteFloat f q.w
+			WriteFloat f q.x
+			WriteFloat f q.z
+			WriteFloat f q.y
+*/
 
 			if objmod == undefined then (
 				if stype == "Sector" then
@@ -532,36 +549,7 @@ fn nowgo file =
 
 
 
-						if MafiaTools.exportNormals.checked == true then (
-							local mesh_norm = lods_array[ilod].modifiers[Edit_Normals]
 
-							local norm_array = #()
-							norm_array.count = lods_array[ilod].numverts
-
-							-- Iterate through each normal and store its data for later use
-							if mesh_norm != undefined then
-							(
-								max modify mode
-								modpanel.setcurrentobject mesh_norm
-
-								for j = 1 to mesh_norm.getnumfaces() do
-								(
-									for k in 1 to 3 do
-									(
-										local n = mesh_norm.getnormalid j k
-										local v = mesh_norm.getvertexid j k
-
-										if norm_array[v] == undefined then
-											norm_array[v] = (mesh_norm.getnormal n)
-									)
-								)
-							)
-							else
-							(
-								for j = 1 to lods_array[ilod].numverts do
-									norm_array[j] = (getnormal lods_array[ilod] j)
-							)
-						)
 
 
 
@@ -571,6 +559,38 @@ fn nowgo file =
 							lodmesh = snapshotAsMesh lods_array[ilod]
 							if splitNormal == true then SplitVertsByNormals lodmesh
 							SplitVertsByMapVerts lodmesh
+
+
+							if MafiaTools.exportNormals.checked == true then (
+								local mesh_norm = lods_array[ilod].modifiers[Edit_Normals]
+
+								local norm_array = #()
+								norm_array.count = lods_array[ilod].numverts
+
+								-- Iterate through each normal and store its data for later use
+								if mesh_norm != undefined then
+								(
+									max modify mode
+									modpanel.setcurrentobject mesh_norm
+
+									for j = 1 to mesh_norm.getnumfaces() do
+									(
+										for k in 1 to 3 do
+										(
+											local n = mesh_norm.getnormalid j k
+											local v = mesh_norm.getvertexid j k
+
+											if norm_array[v] == undefined then
+												norm_array[v] = (mesh_norm.getnormal n)
+										)
+									)
+								)
+								else
+								(
+									for j = 1 to lods_array[ilod].numverts do
+										norm_array[j] = (getnormal lods_array[ilod] j)
+								)
+							)
 
 
 
@@ -880,7 +900,8 @@ fn nowgo file =
 ---------MAIN-----------
 ------------------------
 
-file=GetSaveFileName types:"4DS file (*.4ds)|*.4ds|All files (*.*)|*.*"
+asdfe = getFilenameFile maxFileName
+file=GetSaveFileName types:"4DS file (*.4ds)|*.4ds|All files (*.*)|*.*" filename:asdfe
 if file!=undefined do
 (
 	progressStart "4ds exporting"
