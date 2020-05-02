@@ -1,6 +1,3 @@
---4ds importer plugin for 3dsmax by Mr F
-
-
 
 
 Mafia_Material
@@ -34,6 +31,18 @@ fn ReadPoint2 f = (
 	y = ReadFloat f
 	p2 = point2 x y
 	p2
+)
+
+
+struct MObject
+(
+	_parentID,
+	_offset,
+	_scale,
+	_rotation,
+	_cullingFlags,
+	_name,
+	_params
 )
 
 
@@ -85,6 +94,9 @@ fn ApplyTransform nmesh mobj = (
 		nmesh.transform = (sclMatrix*rotMatrix*matrix)
 	)
 )
+
+n_mesh_array = #()
+n_normal_array = #()
 
 sstandardmeshes = 0
 fn ReadStandardMesh f mobj = (
@@ -161,6 +173,7 @@ fn ReadStandardMesh f mobj = (
 			buildTVFaces nmesh
 			for i = 1 to nmesh.numfaces do (
 				setTVFace nmesh i (getFace nmesh i)
+				setFaceSmoothGroup nmesh i 1
 			)
 
 			nmesh.wirecolor = color 0 0 0
@@ -202,25 +215,26 @@ fn ReadStandardMesh f mobj = (
 
 
 
-			if MafiaTools.importNormals.checked == true then (
-				-- Create an edit_normals modifier
-				-- (because setting them with setnormal() doesn't seem to work...)
-				mesh_norm = edit_normals()
-				addmodifier nmesh mesh_norm
-				max modify mode
-				modpanel.setcurrentobject mesh_norm
-				for i = 1 to nmesh.numfaces do
-				(
-					for j in 1 to 3 do
-					(
-						local n = mesh_norm.getnormalid i j
-						local v = mesh_norm.getvertexid i j
-						--mesh_norm.SetFaceNormalSpecified i j
-						mesh_norm.SetNormalExplicit n
-						mesh_norm.setnormal n normals_array[v]
-					)
-				)
-			)
+			-- if MafiaTools.importNormals.checked == true then (
+			-- 	-- Create an edit_normals modifier
+			-- 	-- (because setting them with setnormal() doesn't seem to work...)
+				
+			-- 	mesh_norm = edit_normals()
+			-- 	addmodifier nmesh mesh_norm
+			-- 	max modify mode
+			-- 	modpanel.setcurrentobject mesh_norm
+			-- 	for i = 1 to nmesh.numfaces do
+			-- 	(
+			-- 		for j in 1 to 3 do
+			-- 		(
+			-- 			local n = mesh_norm.getnormalid i j
+			-- 			local v = mesh_norm.getvertexid i j
+			-- 			--mesh_norm.SetFaceNormalSpecified i j
+			-- 			mesh_norm.SetNormalExplicit n
+			-- 			mesh_norm.setnormal n normals_array[v]
+			-- 		)
+			-- 	)
+			--)
 
 			lmod = MafLod4()
 			lmod.matidOrder = matidOrder
@@ -228,13 +242,19 @@ fn ReadStandardMesh f mobj = (
 
 			addmodifier nmesh lmod
 
-			print (matidOrder as string)
+			--print (matidOrder as string)
 
 
 			nmesh.material = godMat
+
+
+			append n_mesh_array nmesh
+			append n_normal_array normals_array
 		)
 	)
 	--cyp = "Mesh"
+
+
 
 	sstandardmeshes += 1
 
@@ -554,18 +574,6 @@ fn ReadBone f mobj = (
 	sbones += 1
 )
 
-struct MObject
-(
-	_parentID,
-	_offset,
-	_scale,
-	_rotation,
-	_cullingFlags,
-	_name,
-	_params
-)
-
-
 fn ReadHeader f = (
 	fourcc = ReadLong f
 	version = ReadShort f
@@ -584,7 +592,7 @@ fn ReadMaterials f = (
 	godmat[1] = undefined
 	godmat.name = "$MAFIA_MATERIALS"
 
-	for m=1 to numMats do
+	for m=2 to numsubs do
 	(
 		mat = MafMat4()
 		mat.name = "4DSMat"+(m as string)
@@ -675,7 +683,7 @@ fn ReadMaterials f = (
 		)
 
 
-		godMat[m+1] = mat
+		godMat[m] = mat
 		append Mafia_Material mat
 		--b = box()
 		--b.material=mat
@@ -683,6 +691,7 @@ fn ReadMaterials f = (
 
 )
 
+progress = 0
 sobjects = 0
 fn ReadObjects f = (
 	sector_layer = LayerManager.getLayerFromName "Sectors"
@@ -695,8 +704,13 @@ fn ReadObjects f = (
 
 	sobjects = numObjects
 
-	percent = 100.0 / numObjects
-	progress = 0
+	if MafiaTools.importNormals.checked == true then (
+		percent = 20.0 / numObjects
+	)
+	else (
+		percent = 100.0 / numObjects
+	)
+	
 
 	for o=1 to numObjects do
 	(
@@ -777,48 +791,104 @@ fn ReadObjects f = (
 file = getOpenFileName types:"4DS models (*.4ds)|*.4ds|All files (*.*)|*.*"
 if file != undefined do
 (
-	progressStart "4ds importing"
+    with redraw off (
+		progressStart "4ds importing"
 
-	start = timeStamp()
+		start = timeStamp()
 
-	Mafia_Material = #()
-	Mafia_Object = #()
+		Mafia_Material = #()
+		Mafia_Object = #()
 
-	f = fopen file "rb"
-	-- FILE START
-	ReadHeader f
+		f = fopen file "rb"
 
-	-- MATERIALS
-	ReadMaterials f	
-
-	--OBJECTS
-	ReadObjects f
+		disableRefMsgs() 
 
 
-	--MessageBox ("Last object: "+meshname+" ends at "+((ftell f) as string))
-	fclose f
+		-- FILE START
+		ReadHeader f
 
-	end = timeStamp()
+		-- MATERIALS
+		ReadMaterials f	
 
-	progressEnd()
+		--OBJECTS
+		ReadObjects f
 
-	Format "\n-----------------------------------------------------------\n"	
-	format "StandardMeshes: %\n" sstandardmeshes
-	format "SingleMeshes: %\n" ssinglemeshes
-	format "Morphs: %\n" smorphs
-	format "SingleMorphs: %\n" ssinglemorphs
-	format "Billboards: %\n" sbillboards
-	format "Glows: %\n" sglows
-	format "Mirrors: %\n" smirrors
-	format "Sectors: %\n" ssectors
-	format "Dummies: %\n" sdummies
-	format "Targets: %\n" stargets
-	format "Bones: %\n\n" sbones	
-
-	format "Materials: %\n" smaterials
-	format "Total objects: %\n\n" sobjects 
-
-	format "Processing took % seconds\n" ((end - start) / 1000.0)
+		enableRefMsgs()
 
 
+		if MafiaTools.importNormals.checked == true then (
+
+			percent = 80.0 / n_mesh_array.count
+
+			max modify mode
+			select n_mesh_array
+
+			norm = Edit_Normals()
+			modpanel.addmodtoselection norm
+
+			print (n_mesh_array.count as string)
+			print (n_normal_array.count as string)
+
+			disableRefMsgs() 
+			for i = 1 to n_mesh_array.count do
+			(
+				print (n_normal_array[i].count as string)
+				p = n_mesh_array[i]
+
+				pn = n_normal_array[i]
+				
+				for i = 1 to p.numverts do
+				(
+					my_verts = #{i} --define a bitArray specifying vertex 1
+					my_normals = #{} --define an empty bitArray to store the result
+					--call the method with the two bitArrays passed by-reference:
+					norm.ConvertVertexSelection &my_verts &my_normals node:p
+					n = (my_normals as array)[1]
+					--norm.SetNormalExplicit n node:p
+					norm.setnormal n pn[i] node:p
+				)
+
+				my_verts = #{1..p.numverts}
+				my_normals = #{}
+				norm.ConvertVertexSelection &my_verts &my_normals node:p
+				norm.MakeExplicit selection:my_normals node:p
+				
+				
+				progress += percent
+				progressUpdate progress
+			)
+
+
+			enableRefMsgs()
+
+			norm.RebuildNormals()
+			clearSelection()
+		)
+
+
+		--MessageBox ("Last object: "+meshname+" ends at "+((ftell f) as string))
+		fclose f
+
+		end = timeStamp()
+
+		progressEnd()
+
+		format "\n-----------------------------------------------------------\n"	
+		format "StandardMeshes: %\n" sstandardmeshes
+		format "SingleMeshes: %\n" ssinglemeshes
+		format "Morphs: %\n" smorphs
+		format "SingleMorphs: %\n" ssinglemorphs
+		format "Billboards: %\n" sbillboards
+		format "Glows: %\n" sglows
+		format "Mirrors: %\n" smirrors
+		format "Sectors: %\n" ssectors
+		format "Dummies: %\n" sdummies
+		format "Targets: %\n" stargets
+		format "Bones: %\n\n" sbones	
+
+		format "Materials: %\n" smaterials
+		format "Total objects: %\n\n" sobjects 
+
+		format "Processing took % seconds\n" ((end - start) / 1000.0)
+	)	
 )
