@@ -8,6 +8,8 @@ lod_layers
 dummy_layer
 sector_layer
 portal_layer
+bone_layer
+glow_layer
 
 fn ReadText f _length = (
 	local result = ""
@@ -213,6 +215,7 @@ fn ReadStandardMesh f mobj = (
 			lmod = MafLod4()
 			lmod.matidOrder = matidOrder
 			lmod.lodDist = clippingRange
+			lmod.dontOptimize = true			
 			addmodifier lmesh lmod
 
 			lmesh.material = godMat
@@ -329,15 +332,21 @@ sglows = 0
 fn ReadGlow f mobj = (
 
 	numGlows = ReadByte f
-	for bb=1 to numGlows do
+	for i = 1 to numGlows do
 	(
 		position = ReadFloat f
 		matID = ReadShort f
 	)
 
-	nnode=dummy()
+	--nnode=dummy()
 
-	nnode.boxsize=[1,1,1]
+	nnode = point()
+	nnode.constantscreensize = true
+	nnode.box = true
+
+	--nnode.boxsize=[1,1,1]
+	if glow_layer == undefined then glow_layer = LayerManager.newLayerFromName "Glows"
+	glow_layer.addnode nnode
 
 	print ("Glow (numGlows: " + (numGlows as string) + "): " + mobj._name)
 
@@ -384,12 +393,12 @@ fn ReadMirror f mobj = (
 
 sdummies = 0
 fn ReadDummy f mobj = (
-	nnode=dummy()
+	nnode = dummy()
 
 	dmin = ReadPoint3 f
 	dmax = ReadPoint3 f
 
-	nnode.boxsize=[(abs (dmin.x-dmax.x)),(abs (dmin.y-dmax.y)),(abs (dmin.z-dmax.z))]
+	nnode.boxsize = [(abs (dmin.x-dmax.x)), (abs (dmin.y-dmax.y)), (abs (dmin.z-dmax.z))]
 
 
 	if dummy_layer == undefined then dummy_layer = LayerManager.newLayerFromName "Dummies"
@@ -495,11 +504,7 @@ fn ReadSector f mobj = (
 stargets = 0
 fn ReadTarget f mobj = (
 	nnode = dummy()
-	--nnode.name = mobj._name
-	nnode.boxsize = [0.1,0.1,0.1]
-	--if mobj._parentID != 0 do nnode.parent = mobj._parentID
-
-	--ApplyTransform nnode mobj
+	nnode.boxsize = [0.1, 0.1, 0.1]
 
 	unk0 = ReadByte f
 	unk1 = ReadByte f
@@ -517,22 +522,26 @@ fn ReadTarget f mobj = (
 		print ("  linkId: " + (linkId as string) + " - " + Mafia_Object[linkid].name)
 	)
 
+	
+
 	stargets += 1
 )
 
 sbones = 0
 fn ReadBone f mobj = (
-	nnode=dummy()
-	--nnode.name=mobj._name
-	nnode.boxsize=[0.1,0.1,0.1]
-	for b=1 to 64 do
+	nnode = bone()
+	
+	for i = 1 to 64 do
 	(
 		--rotation matrix
 		ReadByte f
 	)
-	ReadLong f
+	boneId = ReadLong f
 
 	print ("Bone: " + mobj._name)
+
+	if bone_layer == undefined then bone_layer = LayerManager.newLayerFromName "Bones"
+	bone_layer.addnode nnode
 
 	sbones += 1
 )
@@ -540,7 +549,7 @@ fn ReadBone f mobj = (
 fn ReadHeader f = (
 	fourcc = ReadLong f
 	version = ReadShort f
-	if version!=29 do MessageBox "Unknown 4DS version - importing might not work correctly"
+	if version != 29 then MessageBox "Unknown 4DS version - importing might not work correctly"
 	timestamp = ReadLongLong f
 )
 
@@ -555,7 +564,7 @@ fn ReadMaterials f = (
 	godmat[1] = undefined
 	godmat.name = "$MAFIA_MATERIALS"
 
-	for m=2 to numsubs do
+	for m = 2 to numsubs do
 	(
 		mat = MafMat4()
 		mat.name = "4DSMat"+(m as string)
@@ -699,6 +708,8 @@ fn ReadObjects f = (
 		if objectType == 7 then ReadTarget f mobj
 		if objectType == 10 then ReadBone f mobj
 
+		--print ("Handle: " + (nnode.inode.handle as string))
+
 		nnode.name=mobj._name
 		if mobj._parentID!=0 do nnode.parent=mobj._parentID
 		ApplyTransform nnode mobj
@@ -719,6 +730,54 @@ fn ReadObjects f = (
 	)
 )
 
+fn ImportNormals = (
+	percent = 80.0 / n_mesh_array.count
+
+	max modify mode
+	select n_mesh_array
+
+	norm = Edit_Normals()
+	modpanel.addmodtoselection norm
+
+	--print (n_mesh_array.count as string)
+	--print (n_normal_array.count as string)
+
+	disableRefMsgs()  --makes a huge difference, 41 seconds with vs. 904 seconds without
+	for i = 1 to n_mesh_array.count do
+	(
+		--print (n_normal_array[i].count as string)
+		p = n_mesh_array[i]
+
+		pn = n_normal_array[i]
+		
+		for i = 1 to p.numverts do
+		(
+			my_verts = #{i} --define a bitArray specifying vertex 1
+			my_normals = #{} --define an empty bitArray to store the result
+			--call the method with the two bitArrays passed by-reference:
+			norm.ConvertVertexSelection &my_verts &my_normals node:p
+			n = (my_normals as array)[1]
+			--norm.SetNormalExplicit n node:p
+			norm.setnormal n pn[i] node:p
+		)
+
+		my_verts = #{1..p.numverts}
+		my_normals = #{}
+		norm.ConvertVertexSelection &my_verts &my_normals node:p
+		norm.MakeExplicit selection:my_normals node:p
+		
+		
+		progress += percent
+		progressUpdate progress
+	)
+
+
+	enableRefMsgs()
+
+	norm.RebuildNormals()
+	clearSelection()
+)
+
 
 ------------------------
 ---------MAIN-----------
@@ -737,65 +796,15 @@ if file != undefined do
 
 		f = fopen file "rb"
 
-		-- FILE START
 		ReadHeader f
 
-		-- MATERIALS
 		ReadMaterials f	
 
-		--OBJECTS
 		ReadObjects f
 
-
 		if MafiaTools.importNormals.checked == true then (
-
-			percent = 80.0 / n_mesh_array.count
-
-			max modify mode
-			select n_mesh_array
-
-			norm = Edit_Normals()
-			modpanel.addmodtoselection norm
-
-			print (n_mesh_array.count as string)
-			print (n_normal_array.count as string)
-
-			disableRefMsgs()  --makes a huge difference, 41 seconds with vs. 904 seconds without
-			for i = 1 to n_mesh_array.count do
-			(
-				print (n_normal_array[i].count as string)
-				p = n_mesh_array[i]
-
-				pn = n_normal_array[i]
-				
-				for i = 1 to p.numverts do
-				(
-					my_verts = #{i} --define a bitArray specifying vertex 1
-					my_normals = #{} --define an empty bitArray to store the result
-					--call the method with the two bitArrays passed by-reference:
-					norm.ConvertVertexSelection &my_verts &my_normals node:p
-					n = (my_normals as array)[1]
-					--norm.SetNormalExplicit n node:p
-					norm.setnormal n pn[i] node:p
-				)
-
-				my_verts = #{1..p.numverts}
-				my_normals = #{}
-				norm.ConvertVertexSelection &my_verts &my_normals node:p
-				norm.MakeExplicit selection:my_normals node:p
-				
-				
-				progress += percent
-				progressUpdate progress
-			)
-
-
-			enableRefMsgs()
-
-			norm.RebuildNormals()
-			clearSelection()
+			ImportNormals()			
 		)
-
 
 		--MessageBox ("Last object: "+meshname+" ends at "+((ftell f) as string))
 		fclose f
@@ -823,7 +832,7 @@ if file != undefined do
 		format "Materials: %\n" smaterials
 		format "Total objects: %\n\n" sobjects 
 
-		format "Processing took % seconds\n" ((end - start) / 1000.0)
+		format "Importing took % seconds\n" ((end - start) / 1000.0)
 
 		if (smirrors > 0) or (sglows > 0) or (stargets > 0) then MessageBox "its here!"
 

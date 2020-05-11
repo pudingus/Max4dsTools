@@ -6,9 +6,11 @@ classID:#(0x6b1c55fc, 0xdfe4a7)
 	(
 		lodDist type:#float default:4 ui:ui_lodDist
 		matidOrder type:#intTab tabSizeVariable:true
+		dontOptimize type:#boolean default:false ui:ui_dontOptimize
 	)
 	rollout params "4DS LOD Params"
 	(
-		spinner ui_lodDist "LOD distance" align:#right fieldwidth:48 range:[0,9999,10] scale:1
+		spinner ui_lodDist "LOD distance" align:#right fieldwidth:48 range:[0,9999,10] scale:1		
+		checkbox ui_dontOptimize "Don't optimize vertices" default:false
 	)
 )
