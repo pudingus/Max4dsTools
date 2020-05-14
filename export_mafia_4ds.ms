@@ -26,100 +26,102 @@ fn WriteHeader f = (
 	WriteLong f 29382754	--timestamp part 2
 )
 
+local godmat 
 fn WriteMaterials f =
 (
     local found = false
     local i = 1
-    local godmat 
-	while ((i <= scenematerials.count) and (found == false)) do
-	(
-		godmat = scenematerials[i]
-		--print (i as string)
-		if (godmat.name == "$MAFIA_MATERIALS") then
-		(
-			print ("found: " + godmat.name)
-			found = true
+	
+	for mat in scenematerials while not found do (
+		if stricmp mat.name "$MAFIA_MATERIALS" == 0 then (
+			found = true	
+			godmat = mat					
 		)
-		i += 1
 	)
-	
-	local numMats = godmat.numSubs - 1
-	WriteShort f numMats
-	
-	for m = 2 to godmat.numSubs do (
-		local mat = godmat[m]
 
-		local flags = 0
-		flags += (bit.set 0 1 true)
-		if classof mat == Standard then flags += (bit.set 0 24 true)
-		else if classof mat == MafMat4 then
-		(	
-			flags += (bit.set 0 19 mat.delegate.diffuseMapEnable)
-			flags += (bit.set 0 28 mat.useColoring)
-			flags += (bit.set 0 24 mat.useMips)
-			flags += (bit.set 0 29 mat.delegate.twoSided)
-			flags += (bit.set 0 27 mat.isAnimatedM)
-			flags += (bit.set 0 20 mat.delegate.reflectionMapEnable)
-			flags += (bit.set 0 9 mat.envOverlay)
-			flags += (bit.set 0 10 mat.envMultiply)
-			flags += (bit.set 0 11 mat.envAdditive)
-			flags += (bit.set 0 13 mat.YProj)
-			flags += (bit.set 0 14 mat.YDetail)
-			flags += (bit.set 0 15 mat.ZDetail)
-			flags += (bit.set 0 16 mat.addEffect)
-			flags += (bit.set 0 31 mat.delegate.opacityMapEnable)
-			flags += (bit.set 0 30 mat.useColorKey)
-			flags += (bit.set 0 32 mat.useAddBlend)
-		)
-	
-		WriteLong f flags
+	if not found then (
+		local numMats = 0
+		WriteShort f numMats
+	)
+	else (
+		local numMats = godmat.numSubs - 1
+		WriteShort f numMats
 		
-		--ambient
-		WriteColor f mat.delegate.ambient
+		for m = 2 to godmat.numSubs do (
+			local mat = godmat[m]
+
+			local flags = 0
+			flags += (bit.set 0 1 true)
+			if classof mat == Standard then flags += (bit.set 0 24 true)
+			else if classof mat == MafMat4 then
+			(	
+				flags += (bit.set 0 19 mat.delegate.diffuseMapEnable)
+				flags += (bit.set 0 28 mat.useColoring)
+				flags += (bit.set 0 24 mat.useMips)
+				flags += (bit.set 0 29 mat.delegate.twoSided)
+				flags += (bit.set 0 27 mat.isAnimatedM)
+				flags += (bit.set 0 20 mat.delegate.reflectionMapEnable)
+				flags += (bit.set 0 9 mat.envOverlay)
+				flags += (bit.set 0 10 mat.envMultiply)
+				flags += (bit.set 0 11 mat.envAdditive)
+				flags += (bit.set 0 13 mat.YProj)
+				flags += (bit.set 0 14 mat.YDetail)
+				flags += (bit.set 0 15 mat.ZDetail)
+				flags += (bit.set 0 16 mat.addEffect)
+				flags += (bit.set 0 31 mat.delegate.opacityMapEnable)
+				flags += (bit.set 0 30 mat.useColorKey)
+				flags += (bit.set 0 32 mat.useAddBlend)
+			)
 		
-		--diffuse
-		WriteColor f mat.delegate.diffuse
+			WriteLong f flags
+			
+			--ambient
+			WriteColor f mat.delegate.ambient
+			
+			--diffuse
+			WriteColor f mat.delegate.diffuse
+			
+			--emission
+			if mat.delegate.useSelfIllumColor then (
+				WriteColor f mat.delegate.selfIllumColor
+			)
+			else (
+				WriteFloat f 0; WriteFloat f 0; WriteFloat f 0
+			)
+			
+			--opacity
+			WriteFloat f (mat.delegate.opacity / 100.0)
 		
-		--emission
-		if mat.delegate.useSelfIllumColor then (
-			WriteColor f mat.delegate.selfIllumColor
-		)
-		else (
-			WriteFloat f 0; WriteFloat f 0; WriteFloat f 0
-		)
+			--env map
+			if mat.delegate.reflectionMapEnable then (
+				WriteFloat f (mat.delegate.reflectionMapAmount / 100.0)
+				local filename = filenameFromPath mat.delegate.reflectionMap.filename
+				WriteText f filename
+			)
 		
-		--opacity
-		WriteFloat f (mat.delegate.opacity / 100.0)
-	
-		--env map
-		if mat.delegate.reflectionMapEnable then (
-			WriteFloat f (mat.delegate.reflectionMapAmount / 100.0)
-			local filename = filenameFromPath mat.delegate.reflectionMap.filename
-			WriteText f filename
-		)
-	
-		--diffuse map
-		if mat.delegate.diffuseMapEnable then (
-			local filename = filenameFromPath mat.delegate.diffusemap.filename
-			WriteText f filename
-		)
-		else (
-			WriteByte f 0
-		)
-	
-		--opacity map
-		if mat.delegate.opacityMapEnable then (
-			local filename = filenameFromPath mat.delegate.opacitymap.filename
-			WriteText f filename
-		)
-	
-		if mat.isAnimatedM then (
-			WriteByte f animFrames
-			WriteByte f 0
-			WriteLong f 0
-			WriteLong f animDelay
-			WriteLong f 0
-			WriteLong f 0
+			--diffuse map
+			if mat.delegate.diffuseMapEnable then (
+				local filename = filenameFromPath mat.delegate.diffusemap.filename
+				WriteText f filename
+			)
+			else (
+				WriteByte f 0
+			)
+		
+			--opacity map
+			if mat.delegate.opacityMapEnable then (
+				local filename = filenameFromPath mat.delegate.opacitymap.filename
+				WriteText f filename
+			)
+		
+			if mat.isAnimatedM then (
+				WriteByte f animFrames
+				WriteByte f 0
+				WriteLong f 0
+				WriteLong f animDelay
+				WriteLong f 0
+				WriteLong f 0
+			)
 		)
 	)	
 )
@@ -343,6 +345,10 @@ fn CollectLodsCompat mobj = (
 	local prevDist = 0.0
 
 	for lodnode in lodnodes do (
+		local lodmesh
+		if isKindOf lodnode Editable_mesh then lodmesh = lodnode
+		else lodmesh = copy lodnode.mesh
+
 		local m_lod = MLod()
 
 		local modl = lodnode.modifiers[MafLod4]
@@ -381,15 +387,15 @@ fn CollectLodsCompat mobj = (
 		)
 
 
-		for i = 1 to lodnode.numVerts do (
-			local vert = in coordsys local getVert lodnode i
-			local tvert = getTVert lodnode i
+		for i = 1 to lodmesh.numVerts do (
+			local vert = (in coordsys local getVert lodmesh i) + lodnode.objectOffsetPos
+			local tvert = getTVert lodmesh i
 			local normal
 			if normMod != undefined then (
 				normal = normals[i]
 			)
 			else (
-				normal = getNormal lodnode i
+				normal = getNormal lodmesh i
 			)
 
 			local m_vert = MVert pos:vert normal:normal uv:tvert
@@ -397,9 +403,15 @@ fn CollectLodsCompat mobj = (
 			append m_lod.verts m_vert
 		)
 
-		for i = 1 to lodnode.numfaces do (
-			local face = getFace lodnode i
-			local matid = getFaceMatID lodnode i
+		local useMatId = false
+		if (godmat != undefined) and (lodnode.mat == godmat) then (
+			useMatId = true
+		)
+
+		for i = 1 to lodmesh.numfaces do (
+			local face = getFace lodmesh i
+			local matid = 1 
+			if useMatId then matid = getFaceMatID lodmesh i
 			local m_facegroup = m_lod.GetFacegroupFromMatID matid
 
 			append m_facegroup.faces face
@@ -424,6 +436,10 @@ fn CollectLods mobj = (
 	local prevDist = 0.0
 
 	for lodnode in lodnodes do (
+		local lodmesh
+		if isKindOf lodnode Editable_mesh then lodmesh = lodnode
+		else lodmesh = copy lodnode.mesh
+
 		local m_lod = MLod()
 
 		local modl = lodnode.modifiers[MafLod4]
@@ -447,19 +463,25 @@ fn CollectLods mobj = (
 			EN_getnormalid = normmod.getnormalid
 			EN_getnormal =  normmod.getnormal
 		)	
+
+		local useMatId = false
+		if (godmat != undefined) and (lodnode.mat == godmat) then (
+			useMatId = true
+		)
 	
-		for i = 1 to lodnode.numfaces do (
-			local face = getFace lodnode i
-			local tface = meshop.getMapFace lodnode 1 i   
+		for i = 1 to lodmesh.numfaces do (
+			local face = getFace lodmesh i
+			local tface = meshop.getMapFace lodmesh 1 i   
 	
-			local matid = getFaceMatID lodnode i
+			local matid = 1 
+			if useMatId then matid = getFaceMatID lodmesh i
 			local m_facegroup = m_lod.GetFacegroupFromMatID matid
-			local rnormals = meshop.getFaceRNormals lodnode i
+			local rnormals = meshop.getFaceRNormals lodmesh i
 			local nface = #()
 	
 			for v = 1 to 3 do (
-				local vert = in coordsys local getVert lodnode (face[v] as integer)
-				local tvert = meshop.getMapVert lodnode 1 (tface[v] as integer)
+				local vert = (in coordsys local getVert lodmesh (face[v] as integer)) + lodnode.objectOffsetPos
+				local tvert = meshop.getMapVert lodmesh 1 (tface[v] as integer)
 				local normal
 				if normmod != undefined then (
 					local n = EN_getnormalid i v node:lodnode
@@ -487,7 +509,7 @@ fn CollectLods mobj = (
 		)
 		append m_lods m_lod
 		
-		format "mverts: %, faces: %, facegroups: %\n" m_lod.verts.count lodnode.numfaces m_lod.facegroups.count
+		--format "mverts: %, faces: %, facegroups: %\n" m_lod.verts.count lodmesh.numfaces m_lod.facegroups.count
 	)
 	m_lods	
 )
@@ -569,6 +591,11 @@ fn WriteObjects f = (
 			WriteQuat f mobj.nnode.rotation
 		)
 
+		-- WritePoint3 f mobj.nnode.objectTransform.translationPart
+		-- WritePoint3 f mobj.nnode.objectTransform.scalePart
+	 	-- WriteQuat f mobj.nnode.objectTransform.rotationPart
+
+
 		WriteByte f cullFlags
 		WriteText f mobj.nnode.name
 		WriteText f userParams
@@ -603,28 +630,22 @@ scenename = getFilenameFile maxFileName
 file = getSaveFileName types:"4DS file (*.4ds)|*.4ds|All files (*.*)|*.*" filename:scenename
 if file != undefined do
 (
-	--progressStart "4ds exporting"
-
-	start = timeStamp()
-	
-	f = fopen file "wb"
-    
+	start = timeStamp()	
+	f = fopen file "wb"    
 	WriteHeader f
-
 	WriteMaterials f
-
 	WriteObjects f
-
 	WriteByte f 0  --use 5ds animation
-
 	fclose f
 
-	end = timeStamp()
-	--timing over midnight
-	if end < start then end += 86400000
+	end = timeStamp()	
+	if end < start then end += 86400000  --timing over midnight
 
-	format "Exporting took % seconds\n" ((end - start) / 1000.0)
-	--progressEnd()
+	dur =  (end - start) / 1000.0
+
+	format "Exporting took % seconds\n" dur
+
+	messageBox ("Exporting took " + (dur as string) + " seconds")
 )
 
 

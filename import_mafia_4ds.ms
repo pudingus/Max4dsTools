@@ -1,15 +1,15 @@
-debug = true
+(
 
-Mafia_Material
-Mafia_Object
-nnode
-godMat
-lod_layers
-dummy_layer
-sector_layer
-portal_layer
-bone_layer
-glow_layer
+local Mafia_Material
+local Mafia_Object
+local nnode
+local godmat
+local lod_layers
+local dummy_layer
+local sector_layer
+local portal_layer
+local bone_layer
+local glow_layer
 
 fn ReadText f _length = (
 	local result = ""
@@ -218,7 +218,7 @@ fn ReadStandardMesh f mobj = (
 			lmod.dontOptimize = true			
 			addmodifier lmesh lmod
 
-			lmesh.material = godMat
+			lmesh.material = godmat
 
 			append n_mesh_array lmesh
 			append n_normal_array normals_array
@@ -323,7 +323,7 @@ fn ReadBillboard f mobj = (
 	ReadByte f
 	ReadByte f   --axis mode
 
-	print ("Billboard: " + mobj._name)
+	--print ("Billboard: " + mobj._name)
 
 	sbillboards += 1
 )
@@ -348,7 +348,7 @@ fn ReadGlow f mobj = (
 	if glow_layer == undefined then glow_layer = LayerManager.newLayerFromName "Glows"
 	glow_layer.addnode nnode
 
-	print ("Glow (numGlows: " + (numGlows as string) + "): " + mobj._name)
+	--print ("Glow (numGlows: " + (numGlows as string) + "): " + mobj._name)
 
 	sglows += 1
 )
@@ -386,7 +386,7 @@ fn ReadMirror f mobj = (
 
 	nnode = mesh vertices:verts_array faces:faces_array
 
-	print ("Mirror: " + mobj._name)
+	--print ("Mirror: " + mobj._name)
 
 	smirrors += 1
 )
@@ -496,7 +496,7 @@ fn ReadSector f mobj = (
 
 	--group portals_array name:"PORTALS"
 
-	print ("Sector: " + mobj._name)
+	-- print ("Sector: " + mobj._name)
 
 	ssectors += 1
 )
@@ -510,16 +510,16 @@ fn ReadTarget f mobj = (
 	unk1 = ReadByte f
 	numLinks = ReadByte f
 
-	print ("Target: " + mobj._name)
-	print ("  unk0: " + (unk0 as string))
-	print ("  unk1: " + (unk1 as string))
-	print ("  numLinks: " + (numLinks as string))
+	-- print ("Target: " + mobj._name)
+	-- print ("  unk0: " + (unk0 as string))
+	-- print ("  unk1: " + (unk1 as string))
+	-- print ("  numLinks: " + (numLinks as string))
 
 
 	for i = 1 to numLinks do
 	(
 		linkId = ReadShort f
-		print ("  linkId: " + (linkId as string) + " - " + Mafia_Object[linkid].name)
+		-- print ("  linkId: " + (linkId as string) + " - " + Mafia_Object[linkid].name)
 	)
 
 	
@@ -538,7 +538,7 @@ fn ReadBone f mobj = (
 	)
 	boneId = ReadLong f
 
-	print ("Bone: " + mobj._name)
+	-- print ("Bone: " + mobj._name)
 
 	if bone_layer == undefined then bone_layer = LayerManager.newLayerFromName "Bones"
 	bone_layer.addnode nnode
@@ -558,103 +558,105 @@ fn ReadMaterials f = (
 
 	numMats = ReadShort f
 	smaterials = numMats
+	
+	if numMats > 0 then (
+		numsubs = numMats + 1
+		godmat = multimaterial numsubs:numsubs
+		godmat[1] = undefined
+		godmat.name = "$MAFIA_MATERIALS"
+	
 
-	numsubs = numMats + 1
-	godMat = multimaterial numsubs:numsubs
-	godmat[1] = undefined
-	godmat.name = "$MAFIA_MATERIALS"
-
-	for m = 2 to numsubs do
-	(
-		mat = MafMat4()
-		mat.name = "4DSMat"+(m as string)
-
-		flags = ReadLong f
-
-		--Diffuse Map
-		mat.delegate.diffuseMapEnable = (bit.get flags 19)
-
-
-		mat.useColoring = (bit.get flags 28)
-		mat.useMips = (bit.get flags 24)
-		mat.delegate.twoSided = (bit.get flags 29)
-		mat.isAnimatedM = (bit.get flags 27)
-
-
-		--Environment Map
-		mat.delegate.reflectionMapEnable = (bit.get flags 20)
-
-
-		mat.envOverlay = (bit.get flags 9)
-		mat.envMultiply = (bit.get flags 10)
-		mat.envAdditive = (bit.get flags 11)
-		mat.YProj = (bit.get flags 13)
-		mat.YDetail = (bit.get flags 14)
-		mat.ZDetail = (bit.get flags 15)
-
-		--Additional Effect
-		mat.addEffect = (bit.get flags 16)
-		mat.delegate.opacityMapEnable = (bit.get flags 31)
-		--mat.useAlphaMap = (bit.get flags 31)
-		mat.useColorKey = (bit.get flags 30)
-		mat.useAddBlend = (bit.get flags 32)
-
-
-
-		mat.delegate.ambient = ReadColor f
-		mat.delegate.diffuse = ReadColor f
-		mat.delegate.selfIllumColor = ReadColor f
-		mat.delegate.opacity = (ReadFloat f)*100
-
-		if mat.delegate.reflectionMapEnable == true do
+		for m = 2 to numsubs do
 		(
-			mat.delegate.reflectionMapAmount = (ReadFloat f)*100
-			nameLength = readbyte f
-			envMapName = readtext f namelength
-			envMap = bitmaptex()
-			envMap.filename = envMapName
-			mat.delegate.reflectionMap = envMap;
+			mat = MafMat4()
+			mat.name = "4DSMat"+(m as string)
+
+			flags = ReadLong f
+
+			--Diffuse Map
+			mat.delegate.diffuseMapEnable = (bit.get flags 19)
+
+
+			mat.useColoring = (bit.get flags 28)
+			mat.useMips = (bit.get flags 24)
+			mat.delegate.twoSided = (bit.get flags 29)
+			mat.isAnimatedM = (bit.get flags 27)
+
+
+			--Environment Map
+			mat.delegate.reflectionMapEnable = (bit.get flags 20)
+
+
+			mat.envOverlay = (bit.get flags 9)
+			mat.envMultiply = (bit.get flags 10)
+			mat.envAdditive = (bit.get flags 11)
+			mat.YProj = (bit.get flags 13)
+			mat.YDetail = (bit.get flags 14)
+			mat.ZDetail = (bit.get flags 15)
+
+			--Additional Effect
+			mat.addEffect = (bit.get flags 16)
+			mat.delegate.opacityMapEnable = (bit.get flags 31)
+			--mat.useAlphaMap = (bit.get flags 31)
+			mat.useColorKey = (bit.get flags 30)
+			mat.useAddBlend = (bit.get flags 32)
+
+
+
+			mat.delegate.ambient = ReadColor f
+			mat.delegate.diffuse = ReadColor f
+			mat.delegate.selfIllumColor = ReadColor f
+			mat.delegate.opacity = (ReadFloat f)*100
+
+			if mat.delegate.reflectionMapEnable == true do
+			(
+				mat.delegate.reflectionMapAmount = (ReadFloat f)*100
+				nameLength = readbyte f
+				envMapName = readtext f namelength
+				envMap = bitmaptex()
+				envMap.filename = envMapName
+				mat.delegate.reflectionMap = envMap;
+			)
+
+			diffMapNameLength = readbyte f
+			if diffMapNameLength != 0 do
+			(
+				diffMapName = readtext f diffMapNameLength
+				diffMap = bitmaptex()
+				diffMap.filename = diffMapName
+				mat.delegate.diffuseMap = diffMap;
+				showTextureMap mat on
+			)
+
+			if mat.delegate.opacityMapEnable == true do
+			(
+				alphaMapNameLength = readbyte f
+				alphaMapName=readtext f alphaMapNameLength
+				alphatex = bitmaptex()
+				alphatex.filename = alphaMapName
+				mat.delegate.opacityMap = alphatex;
+			)
+
+			if mat.isAnimatedM == true do
+			(
+				--for bb=1 to 18 do
+				--(
+				--	readbyte f
+				--)
+				mat.animFrames = ReadLong f
+				ReadShort f
+				mat.animPeriod = ReadLong f
+				ReadLong f
+				ReadLong f
+			)
+
+
+			godmat[m] = mat
+			append Mafia_Material mat
+			--b = box()
+			--b.material=mat
 		)
-
-		diffMapNameLength = readbyte f
-		if diffMapNameLength != 0 do
-		(
-			diffMapName = readtext f diffMapNameLength
-			diffMap = bitmaptex()
-			diffMap.filename = diffMapName
-			mat.delegate.diffuseMap = diffMap;
-			showTextureMap mat on
-		)
-
-		if mat.delegate.opacityMapEnable == true do
-		(
-			alphaMapNameLength = readbyte f
-			alphaMapName=readtext f alphaMapNameLength
-			alphatex = bitmaptex()
-			alphatex.filename = alphaMapName
-			mat.delegate.opacityMap = alphatex;
-		)
-
-		if mat.isAnimatedM == true do
-		(
-			--for bb=1 to 18 do
-			--(
-			--	readbyte f
-			--)
-			mat.animFrames = ReadLong f
-			ReadShort f
-			mat.animPeriod = ReadLong f
-			ReadLong f
-			ReadLong f
-		)
-
-
-		godMat[m] = mat
-		append Mafia_Material mat
-		--b = box()
-		--b.material=mat
 	)
-
 )
 
 progress = 0
@@ -670,12 +672,12 @@ fn ReadObjects f = (
 
 	sobjects = numObjects
 
-	if MafiaTools.importNormals.checked == true then (
-		percent = 20.0 / numObjects
-	)
-	else (
-		percent = 100.0 / numObjects
-	)	
+	-- if MafiaTools.importNormals.checked == true then (
+	-- 	percent = 20.0 / numObjects
+	-- )
+	-- else (
+	-- 	percent = 100.0 / numObjects
+	-- )	
 
 	for i = 0 to numObjects - 1 do
 	(
@@ -696,10 +698,19 @@ fn ReadObjects f = (
 		if objectType == 1 then  --VISUAL OBJECT
 		(
 			if visualType == 0 then ReadStandardMesh f mobj
-			if visualType == 2 then (ReadSingleMesh f mobj; print ("SingleMesh: " + mobj._name))
-			if visualType == 3 then (ReadSingleMorph f mobj; print ("SingleMorph: " + mobj._name))
+			if visualType == 2 then (
+				ReadSingleMesh f mobj;
+				--print ("SingleMesh: " + mobj._name)
+			)
+			if visualType == 3 then (
+				ReadSingleMorph f mobj
+				--print ("SingleMorph: " + mobj._name)
+			)
 			if visualType == 4 then ReadBillboard f mobj
-			if visualType == 5 then (ReadMorph f mobj; print ("Morph: " + mobj._name))
+			if visualType == 5 then (
+				ReadMorph f mobj; 
+				--print ("Morph: " + mobj._name)
+			)
 			if visualType == 6 then ReadGlow f mobj
 			if visualType == 8 then ReadMirror f mobj
 		)
@@ -725,13 +736,13 @@ fn ReadObjects f = (
 
 		append Mafia_Object nnode
 
-		progress += percent
-		progressUpdate progress
+		--progress += percent
+		--if mod i 50 == 0 then progressUpdate progress
 	)
 )
 
 fn ImportNormals = (
-	percent = 80.0 / n_mesh_array.count
+	-- percent = 80.0 / n_mesh_array.count
 
 	max modify mode
 	select n_mesh_array
@@ -767,8 +778,8 @@ fn ImportNormals = (
 		norm.MakeExplicit selection:my_normals node:p
 		
 		
-		progress += percent
-		progressUpdate progress
+		--progress += percent
+		--if mod i 50 == 0 then progressUpdate progress
 	)
 
 
@@ -783,13 +794,13 @@ fn ImportNormals = (
 ---------MAIN-----------
 ------------------------
 
-file = getOpenFileName types:"4DS models (*.4ds)|*.4ds|All files (*.*)|*.*"
+local file = getOpenFileName types:"4DS models (*.4ds)|*.4ds|All files (*.*)|*.*"
 if file != undefined do
 (
-    with redraw off (
-		progressStart "4ds importing"
+	local start = timeStamp()
 
-		start = timeStamp()
+    with redraw off (
+		--progressStart "4ds importing"
 
 		Mafia_Material = #()
 		Mafia_Object = #()
@@ -797,24 +808,16 @@ if file != undefined do
 		f = fopen file "rb"
 
 		ReadHeader f
-
 		ReadMaterials f	
-
 		ReadObjects f
 
 		if MafiaTools.importNormals.checked == true then (
 			ImportNormals()			
 		)
 
-		--MessageBox ("Last object: "+meshname+" ends at "+((ftell f) as string))
-		fclose f
+		fclose f		
 
-		end = timeStamp()
-
-		--timing over midnight
-		if end < start then end += 86400000
-
-		progressEnd()
+		--progressEnd()
 
 		format "\n-----------------------------------------------------------\n"	
 		format "StandardMeshes: %\n" sstandardmeshes
@@ -830,12 +833,20 @@ if file != undefined do
 		format "Bones: %\n\n" sbones	
 
 		format "Materials: %\n" smaterials
-		format "Total objects: %\n\n" sobjects 
+		format "Total objects: %\n\n" sobjects 		
 
-		format "Importing took % seconds\n" ((end - start) / 1000.0)
-
-		if (smirrors > 0) or (sglows > 0) or (stargets > 0) then MessageBox "its here!"
-
-		CompleteRedraw()
+		--if (smirrors > 0) or (sglows > 0) or (stargets > 0) then MessageBox "its here!"
 	)	
+
+	local end = timeStamp()
+	
+	if end < start then end += 86400000 --timing over midnight
+
+	local dur = (end - start) / 1000.0
+
+	local message = "Importing took " + (dur as string) + " seconds"
+	format message
+	messageBox message
+)
+
 )
