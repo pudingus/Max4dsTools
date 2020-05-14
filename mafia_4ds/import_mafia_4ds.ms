@@ -1,6 +1,6 @@
 (
 
-local Mafia_Material
+--local Mafia_Material
 local Mafia_Object
 local nnode
 local godmat
@@ -652,7 +652,7 @@ fn ReadMaterials f = (
 
 
 			godmat[m] = mat
-			append Mafia_Material mat
+			--append Mafia_Material mat
 			--b = box()
 			--b.material=mat
 		)
@@ -793,60 +793,62 @@ fn ImportNormals = (
 ------------------------
 ---------MAIN-----------
 ------------------------
+Main()
+fn Main = (
+	local file = getOpenFileName types:"4DS models (*.4ds)|*.4ds|All files (*.*)|*.*"
+	if file != undefined do
+	(
+		local start = timeStamp()
 
-local file = getOpenFileName types:"4DS models (*.4ds)|*.4ds|All files (*.*)|*.*"
-if file != undefined do
-(
-	local start = timeStamp()
+		with redraw off (
+			--progressStart "4ds importing"
 
-    with redraw off (
-		--progressStart "4ds importing"
+			--Mafia_Material = #()
+			Mafia_Object = #()
 
-		Mafia_Material = #()
-		Mafia_Object = #()
+			f = fopen file "rb"
 
-		f = fopen file "rb"
+			ReadHeader f
+			ReadMaterials f	
+			ReadObjects f
 
-		ReadHeader f
-		ReadMaterials f	
-		ReadObjects f
+			if MafiaTools.importNormals.checked == true then (
+				ImportNormals()			
+			)
 
-		if MafiaTools.importNormals.checked == true then (
-			ImportNormals()			
-		)
+			fclose f		
 
-		fclose f		
+			--progressEnd()
 
-		--progressEnd()
+			format "\n-----------------------------------------------------------\n"	
+			format "StandardMeshes: %\n" sstandardmeshes
+			format "SingleMeshes: %\n" ssinglemeshes
+			format "Morphs: %\n" smorphs
+			format "SingleMorphs: %\n" ssinglemorphs
+			format "Billboards: %\n" sbillboards
+			format "Glows: %\n" sglows
+			format "Mirrors: %\n" smirrors
+			format "Sectors: %\n" ssectors
+			format "Dummies: %\n" sdummies
+			format "Targets: %\n" stargets
+			format "Bones: %\n\n" sbones	
 
-		format "\n-----------------------------------------------------------\n"	
-		format "StandardMeshes: %\n" sstandardmeshes
-		format "SingleMeshes: %\n" ssinglemeshes
-		format "Morphs: %\n" smorphs
-		format "SingleMorphs: %\n" ssinglemorphs
-		format "Billboards: %\n" sbillboards
-		format "Glows: %\n" sglows
-		format "Mirrors: %\n" smirrors
-		format "Sectors: %\n" ssectors
-		format "Dummies: %\n" sdummies
-		format "Targets: %\n" stargets
-		format "Bones: %\n\n" sbones	
+			format "Materials: %\n" smaterials
+			format "Total objects: %\n\n" sobjects 		
 
-		format "Materials: %\n" smaterials
-		format "Total objects: %\n\n" sobjects 		
+			--if (smirrors > 0) or (sglows > 0) or (stargets > 0) then MessageBox "its here!"
+		)	
 
-		--if (smirrors > 0) or (sglows > 0) or (stargets > 0) then MessageBox "its here!"
-	)	
+		local end = timeStamp()
+		
+		if end < start then end += 86400000 --timing over midnight
 
-	local end = timeStamp()
-	
-	if end < start then end += 86400000 --timing over midnight
+		local dur = (end - start) / 1000.0
 
-	local dur = (end - start) / 1000.0
-
-	local message = "Importing took " + (dur as string) + " seconds"
-	format message
-	messageBox message
+		local message = "Importing took " + (dur as string) + " seconds"
+		format message
+		messageBox message
+	)
 )
 
 )

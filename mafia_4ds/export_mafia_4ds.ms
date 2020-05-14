@@ -180,6 +180,8 @@ fn AddMObject mobj = (
 	mobject_ids[handle] = mobjects.count
 )
 
+fn CompareNames obj1 obj2 = stricmp obj1.name obj2.name
+
 fn CollectObjects = (
 
 	mobjects = #()
@@ -227,6 +229,22 @@ fn CollectObjects = (
 			AddMObject mobj
 		)
 	)
+
+	for mobj in mobjects do (
+		qsort mobj.lods CompareNames
+		qsort mobj.portals CompareNames
+	)
+	
+	-- for mobj in mobjects do (
+	-- 	format "\n% ot:% vt:%" mobj.nnode.name mobj.objectType mobj.visualType
+	-- 	for lodd in mobj.lods do (
+	-- 		format "\n  %" lodd.name 
+	-- 	)
+	-- 	for prtl in mobj.portals do (
+	-- 		format "\n  %" prtl.name 
+	-- 	)
+	-- )
+
 	mobjects
 )
 
@@ -514,7 +532,6 @@ fn CollectLods mobj = (
 	m_lods	
 )
 
-
 fn WriteStandardMesh f mobj = (
 
 	local m_lods
@@ -604,49 +621,38 @@ fn WriteObjects f = (
 		if mobj.objectType == 5 then WriteSector f mobj
 		else if mobj.objectType == 6 then WriteDummy f mobj
 		else if mobj.objectType == 1 and mobj.visualType == 0 then 			
-			WriteStandardMesh f mobj	
-		
-
-
+			WriteStandardMesh f mobj
 
 	)
 )
 
--- for mobj in mobjects do (
--- 	format "\n% ot:% vt:%" mobj.nnode.name mobj.objectType mobj.visualType
--- 	for lodd in mobj.lods do (
--- 		format "\n  %" lodd.name 
--- 	)
--- 	for prtl in mobj.portals do (
--- 		format "\n  %" prtl.name 
--- 	)
--- )
-
 ------------------------
 ---------MAIN-----------
 ------------------------
-
-scenename = getFilenameFile maxFileName
-file = getSaveFileName types:"4DS file (*.4ds)|*.4ds|All files (*.*)|*.*" filename:scenename
-if file != undefined do
-(
-	start = timeStamp()	
-	f = fopen file "wb"    
-	WriteHeader f
-	WriteMaterials f
-	WriteObjects f
-	WriteByte f 0  --use 5ds animation
-	fclose f
-
-	end = timeStamp()	
-	if end < start then end += 86400000  --timing over midnight
-
-	dur =  (end - start) / 1000.0
-
-	format "Exporting took % seconds\n" dur
-
-	messageBox ("Exporting took " + (dur as string) + " seconds")
+Main()
+--CollectObjects()
+fn Main = (
+	scenename = getFilenameFile maxFileName
+	file = getSaveFileName types:"4DS file (*.4ds)|*.4ds|All files (*.*)|*.*" filename:scenename
+	if file != undefined do
+	(
+		start = timeStamp()	
+		f = fopen file "wb"    
+		WriteHeader f
+		WriteMaterials f
+		WriteObjects f
+		WriteByte f 0  --use 5ds animation
+		fclose f
+	
+		end = timeStamp()	
+		if end < start then end += 86400000  --timing over midnight
+	
+		dur =  (end - start) / 1000.0
+	
+		format "Exporting took % seconds\n" dur
+	
+		messageBox ("Exporting took " + (dur as string) + " seconds")
+	)
 )
-
 
 )
