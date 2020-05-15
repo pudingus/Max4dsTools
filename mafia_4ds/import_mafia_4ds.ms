@@ -793,7 +793,6 @@ fn ImportNormals = (
 ------------------------
 ---------MAIN-----------
 ------------------------
-Main()
 fn Main = (
 	local file = getOpenFileName types:"4DS models (*.4ds)|*.4ds|All files (*.*)|*.*"
 	if file != undefined do
@@ -850,5 +849,6 @@ fn Main = (
 		messageBox message
 	)
 )
+Main()
 
 )

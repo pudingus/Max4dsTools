@@ -629,8 +629,6 @@ fn WriteObjects f = (
 ------------------------
 ---------MAIN-----------
 ------------------------
-Main()
---CollectObjects()
 fn Main = (
 	scenename = getFilenameFile maxFileName
 	file = getSaveFileName types:"4DS file (*.4ds)|*.4ds|All files (*.*)|*.*" filename:scenename
@@ -654,5 +652,7 @@ fn Main = (
 		messageBox ("Exporting took " + (dur as string) + " seconds")
 	)
 )
+Main()
+--CollectObjects()
 
 )
