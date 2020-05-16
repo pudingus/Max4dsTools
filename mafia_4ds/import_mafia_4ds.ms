@@ -196,7 +196,7 @@ fn ReadStandardMesh f mobj = (
 			else (
 				lmesh.name = "$lod" + (lodId as string) + "__" + mobj._name
 				lmesh.parent = nnode
-				ApplyTransform lmesh mobj
+				--ApplyTransform lmesh mobj
 			)
 
 			if numLods > 1 then (
