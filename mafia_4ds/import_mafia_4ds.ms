@@ -1,21 +1,86 @@
 (
 
---local Mafia_Material
-local Mafia_Object
+local mnodes
 local nnode
 local godmat
-local lod_layers
+
+
+local lod_layers = #()
 local dummy_layer
 local sector_layer
 local portal_layer
 local bone_layer
 local glow_layer
 
-fn ReadText f _length = (
-	local result = ""
-	for i = 1 to _length do (
-		result += bit.intAsChar(readByte f)
+
+fn AddToLayer obj layerName layer = (
+	if layer == undefined then (
+		layer = LayerManager.getLayerFromName layerName
+		if layer == undefined then (
+			layer = LayerManager.newLayerFromName layerName
+		)
 	)
+	layer.addnode obj
+)
+
+fn AddToGlowLayer obj = (
+	local str = "Glows"
+	AddToLayer obj str glow_layer
+)
+
+fn AddToDummyLayer obj = (
+	local str = "Dummies"
+	AddToLayer obj str dummy_layer
+)
+
+fn AddToSectorLayer obj = (
+	local str = "Sectors"
+	AddToLayer obj str sector_layer
+)
+
+fn AddToPortalLayer obj = (
+	local str = "Portals"
+	AddToLayer obj str portal_layer
+)
+
+fn AddToBoneLayer obj = (
+	local str = "Bones"
+	AddToLayer obj str bone_layer
+)
+
+fn AddToGlowLayer obj = (
+	local str = "Glows"
+	AddToLayer obj str glow_layer
+)
+
+fn AddToLodLayer lodId obj = (
+	local layer = lod_layers[lodId + 1]
+	local str = "LOD" + (lodId as string) + " LAYER"
+	if layer == undefined then (
+		layer = LayerManager.getLayerFromName str
+		if layer == undefined then (
+			layer = LayerManager.newLayerFromName str
+			lod_layers[lodId + 1] = layer
+
+			if lodId >= 1 then layer.ishidden = true
+		)
+
+	)
+	layer.addnode obj
+)
+
+fn ReadText f = (
+	local len = ReadByte f
+
+	local result
+	if len > 0 then (
+		local fmt = "%"
+		local ss = StringStream ""
+		for i = 1 to len do (
+			format fmt (bit.intAsChar(ReadByte f)) to:ss
+		)
+		result = ss as string
+	)	
 	result
 )
 
@@ -23,15 +88,7 @@ fn ReadPoint3 f = (
 	x = ReadFloat f
 	y = ReadFloat f
 	z = ReadFloat f
-	p3 = point3 x z y
-	p3
-)
-
-fn ReadPoint2 f = (
-	x = ReadFloat f
-	y = ReadFloat f
-	p2 = point2 x y
-	p2
+	[x, z, y]
 )
 
 fn ReadColor f = (
@@ -54,54 +111,44 @@ fn ReadQuat f = (
 
 struct MObject
 (
-	_parentID,
-	_offset,
-	_scale,
-	_rotation,
-	_cullingFlags,
-	_name,
-	_params
+	parent,
+	offset,
+	scl,
+	rot,
+	cullFlags,
+	name,
+	userParams
 )
 
 
 fn ReadBaseObject f = (
-	mobj = MObject()
+	local mobj = MObject()
 
-	parentID = ReadShort f
-	if parentID < 0 do parentID = 0
-	if parentID > 0 do parentID = Mafia_Object[parentID]
-	mobj._parentID = parentID
+	local parentId = ReadShort f
+	if parentId > 0 then (
+		mobj.parent = mnodes[parentId]
+	)
 
-
-	mobj._offset = ReadPoint3 f
-	mobj._scale = ReadPoint3 f
-	
-	mobj._rotation = ReadQuat f
-
-	mobj._cullingFlags = ReadByte f #unsigned
-
-	nameLength = ReadByte f #unsigned
-	mobj._name = ReadText f nameLength
-
-	paramsLength = ReadByte f #unsigned
-	mobj._params = ReadText f paramsLength
-
+	mobj.offset = ReadPoint3 f
+	mobj.scl = ReadPoint3 f	
+	mobj.rot = ReadQuat f
+	mobj.cullFlags = ReadByte f #unsigned
+	mobj.name = ReadText f 
+	mobj.userParams = ReadText f
 
 	mobj
 )
 
 fn ApplyTransform nnode mobj = (
 
-	pos = mobj._offset
-	scaletion = mobj._scale
-	rotation = mobj._rotation
-	parentID = mobj._parentID
-	matrix = matrix3 [1, 0, 0] [0, 1, 0] [0, 0, 1] [pos.x, pos.y, pos.z]
-	sclMatrix = matrix3 [scaletion.x, 0, 0] [0, scaletion.y, 0] [0, 0, scaletion.z] [0, 0, 0]
-	rotMatrix = ((inverse rotation) as matrix3)
+	local offset = mobj.offset
+	local scl = mobj.scl
+	local rot = mobj.rot
+	local matrix = matrix3 [1, 0, 0] [0, 1, 0] [0, 0, 1] [offset.x, offset.y, offset.z]
+	local sclMatrix = matrix3 [scl.x, 0, 0] [0, scl.y, 0] [0, 0, scl.z] [0, 0, 0]
+	local rotMatrix = ((inverse rot) as matrix3)
 
-	if parentID != 0 then
-	(
+	if nnode.parent != undefined then (
 		nnode.transform = (sclMatrix*rotMatrix*matrix*nnode.parent.transform)
 	)
 	else (
@@ -109,15 +156,29 @@ fn ApplyTransform nnode mobj = (
 	)
 )
 
+fn ReadFace f = (
+	a = ReadShort f #unsigned
+	b = ReadShort f #unsigned
+	c = ReadShort f #unsigned
+	[a+1, c+1, b+1]       --face vertex indexes are 1-based in 3ds Max
+)
+
+fn ReadUV f = (
+	x = ReadFloat f
+	y = ReadFloat f
+	[x, 1-y, 0]
+)
+
 n_mesh_array = #()
 n_normal_array = #()
 
 sstandardmeshes = 0
 fn ReadStandardMesh f mobj = (
+	local numlods = 0
 	duplicateID = ReadShort f
 	if duplicateID != 0 then
 	(
-		nnode = reference Mafia_Object[duplicateID]
+		nnode = reference mnodes[duplicateID]
 	)
 	else
 	(
@@ -129,63 +190,56 @@ fn ReadStandardMesh f mobj = (
 
 		for lodId = 0 to numLods - 1 do
 		(
-			clippingRange = ReadFloat f  --clipping range
+			local clippingRange = ReadFloat f  --clipping range
 
-			verts_array = #()
-			normals_array = #()
-			tverts_array = #()
-			faces_array = #()
+			local normals_array = #()
 
-			numVerts = readshort f #unsigned
+			local numVerts = readshort f #unsigned
+
+			local tr = TriMesh()
+			setNumVerts tr numverts
+			setNumTVerts tr numverts
 
 			for i = 1 to numVerts do
 			(
-				vert = ReadPoint3 f
-				append verts_array [vert.x, vert.y, vert.z]
+				local vert = ReadPoint3 f
 
-				normal = ReadPoint3 f
+				local normal = ReadPoint3 f
 				append normals_array [normal.x, normal.y, normal.z]
 
-				uv = ReadPoint2 f
-				append tverts_array [uv.x, 1-uv.y, 0]
+				local uv = ReadUV f
+
+				setVert tr i vert
+				setTVert tr i uv
 			)
 
+			local numFacegroups = readbyte f #unsigned
 
-			numFacegroups = readbyte f #unsigned
-
-			material_array = #()
-
-			matidOrder = #()
-
-			totalCount = 1
 			for i = 1 to numFacegroups do (
 
-				numFaces = readshort f #unsigned
+				local numFaces = readshort f #unsigned
+				
+				local offset = getNumFaces tr
+				local num = offset + numFaces
+				setNumFaces tr num true			-- keep topology	
 
 				for j = 1 to numFaces do (
-					a = readshort f #unsigned
-					b = readshort f #unsigned
-					c = readshort f #unsigned
-
-					append faces_array [a+1, c+1, b+1]	--face vertex indexes are 1-based in 3ds Max
-
-					totalCount = totalCount + 1
+					local face = ReadFace f
+					setFace tr (offset+j) face
 				)
-				matnum = (ReadShort f)
-				append matidOrder (matnum+1)
+				local matId = (ReadShort f) + 1 	-- coz 'material_none' is 0 in mafia, but 1 in max
 
 				for j = 1 to numFaces do (
-					append material_array (matnum+1)	-- coz 'material_none' is 0 in mafia, but 1 in max
+					setFaceMatID tr (offset+j) matId
 				)
 			)
-
-			lmesh = mesh vertices:verts_array faces:faces_array materialIDs:material_array tverts:tverts_array
-
-			buildTVFaces lmesh
-			for i = 1 to lmesh.numfaces do (
-				setTVFace lmesh i (getFace lmesh i)
-				setFaceSmoothGroup lmesh i 1
+			
+			buildTVFaces tr
+			for i = 1 to tr.numfaces do (
+			 	setTVFace tr i (getFace tr i)
 			)
+
+			local lmesh = mesh mesh:tr
 
 			lmesh.wirecolor = color 0 0 0
 
@@ -194,26 +248,16 @@ fn ReadStandardMesh f mobj = (
 				nnode = lmesh
 			)
 			else (
-				lmesh.name = "$lod" + (lodId as string) + "__" + mobj._name
+				lmesh.name = "$lod" + (lodId as string) + "__" + mobj.name
 				lmesh.parent = nnode
-				ApplyTransform lmesh mobj
 			)
 
 			if numLods > 1 then (
-				local layer = lod_layers[lodId+1]
-
-				if layer == undefined then (
-					layer = LayerManager.newLayerFromName ("LOD" + (lodId as string) + " LAYER")
-					append lod_layers layer
-				)
-				layer.addnode lmesh
-
-				if lodId >= 1 then layer.ishidden = true
+				AddToLodLayer lodId lmesh
 			)		
 
 
-			lmod = MafLod4()
-			lmod.matidOrder = matidOrder
+			local lmod = MafLod4()
 			lmod.lodDist = clippingRange
 			lmod.dontOptimize = true			
 			addmodifier lmesh lmod
@@ -226,74 +270,66 @@ fn ReadStandardMesh f mobj = (
 	)
 
 	sstandardmeshes += 1
+
+	numLods
 )
 
 ssinglemeshes = 0
 fn ReadSingleMesh f mobj = (
-	ReadStandardMesh f mobj
+	local numLods = ReadStandardMesh f mobj
 	sstandardmeshes -= 1
 
-	bones=ReadByte f
-	ReadLong f
-
-	dmin = ReadPoint3 f
-	dmax = ReadPoint3 f
-
-	for bo=1 to bones do
-	(
-		for b=1 to 64 do
-		(
-			--rotation matrix
-			ReadByte f
+	for i = 1 to numLods do (
+		local numBones = ReadByte f
+		local numW0Verts = ReadLong f
+	
+		local dmin = ReadPoint3 f
+		local dmax = ReadPoint3 f
+	
+		for i = 1 to numBones do (
+			for b = 1 to 64 do ReadByte f   --rotation matrix
+			local numW1Verts = ReadLong f
+			local numWeights = ReadLong f
+			local boneID = ReadLong f
+	
+			local dmin = ReadPoint3 f
+			local dmax = ReadPoint3 f
+	
+			for w = 1 to numWeights do (
+				ReadFloat f
+			)
 		)
-		ReadLong f
-		numfloats=ReadLong f
-		numbone=ReadLong f
-
-		dmin = ReadPoint3 f
-		dmax = ReadPoint3 f
-
-		for b=1 to numfloats do
-		(
-			ReadFloat f
-		)
-	)
+	)	
 
 	ssinglemeshes += 1
 )
 
 fn ReadBaseMorph f mobj = (
-	-- morph
-	morphPoses = ReadByte f
-	morphVGroups = ReadByte f
-	ReadByte f
+	local numTargets = ReadByte f
 
-	for m = 1 to morphVGroups do
-	(
-		morphedVerts = ReadShort f
-
-		for bb=1 to (morphPoses*morphedVerts) do
-		(
-			-- morph bounds
-			smin = ReadPoint3 f
-			smax = ReadPoint3 f
+	if numTargets > 0 then (
+		local numChannels = ReadByte f
+		ReadByte f   --unknown	
+		for i = 1 to numChannels do	(
+			local numVerts = ReadShort f
+	
+			for v = 1 to (numTargets * numVerts) do	(
+				local vert = ReadPoint3 f
+				local normal = ReadPoint3 f
+			)
+	
+			if (numTargets * numVerts) > 0 then	ReadByte f  --unknown
+	
+			for v = 1 to numVerts do	(
+				local vertexLink = ReadShort f 
+			)
 		)
-
-		ReadByte f
-
-		for bb=1 to morphedVerts do
-		(
-			ReadShort f -- vertex numbers
-		)
-	)
-
-	-- min/max
-	dmin = ReadPoint3 f
-	dmax = ReadPoint3 f
-
-	v = ReadPoint3 f 	-- ?
-
-	vvv = ReadFloat f	-- ?
+	
+		local dmin = ReadPoint3 f
+		local dmax = ReadPoint3 f
+	
+		for i = 1 to 4 do ReadFloat f   --unknown
+	)	
 )
 
 ssinglemorphs = 0
@@ -317,13 +353,11 @@ sbillboards = 0
 fn ReadBillboard f mobj = (
 	ReadStandardMesh f mobj
 	sstandardmeshes -= 1
-	ReadByte f   --axis
-	ReadByte f
-	ReadByte f
-	ReadByte f
-	ReadByte f   --axis mode
 
-	--print ("Billboard: " + mobj._name)
+	local axis = ReadLong f
+	local axisMode = ReadByte f
+
+	--print ("Billboard: " + mobj.name)
 
 	sbillboards += 1
 )
@@ -331,24 +365,23 @@ fn ReadBillboard f mobj = (
 sglows = 0
 fn ReadGlow f mobj = (
 
-	numGlows = ReadByte f
+	local numGlows = ReadByte f
 	for i = 1 to numGlows do
 	(
-		position = ReadFloat f
-		matID = ReadShort f
+		local position = ReadFloat f
+		local matID = ReadShort f
 	)
 
-	--nnode=dummy()
+	--nnode = point()
+	--nnode.constantscreensize = true
+	--nnode.box = true
 
-	nnode = point()
-	nnode.constantscreensize = true
-	nnode.box = true
+	nnode = dummy()
+	nnode.boxsize = [0.2, 0.2, 0.2]
 
-	--nnode.boxsize=[1,1,1]
-	if glow_layer == undefined then glow_layer = LayerManager.newLayerFromName "Glows"
-	glow_layer.addnode nnode
+	AddToGlowLayer nnode
 
-	--print ("Glow (numGlows: " + (numGlows as string) + "): " + mobj._name)
+	--print ("Glow (numGlows: " + (numGlows as string) + "): " + mobj.name)
 
 	sglows += 1
 )
@@ -356,37 +389,35 @@ fn ReadGlow f mobj = (
 smirrors = 0
 fn ReadMirror f mobj = (
 
-	minBox = ReadPoint3 f
-	maxBox = ReadPoint3 f
+	local minBox = ReadPoint3 f
+	local maxBox = ReadPoint3 f
 
 	for i = 1 to 4 do unknown = ReadFloat f
 	for i = 1 to 16 do reflectionMatrix = ReadFloat f
 	
-	backColor = ReadColor f
-	drawDistance = ReadFloat f
+	local backColor = ReadColor f
+	local drawDistance = ReadFloat f
 
-	numVerts = ReadLong f
-	numFaces = ReadLong f
+	local numVerts = ReadLong f
+	local numFaces = ReadLong f
 
-	verts_array = #()
-	faces_array = #()
+	local tr = TriMesh()
+	setNumVerts tr numVerts
+	setNumFaces tr numFaces
 
 	for i = 1 to numVerts do (
-		p3 = ReadPoint3 f
-		append verts_array [p3.x, p3.y, p3.z]
+		local vert = ReadPoint3 f
+		setVert tr i vert
 	)
 
 	for i = 1 to numFaces do (
-		a = readshort f #unsigned
-		b = readshort f #unsigned
-		c = readshort f #unsigned
-
-		append faces_array [a+1, c+1, b+1]	--face vertex indexes are 1-based in 3ds Max
+		local face = ReadFace f
+		setFace tr i face
 	)
 
-	nnode = mesh vertices:verts_array faces:faces_array
+	nnode = mesh mesh:tr
 
-	--print ("Mirror: " + mobj._name)
+	--print ("Mirror: " + mobj.name)
 
 	smirrors += 1
 )
@@ -395,14 +426,12 @@ sdummies = 0
 fn ReadDummy f mobj = (
 	nnode = dummy()
 
-	dmin = ReadPoint3 f
-	dmax = ReadPoint3 f
+	local dmin = ReadPoint3 f
+	local dmax = ReadPoint3 f
 
 	nnode.boxsize = [(abs (dmin.x-dmax.x)), (abs (dmin.y-dmax.y)), (abs (dmin.z-dmax.z))]
 
-
-	if dummy_layer == undefined then dummy_layer = LayerManager.newLayerFromName "Dummies"
-	dummy_layer.addnode nnode
+	AddToDummyLayer nnode
 
 	hide nnode
 
@@ -414,89 +443,75 @@ fn ReadSector f mobj = (
 	ReadLong f --always 2049
 	ReadLong f --always 0
 
+	local numVerts = ReadLong f
+	local numFaces = ReadLong f
 
-	verts = ReadLong f
-	faces = ReadLong f
+	local tr = TriMesh()
+	setNumVerts tr numVerts
+	setNumFaces tr numFaces
 
-
-	verts_array = #()
-	faces_array = #()
-
-	for i = 1 to verts do (
-		vert = ReadPoint3 f
-		append verts_array [vert.x, vert.y, vert.z]
+	for i = 1 to numVerts do (
+		local vert = ReadPoint3 f
+		setVert tr i vert
 	)
 
-	for i = 1 to faces do (
-		a = readshort f #unsigned
-		b = readshort f #unsigned
-		c = readshort f #unsigned
-		append faces_array [a+1, c+1, b+1] --vertex indexes in face are counted from 1 in 3ds Max
+	for i = 1 to numFaces do (
+		local face = ReadFace f
+		setFace tr i face
+		setFaceSmoothGroup tr i 0
 	)
 
-	nnode = mesh vertices:verts_array faces:faces_array
+	nnode = mesh mesh:tr
 
-	if sector_layer == undefined then sector_layer = LayerManager.newLayerFromName "Sectors"
-	sector_layer.addnode nnode
+	AddToSectorLayer nnode
 
 	nnode.wirecolor = (color 255 199 0)
 
-	dmin = ReadPoint3 f
-	dmax = ReadPoint3 f
+	local dmin = ReadPoint3 f
+	local dmax = ReadPoint3 f
 
-	portals_array = #()
+	local numPortals = ReadByte f
 
-	numPortals = ReadByte f
-	for bb=1 to numPortals do
-	(
-		numVerts = readbyte f
-		readlong f  --always 4
-		readlong f
-		readlong f
-		readlong f
-		readlong f  --flags?
+	for i = 0 to numPortals-1 do (
 
-		nearRange = readfloat f
-		farRange = readfloat f
+		local numVerts = ReadByte f
+		ReadLong f  --always 4
+		ReadLong f
+		ReadLong f
+		ReadLong f
+		ReadLong f  --flags?
 
-		pmesh = mesh numverts:numVerts numfaces:10
-		pmesh.name = "$portal" + ((bb-1) as string) + "__" + mobj._name
-		--pmesh.name = mobj._name+"__PORTAL"+(bb as string)
+		local nearRange = ReadFloat f
+		local farRange = ReadFloat f
 
-		vertIds_array = #()
+		pmesh = mesh numverts:numVerts
+		pmesh.name = "$portal" + (formattedPrint i format:".2u") + "__" + mobj.name
 
-		for cc=1 to numVerts do
-		(
-			vert = ReadPoint3 f
-			setVert pmesh cc vert.x vert.y vert.z
-			append vertIds_array cc
+		for v = 1 to numVerts do (
+			local vert = ReadPoint3 f
+			setVert pmesh v vert
 		)
 
+		local verts = for v = 1 to numVerts collect v
+
 		p = convertToPoly pmesh
-
-		polyop.createPolygon p vertIds_array
-
+		polyop.createPolygon p verts
 
 		p.wirecolor = (color 255 0 199)
 
 
-		if portal_layer == undefined then portal_layer = LayerManager.newLayerFromName "Portals"
-		portal_layer.addnode p
+		AddToPortalLayer p
 
-		modpp = MafPortal4()
+		local modpp = MafPortal4()
 		modpp.nearRange = nearRange
 		modpp.farRange = farRange
 		addmodifier p modpp
 
 
 		p.parent = nnode
-
-		append portals_array p
 	)
 
-	--group portals_array name:"PORTALS"
-
-	-- print ("Sector: " + mobj._name)
+	-- print ("Sector: " + mobj.name)
 
 	ssectors += 1
 )
@@ -506,86 +521,74 @@ fn ReadTarget f mobj = (
 	nnode = dummy()
 	nnode.boxsize = [0.1, 0.1, 0.1]
 
-	unk0 = ReadByte f
-	unk1 = ReadByte f
-	numLinks = ReadByte f
+	local unk0 = ReadByte f
+	local unk1 = ReadByte f
+	local numLinks = ReadByte f
 
-	-- print ("Target: " + mobj._name)
+	-- print ("Target: " + mobj.name)
 	-- print ("  unk0: " + (unk0 as string))
 	-- print ("  unk1: " + (unk1 as string))
 	-- print ("  numLinks: " + (numLinks as string))
 
-
-	for i = 1 to numLinks do
-	(
-		linkId = ReadShort f
-		-- print ("  linkId: " + (linkId as string) + " - " + Mafia_Object[linkid].name)
+	for i = 1 to numLinks do (
+		local linkId = ReadShort f
+		-- print ("  linkId: " + (linkId as string) + " - " + mnodes[linkid].name)
 	)
-
-	
 
 	stargets += 1
 )
 
 sbones = 0
 fn ReadBone f mobj = (
-	nnode = bone()
+	--nnode = bone()
+	nnode = dummy()
+	nnode.boxsize = [0.1, 0.1, 0.1]
 	
-	for i = 1 to 64 do
-	(
-		--rotation matrix
-		ReadByte f
-	)
-	boneId = ReadLong f
+	for i = 1 to 64 do ReadByte f --rotation matrix	
+	local boneId = ReadLong f
 
-	-- print ("Bone: " + mobj._name)
+	-- print ("Bone: " + mobj.name)
 
-	if bone_layer == undefined then bone_layer = LayerManager.newLayerFromName "Bones"
-	bone_layer.addnode nnode
+	AddToBoneLayer nnode
 
 	sbones += 1
 )
 
 fn ReadHeader f = (
-	fourcc = ReadLong f
-	version = ReadShort f
+	local fourcc = ReadLong f
+	local version = ReadShort f
 	if version != 29 then MessageBox "Unknown 4DS version - importing might not work correctly"
-	timestamp = ReadLongLong f
+	local timestamp = ReadLongLong f
 )
 
 smaterials = 0
 fn ReadMaterials f = (
 
-	numMats = ReadShort f
+	local numMats = ReadShort f
 	smaterials = numMats
 	
 	if numMats > 0 then (
-		numsubs = numMats + 1
+		local numsubs = numMats + 1
 		godmat = multimaterial numsubs:numsubs
 		godmat[1] = undefined
-		godmat.name = "$MAFIA_MATERIALS"
-	
+		godmat.name = "$MAFIA_MATERIALS"	
 
-		for m = 2 to numsubs do
-		(
-			mat = MafMat4()
+		for m = 2 to numsubs do (
+			local mat = MafMat4()
 			mat.name = "4DSMat"+(m as string)
 
-			flags = ReadLong f
+			local flags = ReadLong f
 
 			--Diffuse Map
 			mat.delegate.diffuseMapEnable = (bit.get flags 19)
-
 
 			mat.useColoring = (bit.get flags 28)
 			mat.useMips = (bit.get flags 24)
 			mat.delegate.twoSided = (bit.get flags 29)
 			mat.isAnimatedM = (bit.get flags 27)
 
-
 			--Environment Map
 			mat.delegate.reflectionMapEnable = (bit.get flags 20)
-
 
 			mat.envOverlay = (bit.get flags 9)
 			mat.envMultiply = (bit.get flags 10)
@@ -601,60 +604,43 @@ fn ReadMaterials f = (
 			mat.useColorKey = (bit.get flags 30)
 			mat.useAddBlend = (bit.get flags 32)
 
-
-
 			mat.delegate.ambient = ReadColor f
 			mat.delegate.diffuse = ReadColor f
 			mat.delegate.selfIllumColor = ReadColor f
 			mat.delegate.opacity = (ReadFloat f)*100
 
-			if mat.delegate.reflectionMapEnable == true do
-			(
+			if mat.delegate.reflectionMapEnable then (
 				mat.delegate.reflectionMapAmount = (ReadFloat f)*100
-				nameLength = readbyte f
-				envMapName = readtext f namelength
-				envMap = bitmaptex()
+				local envMapName = ReadText f 
+				local envMap = bitmaptex()
 				envMap.filename = envMapName
 				mat.delegate.reflectionMap = envMap;
 			)
 
-			diffMapNameLength = readbyte f
-			if diffMapNameLength != 0 do
-			(
-				diffMapName = readtext f diffMapNameLength
-				diffMap = bitmaptex()
+			local diffMapName = ReadText f
+			if diffMapName != undefined then (
+				local diffMap = bitmaptex()
 				diffMap.filename = diffMapName
 				mat.delegate.diffuseMap = diffMap;
 				showTextureMap mat on
 			)
 
-			if mat.delegate.opacityMapEnable == true do
-			(
-				alphaMapNameLength = readbyte f
-				alphaMapName=readtext f alphaMapNameLength
-				alphatex = bitmaptex()
+			if mat.delegate.opacityMapEnable then (
+				local alphaMapName = ReadText f
+				local alphatex = bitmaptex()
 				alphatex.filename = alphaMapName
 				mat.delegate.opacityMap = alphatex;
 			)
 
-			if mat.isAnimatedM == true do
-			(
-				--for bb=1 to 18 do
-				--(
-				--	readbyte f
-				--)
+			if mat.isAnimatedM then (
 				mat.animFrames = ReadLong f
-				ReadShort f
+				ReadShort f  --unknown
 				mat.animPeriod = ReadLong f
-				ReadLong f
-				ReadLong f
+				ReadLong f  --unknown
+				ReadLong f  --unknown
 			)
 
-
 			godmat[m] = mat
-			--append Mafia_Material mat
-			--b = box()
-			--b.material=mat
 		)
 	)
 )
@@ -662,13 +648,7 @@ fn ReadMaterials f = (
 progress = 0
 sobjects = 0
 fn ReadObjects f = (
-	sector_layer = LayerManager.getLayerFromName "Sectors"
-	portal_layer = LayerManager.getLayerFromName "Portals"
-	dummy_layer = LayerManager.getLayerFromName "Dummies"
-
-	lod_layers = #()
-
-	numObjects = ReadShort f
+	local numObjects = ReadShort f
 
 	sobjects = numObjects
 
@@ -681,7 +661,7 @@ fn ReadObjects f = (
 
 	for i = 0 to numObjects - 1 do
 	(
-		objectType = ReadByte f
+		local objectType = ReadByte f
 		local visualType
 		local renderFlags = 0
 
@@ -693,23 +673,23 @@ fn ReadObjects f = (
 		--general block
 
 		nnode = 0
-		mobj = ReadBaseObject f
+		local mobj = ReadBaseObject f
 		
 		if objectType == 1 then  --VISUAL OBJECT
 		(
 			if visualType == 0 then ReadStandardMesh f mobj
 			if visualType == 2 then (
 				ReadSingleMesh f mobj;
-				--print ("SingleMesh: " + mobj._name)
+				--print ("SingleMesh: " + mobj.name)
 			)
 			if visualType == 3 then (
 				ReadSingleMorph f mobj
-				--print ("SingleMorph: " + mobj._name)
+				--print ("SingleMorph: " + mobj.name)
 			)
 			if visualType == 4 then ReadBillboard f mobj
 			if visualType == 5 then (
 				ReadMorph f mobj; 
-				--print ("Morph: " + mobj._name)
+				--print ("Morph: " + mobj.name)
 			)
 			if visualType == 6 then ReadGlow f mobj
 			if visualType == 8 then ReadMirror f mobj
@@ -721,20 +701,20 @@ fn ReadObjects f = (
 
 		--print ("Handle: " + (nnode.inode.handle as string))
 
-		nnode.name=mobj._name
-		if mobj._parentID!=0 do nnode.parent=mobj._parentID
+		nnode.name = mobj.name
+		nnode.parent = mobj.parent
+
 		ApplyTransform nnode mobj
 
 
 		modf = MafObject4()
-		--modf.subtypeName = cyp
 		modf.renderFlags = renderFlags
-		modf.cullFlags = mobj._cullingFlags
-		modf.userParams = mobj._params
+		modf.cullFlags = mobj.cullFlags
+		if mobj.userParams != undefined then modf.userParams = mobj.userParams
 		--addmodifier nnode modf before:(nnode.modifiers.count)
 		addmodifier nnode modf
 
-		append Mafia_Object nnode
+		append mnodes nnode
 
 		--progress += percent
 		--if mod i 50 == 0 then progressUpdate progress
@@ -747,7 +727,7 @@ fn ImportNormals = (
 	max modify mode
 	select n_mesh_array
 
-	norm = Edit_Normals()
+	local norm = Edit_Normals()
 	modpanel.addmodtoselection norm
 
 	--print (n_mesh_array.count as string)
@@ -757,25 +737,25 @@ fn ImportNormals = (
 	for i = 1 to n_mesh_array.count do
 	(
 		--print (n_normal_array[i].count as string)
-		p = n_mesh_array[i]
+		local p = n_mesh_array[i]
 
-		pn = n_normal_array[i]
+		local pn = n_normal_array[i]
 		
 		for i = 1 to p.numverts do
 		(
-			my_verts = #{i} --define a bitArray specifying vertex 1
-			my_normals = #{} --define an empty bitArray to store the result
+			local vert_sel = #{i} --define a bitArray specifying vertex 1
+			local normal_sel = #{} --define an empty bitArray to store the result
 			--call the method with the two bitArrays passed by-reference:
-			norm.ConvertVertexSelection &my_verts &my_normals node:p
-			n = (my_normals as array)[1]
+			norm.ConvertVertexSelection &vert_sel &normal_sel node:p
+			n = (normal_sel as array)[1]
 			--norm.SetNormalExplicit n node:p
 			norm.setnormal n pn[i] node:p
 		)
 
-		my_verts = #{1..p.numverts}
-		my_normals = #{}
-		norm.ConvertVertexSelection &my_verts &my_normals node:p
-		norm.MakeExplicit selection:my_normals node:p
+		local vert_sel = #{1..p.numverts}
+		local normal_sel = #{}
+		norm.ConvertVertexSelection &vert_sel &normal_sel node:p
+		norm.MakeExplicit selection:normal_sel node:p
 		
 		
 		--progress += percent
@@ -794,16 +774,20 @@ fn ImportNormals = (
 ---------MAIN-----------
 ------------------------
 fn Main = (
-	local file = getOpenFileName types:"4DS models (*.4ds)|*.4ds|All files (*.*)|*.*"
+	local file = getOpenFileName types:"4DS models (*.4ds)|*.4ds|All files (*.*)|*.*" historyCategory:"4dsImport"
 	if file != undefined do
 	(
-		local start = timeStamp()
+		format "importing: %\n" file
+		local start = timeStamp()		
+
+		gc light:true
+
+		local used_start = (heapsize - heapfree) / 1024.0
 
 		with redraw off (
 			--progressStart "4ds importing"
 
-			--Mafia_Material = #()
-			Mafia_Object = #()
+			mnodes = #()
 
 			f = fopen file "rb"
 
@@ -838,17 +822,23 @@ fn Main = (
 			--if (smirrors > 0) or (sglows > 0) or (stargets > 0) then MessageBox "its here!"
 		)	
 
-		local end = timeStamp()
-		
+		local end = timeStamp()		
 		if end < start then end += 86400000 --timing over midnight
+		local dur = (end - start) / 1000.0		
 
-		local dur = (end - start) / 1000.0
+		CompleteRedraw()
 
-		local message = "Importing took " + (dur as string) + " seconds"
+		local used_end = (heapsize - heapfree) / 1024.0
+		format "memory used ~ % KiB\n" (used_end - used_start)
+
+		gc light:true
+
+		local message = "Importing took " + (dur as string) + " seconds\n"
 		format message
 		messageBox message
 	)
 )
+
 Main()
 
 )

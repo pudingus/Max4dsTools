@@ -6,7 +6,7 @@ classID:#(0x61e87622, 0x3623b669)
 	(
 		renderFlags type:#integer ui:ui_cullFlags
 		cullFlags type:#integer ui:ui_cullFlags
-		userParams type:#string default:"" ui:ui_userParams
+		userParams type:#string ui:ui_userParams
 	)
 	rollout params "4DS Base Object"
 	(

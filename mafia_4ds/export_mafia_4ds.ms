@@ -2,13 +2,16 @@
 
 fn WriteText f txt = (
 	if txt == undefined then (
-		--MessageBox "writetext undefined"
-		--print "writetext undefined"
 		WriteByte f 0 #unsigned
 	)
 	else (
-		WriteByte f txt.count #unsigned
-		for i = 1 to txt.count do
+		local count = txt.count
+		if count > 255 then (
+			count = 255
+			messageBox ("String '" + txt + "' is over the maximum of 255 characters!") icon:#warning
+		)
+		WriteByte f count #unsigned
+		for i = 1 to count do
 			WriteByte f (bit.charasint txt[i])
 	)
 )
@@ -24,6 +27,18 @@ fn WriteHeader f = (
 	WriteShort f 29			--format version
 	WriteLong f 343586816	--timestamp
 	WriteLong f 29382754	--timestamp part 2
+)
+
+fn GetModByClass obj mclass = (    --to support versions prior 2013
+	local found = false	
+	local foundMod
+	for modd in obj.modifiers while not found do (
+		if classof modd == mclass then (
+			found = true
+			foundMod = modd
+		)
+	)
+	foundMod
 )
 
 local godmat 
@@ -115,10 +130,10 @@ fn WriteMaterials f =
 			)
 		
 			if mat.isAnimatedM then (
-				WriteByte f animFrames
+				WriteByte f mat.animFrames
 				WriteByte f 0
 				WriteLong f 0
-				WriteLong f animDelay
+				WriteLong f mat.animPeriod
 				WriteLong f 0
 				WriteLong f 0
 			)
@@ -185,7 +200,7 @@ fn CompareNames obj1 obj2 = stricmp obj1.name obj2.name
 fn CollectObjects = (
 
 	mobjects = #()
-	mobject_ids = Dictionary #integer	
+	mobject_ids = #()
 
 	for obj in objects do (		
 		mobj = MObject()
@@ -271,21 +286,31 @@ fn WriteFace f face = (
 	Writeshort f c #unsigned
 )
 
+fn WriteUV f uv = (
+	WriteFloat f uv.x
+	WriteFloat f (1 - uv.y)
+)
+
 fn WriteSector f mobj = (
 	WriteLong f 2049    --unknown
 	WriteLong f 0		--unknown
 
-	WriteLong f (mobj.nnode.numVerts)
-	WriteLong f (mobj.nnode.numFaces)
+	local smesh = copy mobj.nnode.mesh
 
-	for i = 1 to mobj.nnode.numVerts do (
-		pos = getVert mobj.nnode i
-		WritePoint3 f pos
+	local numVerts = smesh.numVerts
+	local numFaces = smesh.numFaces
+
+	WriteLong f numVerts
+	WriteLong f numFaces
+
+	for i = 1 to numVerts do (
+		local vert = getVert smesh i
+		WritePoint3 f vert
 	)
 
-	for i = 1 to mobj.nnode.numFaces do (
-		indexes = getFace mobj.nnode i
-		WriteFace f indexes
+	for i = 1 to numFaces do (
+		local face = getFace smesh i
+		WriteFace f face
 	)
 
 	WritePoint3 f mobj.nnode.min
@@ -294,10 +319,17 @@ fn WriteSector f mobj = (
 	WriteByte f mobj.portals.count
 
 	for portal in mobj.portals do (
-		WriteByte f (portal.numVerts)
-		WriteLong f 4 	--unknown
-		for i = 1 to 4 do WriteLong f 0   --unknown
-		local modp = portal.modifiers[MafPortal4]
+		local pmesh = copy portal.mesh
+
+		local numVerts = pmesh.numVerts
+
+		WriteByte f numVerts
+
+		WriteLong f 4					--unknown
+		for i = 1 to 4 do WriteLong f 0	--unknown
+
+		local modp = GetModByClass portal MafPortal4
+
 		if (modp == undefined) then (
 			WriteFloat f 0.0
 			WriteFloat f 10.0
@@ -307,9 +339,9 @@ fn WriteSector f mobj = (
 			WriteFloat f modp.farRange
 		)	
 
-		for i = 1 to portal.numVerts do (
-			pos = polyop.getvert portal i
-			WritePoint3 f pos
+		for i = 1 to numVerts do (
+			local vert = getVert pmesh i
+			WritePoint3 f vert
 		)
 	)
 )
@@ -322,6 +354,7 @@ fn WriteDummy f mobj = (
 )
 
 struct MVert (
+	key, --string
 	pos,	--Point3
 	normal,	--Point3
 	uv		--Point3 (Point2)
@@ -334,9 +367,8 @@ struct MFacegroup (
 
 struct MLod (
 	verts = #(),  --array of MVert
-	vert_ids = Dictionary #string,
 	facegroups = #(),   --array of MFacegroup
-	facegroup_ids = Dictionary #integer,
+	facegroup_ids = #(),
 	loddist,
 
 	fn GetFacegroupFromMatID matid = (
@@ -363,13 +395,11 @@ fn CollectLodsCompat mobj = (
 	local prevDist = 0.0
 
 	for lodnode in lodnodes do (
-		local lodmesh
-		if isKindOf lodnode Editable_mesh then lodmesh = lodnode
-		else lodmesh = copy lodnode.mesh
+		local lodmesh = copy lodnode.mesh
 
 		local m_lod = MLod()
 
-		local modl = lodnode.modifiers[MafLod4]
+		local modl = GetModByClass lodnode MafLod4
 		if modl != undefined then (
 			m_lod.loddist = modl.lodDist
 		)
@@ -380,7 +410,9 @@ fn CollectLodsCompat mobj = (
 		prevDist = m_lod.loddist
 
 		local normMod
-		if MafiaTools.exportNormals.checked then normMod = lodnode.modifiers[Edit_Normals]
+		if MafiaTools.exportNormals.state == 2 then normMod = GetModByClass lodnode Edit_Normals
+		-----
+
 		local normals = #()
 
 		if normMod != undefined then
@@ -441,10 +473,85 @@ fn CollectLodsCompat mobj = (
 	m_lods
 )
 
+
+fn CompareVerts mvert1 mvert2 = stricmp mvert1.key mvert2.key
+
+fn CompareVertsB mkey index mverts: = (
+	currentKey = mverts[index].key
+	stricmp mkey currentKey
+)
+
+
+fn CollectVerts lodmesh lodnode = (
+	local EN_getnormalid 
+	local EN_getnormal
+	if normmod != undefined then (
+		max modify mode
+		modpanel.setcurrentobject normmod node:lodnode
+		
+		EN_getnormalid = normmod.getnormalid
+		EN_getnormal =  normmod.getnormal
+	)	
+
+	local verts_big_unsorted = #()
+
+	for i = 1 to lodmesh.numfaces do (
+		local face = getFace lodmesh i
+		local tface = meshop.getMapFace lodmesh 1 i   
+		local rnormals = meshop.getFaceRNormals lodmesh i
+
+		for v = 1 to 3 do (
+						
+			local pos = (in coordsys local getVert lodmesh (face[v] as integer)) + lodnode.objectOffsetPos
+			local uv = getTVert lodmesh (tface[v] as integer)
+			local normal
+			if normmod != undefined then (
+				local n = EN_getnormalid i v node:lodnode
+				normal = EN_getnormal n node:lodnode
+			)
+			else normal = rnormals[v]				
+
+			local strvert = stringstream ""
+			format "%%%%%%%%" pos.x pos.y pos.z normal.x normal.y normal.z uv.x uv.y to:strvert
+			strvert = strvert as string	
+
+			local m_vert = MVert pos:pos normal:normal uv:uv key:strvert	
+
+			append verts_big_unsorted m_vert
+		)
+	)
+
+	verts_big_unsorted
+)
+
+fn RemoveDuplicates verts_big_unsorted = (
+	local verts_big_sorted = copy verts_big_unsorted #noMap
+
+	qsort verts_big_sorted CompareVerts
+
+	local usedIds = #{}
+	local big_ids = for i = 1 to verts_big_sorted.count collect i
+	for m_vert in verts_big_sorted do (
+		local index = bsearch m_vert.key big_ids CompareVertsB mverts:verts_big_sorted
+		usedIds[index] = true
+	)
+	usedIds = usedIds as array
+
+	local verts_unique = #()
+
+	for id in usedIds do (
+		local m_vert = verts_big_sorted[id]
+		append verts_unique m_vert
+	)
+
+	verts_unique
+)
+
+
+
+
 fn CollectLods mobj = (
-	--local nnode = $
 	local nnode = mobj.nnode
-	--if classof nnode != Editable_mesh then nnode = snapshotAsMesh $	
 
 	local lodnodes = copy mobj.lods #noMap
 	insertItem mobj.nnode lodnodes 1
@@ -454,13 +561,11 @@ fn CollectLods mobj = (
 	local prevDist = 0.0
 
 	for lodnode in lodnodes do (
-		local lodmesh
-		if isKindOf lodnode Editable_mesh then lodmesh = lodnode
-		else lodmesh = copy lodnode.mesh
+		local lodmesh = copy lodnode.mesh
 
 		local m_lod = MLod()
-
-		local modl = lodnode.modifiers[MafLod4]
+		
+		local modl = GetModByClass lodnode MafLod4
 		if modl != undefined then (
 			m_lod.loddist = modl.lodDist
 		)
@@ -471,73 +576,63 @@ fn CollectLods mobj = (
 		prevDist = m_lod.loddist
 
 		local normMod
-		if MafiaTools.exportNormals.checked then normMod = lodnode.modifiers[Edit_Normals]
-		local EN_getnormalid 
-		local EN_getnormal
-		if normmod != undefined then (
-			max modify mode
-			modpanel.setcurrentobject normmod node:lodnode
-			
-			EN_getnormalid = normmod.getnormalid
-			EN_getnormal =  normmod.getnormal
-		)	
+		if MafiaTools.exportNormals.state == 2 then normMod = GetModByClass lodnode Edit_Normals
 
+		-----
+
+		
 		local useMatId = false
 		if (godmat != undefined) and (lodnode.mat == godmat) then (
 			useMatId = true
-		)
-	
+		)	
+
+		----***FIRST PASS		
+
+		local verts_big_unsorted = CollectVerts lodmesh lodnode
+		
+		---***REMOVE DUPLICATES		
+		
+		m_lod.verts = RemoveDuplicates verts_big_unsorted
+
+		---***SECOND PASS
+
+		local unique_ids = for i = 1 to m_lod.verts.count collect i
+
+		local kkek = 1
 		for i = 1 to lodmesh.numfaces do (
-			local face = getFace lodmesh i
-			local tface = meshop.getMapFace lodmesh 1 i   
-	
+
 			local matid = 1 
 			if useMatId then matid = getFaceMatID lodmesh i
 			local m_facegroup = m_lod.GetFacegroupFromMatID matid
-			local rnormals = meshop.getFaceRNormals lodmesh i
+
 			local nface = #()
 	
 			for v = 1 to 3 do (
-				local vert = (in coordsys local getVert lodmesh (face[v] as integer)) + lodnode.objectOffsetPos
-				local tvert = meshop.getMapVert lodmesh 1 (tface[v] as integer)
-				local normal
-				if normmod != undefined then (
-					local n = EN_getnormalid i v node:lodnode
-					normal = EN_getnormal n node:lodnode
-				)
-				else (
-					normal = rnormals[v]
-				)	
-	
-				strvert = stringstream ""
-				format "%%%%%%%%" vert.x vert.y vert.z normal.x normal.y normal.z tvert.x tvert.y to:strvert
-				strvert = strvert as string	
-				
-				local id = m_lod.vert_ids[strvert]
-				if id == undefined then (
-					local m_vert = MVert pos:vert normal:normal uv:tvert
-					append m_lod.verts m_vert
-					id = m_lod.verts.count
-					m_lod.vert_ids[strvert] = id
-				)
-				nface[v] = id			
+				local strvert = verts_big_unsorted[kkek].key
+				local vert_id = bsearch strvert unique_ids CompareVertsB mverts:m_lod.verts
+				nface[v] = vert_id
+				kkek += 1
 			)
 	
 			append m_facegroup.faces nface
-		)
-		append m_lods m_lod
+		)		
 		
 		--format "mverts: %, faces: %, facegroups: %\n" m_lod.verts.count lodmesh.numfaces m_lod.facegroups.count
+
+		append m_lods m_lod		
 	)
 	m_lods	
 )
 
+
+
 fn WriteStandardMesh f mobj = (
 
 	local m_lods
-	local modl = mobj.nnode.modifiers[MafLod4]
+	local modl = GetModByClass mobj.nnode MafLod4
 	if (modl != undefined) and (modl.dontOptimize) then (
 		m_lods = CollectLodsCompat mobj
+		--m_lods = CollectLods mobj
 	)
 	else (
 		m_lods = CollectLods mobj
@@ -545,18 +640,22 @@ fn WriteStandardMesh f mobj = (
 
 	WriteShort f 0 --not duplicate
 	WriteByte f m_lods.count
+
 	for m_lod in m_lods do (
 		
 		WriteFloat f m_lod.loddist
+
+		local count = m_lod.verts.count
+		if count > 65535 then (
+			messageBox ("Too many vertices in " + mobj.nnode.name + ".  " + (count as string) + " / 65535.") icon:#critical
+		)
 
 		WriteShort f m_lod.verts.count
 
 		for m_vert in m_lod.verts do (
 			WritePoint3 f m_vert.pos
 			WritePoint3 f m_vert.normal
-
-			WriteFloat f m_vert.uv.x
-			WriteFloat f (1 - m_vert.uv.y)
+			WriteUV f m_vert.uv
 		)
 
 		WriteByte f m_lod.facegroups.count
@@ -579,7 +678,8 @@ fn WriteObjects f = (
 	WriteShort f mobjects.count
 
 	for mobj in mobjects do (		
-		local modo = mobj.nnode.modifiers[MafObject4]
+		local modo = GetModByClass mobj.nnode MafObject4
+
 
 		local renderFlags = 0
 		local cullFlags = 0
@@ -622,7 +722,7 @@ fn WriteObjects f = (
 		else if mobj.objectType == 6 then WriteDummy f mobj
 		else if mobj.objectType == 1 and mobj.visualType == 0 then 			
 			WriteStandardMesh f mobj
-
+		
 	)
 )
 
@@ -630,11 +730,18 @@ fn WriteObjects f = (
 ---------MAIN-----------
 ------------------------
 fn Main = (
-	scenename = getFilenameFile maxFileName
-	file = getSaveFileName types:"4DS file (*.4ds)|*.4ds|All files (*.*)|*.*" filename:scenename
+	local scenename = getFilenameFile maxFileName
+	local file = getSaveFileName types:"4DS file (*.4ds)|*.4ds|All files (*.*)|*.*" filename:scenename historyCategory:"4dsExport"
 	if file != undefined do
 	(
-		start = timeStamp()	
+		format "exporting: %\n" file
+
+		local start = timeStamp()	
+		
+		gc light:true
+
+		local used_start = (heapsize - heapfree) / 1024.0
+
 		f = fopen file "wb"    
 		WriteHeader f
 		WriteMaterials f
@@ -642,17 +749,19 @@ fn Main = (
 		WriteByte f 0  --use 5ds animation
 		fclose f
 	
-		end = timeStamp()	
-		if end < start then end += 86400000  --timing over midnight
+		local end = timeStamp()	
+		if end < start then end += 86400000  --timing over midnight	
+		local dur =  (end - start) / 1000.0
+
+		local used_end = (heapsize - heapfree) / 1024.0
+		format "memory used ~ % KiB\n" (used_end - used_start)
+
+		gc light:true
 	
-		dur =  (end - start) / 1000.0
-	
-		format "Exporting took % seconds\n" dur
-	
+		format "Exporting took % seconds\n" dur	
 		messageBox ("Exporting took " + (dur as string) + " seconds")
 	)
 )
 Main()
---CollectObjects()
 
 )
