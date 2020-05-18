@@ -35,8 +35,8 @@ extends:Standard
 		checkbox ui_useMips 		"Mip Mapping" 		align:#left fieldwidth:48
 		--checkbox ui_is2Sided 		"2 Sided" 			align:#left fieldwidth:48
 		checkbox ui_isAnimated 		"Animated" 			align:#left fieldwidth:48
-		spinner ui_animFrames 		"Frame Count" 		range:[0,1000,1] align:#left fieldwidth:40
-		spinner ui_animPeriod 		"Frame Period" 		range:[0,3600000,1] align:#left fieldwidth:40
+		spinner ui_animFrames 		"Frame Count" 		range:[0,1000,1] align:#left fieldwidth:40 type:#integer offset:[25,0]
+		spinner ui_animPeriod 		"Frame Period" 		range:[0,3600000,1] align:#left fieldwidth:40 type:#integer offset:[25,00]
 		label ui_environmentMap		"Environment Map"
 		--spinner ui_envRatio 		"Ratio" 			range:[0,1,1] align:#left fieldwidth:40
 		checkbox ui_envOverlay 		"Overlay" 			align:#left fieldwidth:48
