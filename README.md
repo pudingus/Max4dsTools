@@ -14,7 +14,9 @@
 - Vertex normals (smoothing groups, or explicit normals)
 
 **What is not supported (yet?):**
-- Skinned meshes, morphs, bones, billboards, mirrors, targets, glows, instanced geometry. Files containing these types can be opened, but they will be imported only partially.
+- Skinned meshes, morphs, bones, billboards, mirrors, targets, glows, instanced geometry. Files containing these types can be opened, but they will be imported only partially.  
+
+See [**roadmap**](ROADMAP.md)
 
 
 Sectors have to be prefixed with "sector" (no dollar sign)  
