@@ -295,7 +295,8 @@ fn WriteSector f mobj = (
 	WriteLong f 2049    --unknown
 	WriteLong f 0		--unknown
 
-	local smesh = copy mobj.nnode.mesh
+	--local smesh = copy mobj.nnode.mesh
+	local smesh = snapshotAsMesh mobj.nnode
 
 	local numVerts = smesh.numVerts
 	local numFaces = smesh.numFaces
@@ -319,7 +320,8 @@ fn WriteSector f mobj = (
 	WriteByte f mobj.portals.count
 
 	for portal in mobj.portals do (
-		local pmesh = copy portal.mesh
+		--local pmesh = copy portal.mesh
+		local pmesh = snapshotAsMesh portal
 
 		local numVerts = pmesh.numVerts
 
@@ -701,12 +703,30 @@ fn WriteObjects f = (
 		)
 		WriteShort f mobj.parentID #unsigned
 
-		in coordsys parent
-		(
-			WritePoint3 f mobj.nnode.pos
-			WritePoint3 f mobj.nnode.scale
-			WriteQuat f mobj.nnode.rotation
+		if mobj.objectType == 5 then (
+			WritePoint3 f [0,0,0]
+			WritePoint3 f [1,1,1]
+			WriteQuat f [0,0,0,0]
 		)
+		else (
+			if (mobj.parentID != 0) and (mobjects[mobj.parentID].objectType == 5) then (
+				in coordsys world
+				(
+					WritePoint3 f mobj.nnode.pos
+					WritePoint3 f mobj.nnode.scale
+					WriteQuat f mobj.nnode.rotation
+				)
+			)
+			else (
+				in coordsys parent
+				(
+					WritePoint3 f mobj.nnode.pos
+					WritePoint3 f mobj.nnode.scale
+					WriteQuat f mobj.nnode.rotation
+				)
+			)
+			
+		)	
 
 		-- WritePoint3 f mobj.nnode.objectTransform.translationPart
 		-- WritePoint3 f mobj.nnode.objectTransform.scalePart
