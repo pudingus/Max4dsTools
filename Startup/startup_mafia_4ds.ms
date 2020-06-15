@@ -1,13 +1,34 @@
 (
-    local set_heapsize = 64 * 1024 * 1024  --64 MiB
-    if heapsize < set_heapsize then heapsize = set_heapsize
+	local set_heapsize = 64 * 1024 * 1024  --64 MiB
+	if heapsize < set_heapsize then heapsize = set_heapsize
+	
+
+	filein "mafia_4ds\\MafLod4.ms"
+	filein "mafia_4ds\\MafMat4.ms"
+	filein "mafia_4ds\\MafObject4.ms"
+	filein "mafia_4ds\\MafPortal4.ms"
+
+	filein "mafia_4ds\\ui_mafia_4ds.ms"	
 )
 
-filein "mafia_4ds\\MafLod4.ms"
-filein "mafia_4ds\\MafMat4.ms"
-filein "mafia_4ds\\MafObject4.ms"
-filein "mafia_4ds\\MafPortal4.ms"
+callbacks.addScript #systemPostNew "PostNew()" id:#MafiaTools
+callbacks.addScript #systemPostReset "PostNew()" id:#MafiaTools
 
-filein "mafia_4ds\\ui_mafia_4ds.ms"
+callbacks.addScript #filePostOpen "PostOpen()" id:#MafiaTools
+callbacks.addScript #filePostSave "PostSave()" id:#MafiaTools
 
-print "Mafia 4DS Tools loaded"
+fn PostNew = (
+	MafiaTools.editName.text = ""
+)
+
+fn PostOpen = (
+	MafiaTools.editName.text = getFilenameFile maxFileName
+)
+
+fn PostSave = (
+	if MafiaTools.editName.text == "" then (
+		MafiaTools.editName.text = getFilenameFile maxFileName
+	)	
+)
+
+print "Mafia 4DS Tools 0.2.0 loaded"

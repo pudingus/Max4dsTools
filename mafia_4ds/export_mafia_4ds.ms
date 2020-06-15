@@ -41,104 +41,119 @@ fn GetModByClass obj mclass = (    --to support versions prior 2013
 	foundMod
 )
 
-local godmat 
+local mafia_materials = #()
+local mat_map = #()
+
 fn WriteMaterials f =
 (
-    local found = false
-    local i = 1
+	for mat in sceneMaterials do (
+		if isKindOf mat MultiMaterial then (
+			for submat in mat.materialList where submat != undefined do (
+				local handle = GetHandleByAnim submat
+
+				if mat_map[handle] == undefined then (
+					append mafia_materials submat
+					mat_map[handle] = mafia_materials.count
+				)
+			)
+
+		)
+		else (
+			local handle = GetHandleByAnim mat
+
+			if mat_map[handle] == undefined then (
+				append mafia_materials mat
+				mat_map[handle] = mafia_materials.count
+			)
+		)
+	)
+
+	for mat in mafia_materials do print mat
+	for matm in mat_map where matm != undefined do print matm
+
 	
-	for mat in scenematerials while not found do (
-		if stricmp mat.name "$MAFIA_MATERIALS" == 0 then (
-			found = true	
-			godmat = mat					
+
+	
+	
+	local numMats = mafia_materials.count
+	WriteShort f numMats
+	
+	for mat in mafia_materials do (
+
+		local flags = 0
+		flags += (bit.set 0 1 true)
+		if classof mat == Standard then flags += (bit.set 0 24 true)
+		else if classof mat == MafMat4 then
+		(	
+			flags += (bit.set 0 19 mat.delegate.diffuseMapEnable)
+			flags += (bit.set 0 28 mat.useColoring)
+			flags += (bit.set 0 24 mat.useMips)
+			flags += (bit.set 0 29 mat.delegate.twoSided)
+			flags += (bit.set 0 27 mat.isAnimatedM)
+			flags += (bit.set 0 20 mat.delegate.reflectionMapEnable)
+			flags += (bit.set 0 9 mat.envOverlay)
+			flags += (bit.set 0 10 mat.envMultiply)
+			flags += (bit.set 0 11 mat.envAdditive)
+			flags += (bit.set 0 13 mat.YProj)
+			flags += (bit.set 0 14 mat.YDetail)
+			flags += (bit.set 0 15 mat.ZDetail)
+			flags += (bit.set 0 16 mat.addEffect)
+			flags += (bit.set 0 31 mat.delegate.opacityMapEnable)
+			flags += (bit.set 0 30 mat.useColorKey)
+			flags += (bit.set 0 32 mat.useAddBlend)
+		)
+	
+		WriteLong f flags
+		
+		--ambient
+		WriteColor f mat.delegate.ambient
+		
+		--diffuse
+		WriteColor f mat.delegate.diffuse
+		
+		--emission
+		if mat.delegate.useSelfIllumColor then (
+			WriteColor f mat.delegate.selfIllumColor
+		)
+		else (
+			WriteFloat f 0; WriteFloat f 0; WriteFloat f 0
+		)
+		
+		--opacity
+		WriteFloat f (mat.delegate.opacity / 100.0)
+	
+		--env map
+		if mat.delegate.reflectionMapEnable then (
+			WriteFloat f (mat.delegate.reflectionMapAmount / 100.0)
+			local filename = filenameFromPath mat.delegate.reflectionMap.filename
+			WriteText f filename
+		)
+	
+		--diffuse map
+		if mat.delegate.diffuseMapEnable then (
+			local filename = filenameFromPath mat.delegate.diffusemap.filename
+			WriteText f filename
+		)
+		else (
+			WriteByte f 0
+		)
+	
+		--opacity map
+		if mat.delegate.opacityMapEnable then (
+			local filename = filenameFromPath mat.delegate.opacitymap.filename
+			WriteText f filename
+		)
+	
+		if mat.isAnimatedM then (
+			WriteByte f mat.animFrames
+			WriteByte f 0
+			WriteLong f 0
+			WriteLong f mat.animPeriod
+			WriteLong f 0
+			WriteLong f 0
 		)
 	)
-
-	if not found then (
-		local numMats = 0
-		WriteShort f numMats
-	)
-	else (
-		local numMats = godmat.numSubs - 1
-		WriteShort f numMats
 		
-		for m = 2 to godmat.numSubs do (
-			local mat = godmat[m]
-
-			local flags = 0
-			flags += (bit.set 0 1 true)
-			if classof mat == Standard then flags += (bit.set 0 24 true)
-			else if classof mat == MafMat4 then
-			(	
-				flags += (bit.set 0 19 mat.delegate.diffuseMapEnable)
-				flags += (bit.set 0 28 mat.useColoring)
-				flags += (bit.set 0 24 mat.useMips)
-				flags += (bit.set 0 29 mat.delegate.twoSided)
-				flags += (bit.set 0 27 mat.isAnimatedM)
-				flags += (bit.set 0 20 mat.delegate.reflectionMapEnable)
-				flags += (bit.set 0 9 mat.envOverlay)
-				flags += (bit.set 0 10 mat.envMultiply)
-				flags += (bit.set 0 11 mat.envAdditive)
-				flags += (bit.set 0 13 mat.YProj)
-				flags += (bit.set 0 14 mat.YDetail)
-				flags += (bit.set 0 15 mat.ZDetail)
-				flags += (bit.set 0 16 mat.addEffect)
-				flags += (bit.set 0 31 mat.delegate.opacityMapEnable)
-				flags += (bit.set 0 30 mat.useColorKey)
-				flags += (bit.set 0 32 mat.useAddBlend)
-			)
-		
-			WriteLong f flags
-			
-			--ambient
-			WriteColor f mat.delegate.ambient
-			
-			--diffuse
-			WriteColor f mat.delegate.diffuse
-			
-			--emission
-			if mat.delegate.useSelfIllumColor then (
-				WriteColor f mat.delegate.selfIllumColor
-			)
-			else (
-				WriteFloat f 0; WriteFloat f 0; WriteFloat f 0
-			)
-			
-			--opacity
-			WriteFloat f (mat.delegate.opacity / 100.0)
-		
-			--env map
-			if mat.delegate.reflectionMapEnable then (
-				WriteFloat f (mat.delegate.reflectionMapAmount / 100.0)
-				local filename = filenameFromPath mat.delegate.reflectionMap.filename
-				WriteText f filename
-			)
-		
-			--diffuse map
-			if mat.delegate.diffuseMapEnable then (
-				local filename = filenameFromPath mat.delegate.diffusemap.filename
-				WriteText f filename
-			)
-			else (
-				WriteByte f 0
-			)
-		
-			--opacity map
-			if mat.delegate.opacityMapEnable then (
-				local filename = filenameFromPath mat.delegate.opacitymap.filename
-				WriteText f filename
-			)
-		
-			if mat.isAnimatedM then (
-				WriteByte f mat.animFrames
-				WriteByte f 0
-				WriteLong f 0
-				WriteLong f mat.animPeriod
-				WriteLong f 0
-				WriteLong f 0
-			)
-		)
-	)	
 )
 
 fn IsGeometry obj =
@@ -374,6 +389,7 @@ struct MLod (
 	loddist,
 
 	fn GetFacegroupFromMatID matid = (
+		matid = matid + 1
 		local grp_id = facegroup_ids[matid]	
 
 		if grp_id == undefined then (
@@ -384,6 +400,25 @@ struct MLod (
 		)
 		facegroups[grp_id]
 	)
+)
+
+
+fn GetMafiaMatId mat matid = (
+	local subMat = mat
+	if isKindOf mat MultiMaterial then (
+		subMat = mat[matid]		
+	)
+	
+	local mid
+	if subMat == undefined then (
+		mid = 0
+	)
+	else (
+		local handle = getHandleByAnim subMat
+		mid = mat_map[handle]
+	)	
+
+	mid
 )
 
 fn CollectLodsCompat mobj = (
@@ -454,17 +489,17 @@ fn CollectLodsCompat mobj = (
 
 			append m_lod.verts m_vert
 		)
-
-		local useMatId = false
-		if (godmat != undefined) and (lodnode.mat == godmat) then (
-			useMatId = true
-		)
+		
 
 		for i = 1 to lodmesh.numfaces do (
 			local face = getFace lodmesh i
-			local matid = 1 
-			if useMatId then matid = getFaceMatID lodmesh i
-			local m_facegroup = m_lod.GetFacegroupFromMatID matid
+			local matid = getFaceMatID lodmesh i
+
+
+			local m_matid = GetMafiaMatId (lodnode.mat) matid
+
+
+			local m_facegroup = m_lod.GetFacegroupFromMatID m_matid
 
 			append m_facegroup.faces face
 		)
@@ -474,6 +509,7 @@ fn CollectLodsCompat mobj = (
 
 	m_lods
 )
+
 
 
 fn CompareVerts mvert1 mvert2 = stricmp mvert1.key mvert2.key
@@ -583,10 +619,6 @@ fn CollectLods mobj = (
 		-----
 
 		
-		local useMatId = false
-		if (godmat != undefined) and (lodnode.mat == godmat) then (
-			useMatId = true
-		)	
 
 		----***FIRST PASS		
 
@@ -602,10 +634,12 @@ fn CollectLods mobj = (
 
 		local kkek = 1
 		for i = 1 to lodmesh.numfaces do (
+			
+			local matid = getFaceMatID lodmesh i
 
-			local matid = 1 
-			if useMatId then matid = getFaceMatID lodmesh i
-			local m_facegroup = m_lod.GetFacegroupFromMatID matid
+			local m_matid = GetMafiaMatId (lodnode.mat) matid
+
+			local m_facegroup = m_lod.GetFacegroupFromMatID m_matid
 
 			local nface = #()
 	
@@ -750,10 +784,16 @@ fn WriteObjects f = (
 ---------MAIN-----------
 ------------------------
 fn Main = (
-	local scenename = getFilenameFile maxFileName
+
+	--local scenename = getFilenameFile maxFileName
+	local scenename = MafiaTools.editName.text
 	local file = getSaveFileName types:"4DS file (*.4ds)|*.4ds|All files (*.*)|*.*" filename:scenename historyCategory:"4dsExport"
 	if file != undefined do
 	(
+		if MafiaTools.editName.text == "" then (
+			MafiaTools.editName.text = getFilenameFile file
+		)
+
 		format "exporting: %\n" file
 
 		local start = timeStamp()	

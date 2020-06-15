@@ -12,6 +12,8 @@ local portal_layer
 local bone_layer
 local glow_layer
 
+local filename
+
 
 fn AddToLayer obj layerName layer = (
 	if layer == undefined then (
@@ -227,7 +229,13 @@ fn ReadStandardMesh f mobj = (
 					local face = ReadFace f
 					setFace tr (offset+j) face
 				)
-				local matId = (ReadShort f) + 1 	-- coz 'material_none' is 0 in mafia, but 1 in max
+				--local matId = (ReadShort f) + 1 	-- coz 'material_none' is 0 in mafia, but 1 in max
+
+				local matId = ReadShort f
+
+				if matId == 0 then (
+					matId = godmat.numsubs
+				)
 
 				for j = 1 to numFaces do (
 					setFaceMatID tr (offset+j) matId
@@ -568,14 +576,13 @@ fn ReadMaterials f = (
 	smaterials = numMats
 	
 	if numMats > 0 then (
-		local numsubs = numMats + 1
-		godmat = multimaterial numsubs:numsubs
-		godmat[1] = undefined
-		godmat.name = "$MAFIA_MATERIALS"	
+		godmat = multimaterial numsubs:(numMats+1)
+		godmat[numMats+1] = undefined
+		godmat.name = filename + " Materials"	
 
-		for m = 2 to numsubs do (
+		for m = 1 to numMats do (
 			local mat = MafMat4()
-			mat.name = "4DSMat"+(m as string)
+			mat.name = "4dsMat"+(m as string)
 
 			local flags = ReadLong f
 
@@ -769,14 +776,19 @@ fn ImportNormals = (
 	clearSelection()
 )
 
-
 ------------------------
 ---------MAIN-----------
 ------------------------
 fn Main = (
 	local file = getOpenFileName types:"4DS models (*.4ds)|*.4ds|All files (*.*)|*.*" historyCategory:"4dsImport"
-	if file != undefined do
+	if file != undefined then
 	(
+		if MafiaTools.editName.text == "" then (
+			MafiaTools.editName.text = getFilenameFile file			
+		)
+		
+		filename = getFilenameFile file
+
 		format "importing: %\n" file
 		local start = timeStamp()		
 
