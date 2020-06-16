@@ -374,10 +374,8 @@ fn WriteSector f mobj = (
 	WriteByte f mobj.portals.count
 
 	for portal in mobj.portals do (
-		--local pmesh = copy portal.mesh
-		local pmesh = snapshotAsMesh portal
-
-		local numVerts = pmesh.numVerts
+		local vertIds = polyop.getFaceVerts portal 1
+		local numVerts = vertIds.count
 
 		WriteByte f numVerts
 
@@ -395,8 +393,8 @@ fn WriteSector f mobj = (
 			WriteFloat f modp.farRange
 		)	
 
-		for i = 1 to numVerts do (
-			local vert = getVert pmesh i
+		for id in vertIds do (
+			local vert = polyop.getVert portal id
 			WritePoint3 f vert
 		)
 	)
