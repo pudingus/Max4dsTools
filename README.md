@@ -2,8 +2,7 @@
 
 3ds Max 2009 or newer required.
 
-![a](https://i.postimg.cc/HxvRb652/hotrodp200.png)
-
+<img width="600" height="360" src="https://i.postimg.cc/HxvRb652/hotrodp200.png">
 
 **What is supported:**
 - Sectors
@@ -11,7 +10,7 @@
 - Meshes
 - LODs
 - Dummies
-- [Material flags](https://i.postimg.cc/zfJcMsF7/hotrodp200-materials.png)
+- [Material flags](https://user-images.githubusercontent.com/39903631/84805351-67706b80-b004-11ea-846a-2d633223620a.png)
 - Culling and rendering flags
 - Vertex normals (smoothing groups, or explicit normals)
 
