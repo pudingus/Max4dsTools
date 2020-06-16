@@ -587,15 +587,16 @@ fn ReadMaterials f = (
 			local flags = ReadLong f
 
 			--Diffuse Map
-			mat.delegate.diffuseMapEnable = (bit.get flags 19)
+			mat.diffuseMapEnable = (bit.get flags 19)
 
-			mat.useColoring = (bit.get flags 28)
-			mat.useMips = (bit.get flags 24)
-			mat.delegate.twoSided = (bit.get flags 29)
-			mat.isAnimatedM = (bit.get flags 27)
+			mat.colored = (bit.get flags 28)
+			mat.mipMapping = (bit.get flags 24)
+			mat.twoSided = (bit.get flags 29)
+			mat.animatedDiffuse = (bit.get flags 27)
+			mat.animatedAlpha = (bit.get flags 26)
 
 			--Environment Map
-			mat.delegate.reflectionMapEnable = (bit.get flags 20)
+			mat.envMapEnable = (bit.get flags 20)
 
 			mat.envOverlay = (bit.get flags 9)
 			mat.envMultiply = (bit.get flags 10)
@@ -606,40 +607,44 @@ fn ReadMaterials f = (
 
 			--Additional Effect
 			mat.addEffect = (bit.get flags 16)
-			mat.delegate.opacityMapEnable = (bit.get flags 31)
-			--mat.useAlphaMap = (bit.get flags 31)
-			mat.useColorKey = (bit.get flags 30)
-			mat.useAddBlend = (bit.get flags 32)
+			mat.alphaMapEnable = (bit.get flags 31)
+			mat.colorKey = (bit.get flags 30)
+			mat.additiveMixing = (bit.get flags 32)
 
-			mat.delegate.ambient = ReadColor f
-			mat.delegate.diffuse = ReadColor f
-			mat.delegate.selfIllumColor = ReadColor f
-			mat.delegate.opacity = (ReadFloat f)*100
+			mat.ambient = ReadColor f
+			mat.diffuse = ReadColor f
+			mat.emission = ReadColor f
+			mat.opacity = (ReadFloat f)*100
 
-			if mat.delegate.reflectionMapEnable then (
-				mat.delegate.reflectionMapAmount = (ReadFloat f)*100
+			if mat.envMapEnable then (
+				mat.envMapAmount = (ReadFloat f)*100
 				local envMapName = ReadText f 
-				local envMap = bitmaptex()
-				envMap.filename = envMapName
-				mat.delegate.reflectionMap = envMap;
+				if envMapName != undefined then (
+					local envMap = bitmaptex()
+					envMap.filename = envMapName
+					mat.envMap = envMap
+				)
 			)
 
 			local diffMapName = ReadText f
 			if diffMapName != undefined then (
 				local diffMap = bitmaptex()
 				diffMap.filename = diffMapName
-				mat.delegate.diffuseMap = diffMap;
+				mat.diffuseMap = diffMap
 				showTextureMap mat on
-			)
 
-			if mat.delegate.opacityMapEnable then (
-				local alphaMapName = ReadText f
-				local alphatex = bitmaptex()
-				alphatex.filename = alphaMapName
-				mat.delegate.opacityMap = alphatex;
+				if mat.alphaMapEnable then (
+					local alphaMapName = ReadText f
+					if alphaMapName != undefined then (
+						local alphaMap = bitmaptex()
+						alphaMap.filename = alphaMapName
+						mat.alphaMap = alphaMap
+					)
+				)
 			)
+						
 
-			if mat.isAnimatedM then (
+			if mat.animatedDiffuse then (
 				mat.animFrames = ReadLong f
 				ReadShort f  --unknown
 				mat.animPeriod = ReadLong f
