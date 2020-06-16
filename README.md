@@ -1,6 +1,8 @@
 **Work in progress!** Based on the plugin by Mr F, but almost everything has been rewritten.
 
-~~Required version is 2017.1 or higher.~~ 3ds Max 2009 or newer required.
+3ds Max 2009 or newer required.
+
+![a](https://i.postimg.cc/HxvRb652/hotrodp200.png)
 
 
 **What is supported:**
@@ -9,7 +11,7 @@
 - Meshes
 - LODs
 - Dummies
-- Material flags
+- [Material flags](https://i.postimg.cc/zfJcMsF7/hotrodp200-materials.png)
 - Culling and rendering flags
 - Vertex normals (smoothing groups, or explicit normals)
 
@@ -27,7 +29,7 @@ You can apply optional modifiers to control culling flags, lod fade distance, po
 
 scene.4ds files can be imported & exported without losing lighting or collisions (depends on how much you edit)
 
-**Current limitations:** Materials you wish to export have to be under single Multimaterial with a name "$MAFIA_MATERIALS". This single Multimaterial has to be applied to every object.
+~~Current limitations: Materials have to be under single Multimaterial with a name "$MAFIA_MATERIALS"~~
 
 If you move pivot for an object, you have to reset it before exporting.
 
