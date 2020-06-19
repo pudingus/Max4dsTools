@@ -68,8 +68,8 @@ fn WriteMaterials f =
 		)
 	)
 
-	for mat in mafia_materials do print mat
-	for matm in mat_map where matm != undefined do print matm
+	--for mat in mafia_materials do print mat
+	--for matm in mat_map where matm != undefined do print matm
 
 	
 

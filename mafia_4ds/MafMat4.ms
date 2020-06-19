@@ -6,39 +6,50 @@ extends:Standard replaceUI:true version:2 remap:#(#(#isAnimatedM,#useMips,#useCo
 	parameters main rollout:params
 	(
 
-		ambient type:#color ui:ambient
+		ambient type:#color ui:ambient default:[150,150,150]
 		on ambient set val do delegate.ambient = val
 			
-		diffuse type:#color ui:diffuse
+		diffuse type:#color ui:diffuse default:[150,150,150]
 		on diffuse set val do delegate.diffuse = val
 			
-		emission type:#color ui:emission animatable:true
-		on emission set val do delegate.selfIllumColor = val
+		emission type:#color ui:emission
+		on emission set val do delegate.selfIllumColor = val		
 		
-		
-		opacity type:#integer ui:opacity
+		opacity type:#integer ui:opacity default:100
 		on opacity set val do delegate.opacity = val
 		
 		diffuseMapEnable type:#boolean ui:diffuseMapEnable	
 		on diffuseMapEnable set val do delegate.diffuseMapEnable = val
 			
 		'Diffuse Map' type:#texturemap ui:diffuseMap
-		on 'Diffuse Map' set val do delegate.diffuseMap = val		
+		on 'Diffuse Map' set val do (
+			delegate.diffuseMap = val		
+			if val != undefined then diffuseMapEnable = true
+			else diffuseMapEnable = false
+		)
+		
 		
 		envMapEnable type:#boolean ui:envMapEnable
 		on envMapEnable set val do delegate.reflectionMapEnable = val
 
-		envMapAmount type:#integer ui:envMapAmount
+		envMapAmount type:#integer ui:envMapAmount default:100
 		on envMapAmount set val do delegate.reflectionMapAmount = val
 
 		'Env Map' type:#texturemap ui:envMap
-		on 'Env Map' set val do delegate.reflectionMap = val
-			
+		on 'Env Map' set val do (
+			delegate.reflectionMap = val
+			if val != undefined then envMapEnable = true
+			else envMapEnable = false
+		)			
 		
 		alphaMapEnable type:#boolean ui:alphaMapEnable		
 		on alphaMapEnable set val do delegate.opacityMapEnable = val
 		'Alpha Map' type:#texturemap ui:alphaMap
-		on 'Alpha Map' set val do delegate.opacityMap = val
+		on 'Alpha Map' set val do (
+			delegate.opacityMap = val
+			if val != undefined then alphaMapEnable = true
+			else alphaMapEnable = false
+		)
 
 
 		twoSided type:#boolean ui:twoSided
@@ -73,7 +84,7 @@ extends:Standard replaceUI:true version:2 remap:#(#(#isAnimatedM,#useMips,#useCo
 		colorpicker ambient "Ambient" across:2
 		colorpicker emission "Emission"
 		colorpicker diffuse "Diffuse" across:2	 offset:[5,0]	
-		spinner opacity "Opacity  " type:#integer align:#left fieldwidth:30 type:#integer 
+		spinner opacity "Opacity  " type:#integer align:#left fieldwidth:30 type:#integer
 		
 		--label ui_diffuseMap			"Diffuse Map"
 		label a ""
