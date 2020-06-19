@@ -31,4 +31,4 @@ fn PostSave = (
 	)	
 )
 
-print "Mafia 4DS Tools 0.2.0 loaded"
+format "Mafia 4DS Tools % loaded\n" MafiaTools.version.caption

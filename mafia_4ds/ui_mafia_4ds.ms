@@ -8,7 +8,7 @@ utility MafiaTools "Mafia 4DS Tools v4"
 	edittext     editName           align:#left offset:[0,10]  text:""
 	button       btnExport         "Export all..." align:#left
 	label        bout              "by pudingus" offset:[0,20]
-	label        version              "v0.2.0"
+	label        version              "v0.2.1"
 
 	on btnImport pressed do
 	(		
