@@ -11,13 +11,13 @@ MafParams_def = attributes "MafParams" attribID:#(0x4c8354c9, 0x47113d19)
 		userParams type:#string  default:""
 
 		--LOD
-		lodDist type:#float default:4
+		lodDist type:#float default:0.0
 		dontOptimize type:#boolean default:false
 
 
 		--Portal
-		nearRange type:#float default:0
-		farRange type:#float default:10
+		nearRange type:#float default:0.0
+		farRange type:#float default:10.0
 
 
 		--Billboard

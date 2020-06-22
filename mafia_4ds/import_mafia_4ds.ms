@@ -267,7 +267,7 @@ fn ReadStandardMesh f mobj = (
 			custAttributes.add lmesh MafParams_def
 			local gp = custAttributes.get lmesh mafParams_def
 
-			gp.objectType = "lod"
+			gp.objectType = "Lod"
 			gp.lodDist = clippingRange
 			gp.dontOptimize = true
 
@@ -522,7 +522,7 @@ fn ReadSector f mobj = (
 		local gp = custAttributes.get p MafParams_def
 		
 
-		gp.objectType = "portal"
+		gp.objectType = "Portal"
 		gp.nearRange = nearRange
 		gp.farRange = farRange
 		
@@ -736,17 +736,17 @@ fn ReadObjects f = (
 
 		if objectType == 1 then (
 			if visualType == 4 then (
-				gp.objectType = "billboard"
+				gp.objectType = "Billboard"
 			)
 			else (
-				gp.objectType = "mesh"
+				gp.objectType = "Mesh"
 			)
 		)
 		else if objectType == 5 then (
-			gp.objectType = "sector"
+			gp.objectType = "Sector"
 		)
 		else (
-			gp.objectType = "dummy"
+			gp.objectType = "Dummy"
 		)
 
 		gp.renderFlags = renderFlags
