@@ -264,11 +264,12 @@ fn ReadStandardMesh f mobj = (
 				AddToLodLayer lodId lmesh
 			)		
 
+			custAttributes.add lmesh MafParams_def
+			local gp = custAttributes.get lmesh mafParams_def
 
-			local lmod = MafLod4()
-			lmod.lodDist = clippingRange
-			lmod.dontOptimize = true			
-			addmodifier lmesh lmod
+			gp.objectType = "lod"
+			gp.lodDist = clippingRange
+			gp.dontOptimize = true
 
 			lmesh.material = godmat
 
@@ -364,6 +365,13 @@ fn ReadBillboard f mobj = (
 
 	local axis = ReadLong f
 	local axisMode = ReadByte f
+
+	custAttributes.add nnode MafParams_def
+	local gp = custAttributes.get nnode MafParams_def
+
+	gp.rotAxis = axis + 1
+	gp.rotMode = axisMode + 1
+
 
 	--print ("Billboard: " + mobj.name)
 
@@ -510,12 +518,15 @@ fn ReadSector f mobj = (
 
 		AddToPortalLayer p
 
-		local modpp = MafPortal4()
-		modpp.nearRange = nearRange
-		modpp.farRange = farRange
-		addmodifier p modpp
+		custAttributes.add p MafParams_def
+		local gp = custAttributes.get p MafParams_def
+		
 
-
+		gp.objectType = "portal"
+		gp.nearRange = nearRange
+		gp.farRange = farRange
+		
+		
 		p.parent = nnode
 	)
 
@@ -719,13 +730,29 @@ fn ReadObjects f = (
 		ApplyTransform nnode mobj
 
 
-		modf = MafObject4()
-		modf.renderFlags = renderFlags
-		modf.cullFlags = mobj.cullFlags
-		if mobj.userParams != undefined then modf.userParams = mobj.userParams
-		--addmodifier nnode modf before:(nnode.modifiers.count)
-		addmodifier nnode modf
+		custAttributes.add nnode MafParams_def
+		local gp = custAttributes.get nnode MafParams_def
 
+
+		if objectType == 1 then (
+			if visualType == 4 then (
+				gp.objectType = "billboard"
+			)
+			else (
+				gp.objectType = "mesh"
+			)
+		)
+		else if objectType == 5 then (
+			gp.objectType = "sector"
+		)
+		else (
+			gp.objectType = "dummy"
+		)
+
+		gp.renderFlags = renderFlags
+		gp.cullFlags = mobj.cullFlags
+		if mobj.userParams != undefined then gp.userParams = mobj.userParams
+		
 		append mnodes nnode
 
 		--progress += percent
@@ -788,6 +815,9 @@ fn Main = (
 	local file = getOpenFileName types:"4DS models (*.4ds)|*.4ds|All files (*.*)|*.*" historyCategory:"4dsImport"
 	if file != undefined then
 	(
+		--delete $*
+		--gc()
+
 		if MafiaTools.editName.text == "" then (
 			MafiaTools.editName.text = getFilenameFile file			
 		)

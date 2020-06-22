@@ -1,5 +1,7 @@
 (
 
+local debug = false
+
 fn WriteText f txt = (
 	if txt == undefined then (
 		WriteByte f 0 #unsigned
@@ -227,6 +229,13 @@ struct MObject (
 			objectType = 6
 			isSet = true
 		)
+	),
+	fn Billboard = (
+		if not isSet then (
+			objectType = 1
+			visualType = 4
+			isSet = true
+		)
 	)
 )
 
@@ -276,12 +285,18 @@ fn CollectObjects = (
 					append parent_mobj.lods obj
 				) 
 			)
-			else (							
+			else (			
 				if matchPattern obj.name pattern:"sector*" then (
 					mobj.Sector()
-				)
+				)				
 				else (
-					mobj.StandardMesh()
+					local gp = custAttributes.get obj MafParams_def	
+					if (gp != undefined) and (stricmp gp.objectType "billboard" == 0) then (
+						mobj.Billboard()
+					)
+					else (
+						mobj.StandardMesh()
+					)
 				)
 			)
 
@@ -304,15 +319,20 @@ fn CollectObjects = (
 		qsort mobj.portals CompareNames
 	)
 	
-	-- for mobj in mobjects do (
-	-- 	format "\n% ot:% vt:%" mobj.nnode.name mobj.objectType mobj.visualType
-	-- 	for lodd in mobj.lods do (
-	-- 		format "\n  %" lodd.name 
-	-- 	)
-	-- 	for prtl in mobj.portals do (
-	-- 		format "\n  %" prtl.name 
-	-- 	)
-	-- )
+	if debug then (
+		local id = 0
+		for mobj in mobjects do (
+			format "\n%: % ot:% vt:%" id mobj.nnode.name mobj.objectType mobj.visualType
+			for lodd in mobj.lods do (
+				format "\n  %" lodd.name 
+			)
+			for prtl in mobj.portals do (
+				format "\n  %" prtl.name 
+			)
+			id = id + 1
+		)
+	)
+	
 
 	mobjects
 )
@@ -382,16 +402,16 @@ fn WriteSector f mobj = (
 		WriteLong f 4					--unknown
 		for i = 1 to 4 do WriteLong f 0	--unknown
 
-		local modp = GetModByClass portal MafPortal4
+		local gp = custAttributes.get portal MafParams_def
 
-		if (modp == undefined) then (
+		if gp != undefined then (
+			WriteFloat f gp.nearRange
+			WriteFloat f gp.farRange
+		)
+		else (
 			WriteFloat f 0.0
 			WriteFloat f 10.0
 		)
-		else (
-			WriteFloat f modp.nearRange
-			WriteFloat f modp.farRange
-		)	
 
 		for id in vertIds do (
 			local vert = polyop.getVert portal id
@@ -473,9 +493,9 @@ fn CollectLodsCompat mobj = (
 
 		local m_lod = MLod()
 
-		local modl = GetModByClass lodnode MafLod4
-		if modl != undefined then (
-			m_lod.loddist = modl.lodDist
+		local gp = custAttributes.get lodnode MafParams_def
+		if gp != undefined then (
+			m_lod.loddist = gp.lodDist
 		)
 		else (
 			if lodnode == lodnodes[lodnodes.count] then m_lod.loddist = 0.0
@@ -639,16 +659,16 @@ fn CollectLods mobj = (
 		local lodmesh = copy lodnode.mesh
 
 		local m_lod = MLod()
-		
-		local modl = GetModByClass lodnode MafLod4
-		if modl != undefined then (
-			m_lod.loddist = modl.lodDist
+
+		local gp = custAttributes.get lodnode MafParams_def
+		if gp != undefined then (
+			m_lod.loddist = gp.lodDist
 		)
 		else (
 			if lodnode == lodnodes[lodnodes.count] then m_lod.loddist = 0.0
 			else m_lod.loddist = prevDist + 100.0
 		)
-		prevDist = m_lod.loddist
+		prevDist = m_lod.loddist	
 
 		local normMod
 		if MafiaTools.exportNormals.state == 2 then normMod = GetModByClass lodnode Edit_Normals
@@ -702,8 +722,8 @@ fn CollectLods mobj = (
 fn WriteStandardMesh f mobj = (
 
 	local m_lods
-	local modl = GetModByClass mobj.nnode MafLod4
-	if (modl != undefined) and (modl.dontOptimize) then (
+	local gp = custAttributes.get mobj.nnode MafParams_def
+	if (gp != undefined) and (gp.dontOptimize) then (
 		m_lods = CollectLodsCompat mobj
 		--m_lods = CollectLods mobj
 	)
@@ -744,6 +764,15 @@ fn WriteStandardMesh f mobj = (
 	)	
 )
 
+fn WriteBillboard f mobj = (
+	WriteStandardMesh f mobj	
+
+	local gp = custAttributes.get mobj.nnode MafParams_def
+
+	WriteByte f (gp.rotAxis - 1)
+	WriteLong f (gp.rotMode - 1)
+)
+
 
 fn WriteObjects f = (
 	local mobjects = CollectObjects()
@@ -751,16 +780,16 @@ fn WriteObjects f = (
 	WriteShort f mobjects.count
 
 	for mobj in mobjects do (		
-		local modo = GetModByClass mobj.nnode MafObject4
+		local gp = custAttributes.get mobj.nnode MafParams_def
 
 
 		local renderFlags = 0
 		local cullFlags = 0
-		local userParams
-		if modo != undefined then (
-			renderFlags = modo.renderFlags
-			cullFlags = modo.cullFlags
-			userParams = modo.userParams
+		local userParams		
+		if gp != undefined then (
+			renderFlags = gp.renderFlags
+			cullFlags = gp.cullFlags
+			userParams = gp.userParams
 		)
 		else if mobj.objectType == 5 then cullFlags = 125
 		else if mobj.objectType == 1 then cullFlags = 9
@@ -809,10 +838,16 @@ fn WriteObjects f = (
 		WriteText f userParams
 		------------------
 
-		if mobj.objectType == 5 then WriteSector f mobj
+		if mobj.objectType == 1 then (
+			if mobj.visualType == 0 then (
+				WriteStandardMesh f mobj
+			)
+			else if mobj.visualType == 4 then (
+				WriteBillboard f mobj
+			)
+		)
+		else if mobj.objectType == 5 then WriteSector f mobj
 		else if mobj.objectType == 6 then WriteDummy f mobj
-		else if mobj.objectType == 1 and mobj.visualType == 0 then 			
-			WriteStandardMesh f mobj
 		
 	)
 )

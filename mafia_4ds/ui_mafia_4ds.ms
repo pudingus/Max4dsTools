@@ -7,8 +7,11 @@ utility MafiaTools "Mafia 4DS Tools v4"
 	radiobuttons exportNormals     "Export normals:" labels:#("Smoothing groups", "Edit_Normals (slow)") align:#left offset:[0,20] 
 	edittext     editName           align:#left offset:[0,10]  text:""
 	button       btnExport         "Export all..." align:#left
+	button       btnParamEditor    "Parameter editor..." align:#left
+	--button       btnBitmapPaths   "Texture paths..." align:#left
+
 	label        bout              "by pudingus" offset:[0,20]
-	label        version              "v0.2.1"
+	label        version              "v0.3.0"
 
 	on btnImport pressed do
 	(		
@@ -19,5 +22,18 @@ utility MafiaTools "Mafia 4DS Tools v4"
 	(		
 		filein "export_mafia_4ds.ms"		
 	)
+
+	on btnParamEditor pressed do
+	(		
+		filein "parameditor.ms"		
+	)
+	
+	-- on btnBitmapPaths pressed do
+	-- (		
+	-- 	configureBitmapPaths()		
+	-- )
+
+	
+	
 )
 openUtility MafiaTools
