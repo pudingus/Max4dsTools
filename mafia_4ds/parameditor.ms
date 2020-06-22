@@ -8,13 +8,30 @@ global aaa
 
     rollout ObjectRoll ""
     (
-        spinner renderFlags "Rendering flags:" range:[0,65535,0] type:#integer align:#left fieldwidth:45 enabled:false
-        spinner cullFlags "Culling flags:      " range:[0,255,0]  type:#integer align:#left fieldwidth:45 tooltip:"9=normal, 125=sector, \n29, 61, \n16=disabled, 17=disabled"
+        spinner renderFlags "Render flags:" range:[0,255,0] type:#integer align:#left fieldwidth:30 enabled:false across:2
+        spinner renderFlags2 "" range:[0,255,0] type:#integer fieldwidth:30 enabled:false
+        checkbox depthBias "Depth bias" across:2
+        checkbox shadowed "Shadowed" 
+        checkbox texProj "Tex. proj." across:2
+        checkbox noFog "No fog"
+
+        spinner cullFlags "Culling flags:  " range:[0,255,0]  type:#integer align:#left fieldwidth:50 tooltip:"9=normal, 125=sector, \n61=wall, 29=in portal, \n16=disabled, 17=disabled"
         label paramsLabel "String params:" align:#left
         edittext userParams "" align:#left width:130    
 
         on renderFlags changed val do (
             gp.renderFlags = val
+        )
+
+        on renderFlags2 changed val do (
+            gp.renderFlags2 = val
+
+            local flags = val
+
+            depthBias.checked = bit.get flags 1
+            shadowed.checked = bit.get flags 2 
+            texProj.checked = bit.get flags 6 
+            noFog.checked = bit.get flags 8
         )
 
         on cullFlags changed val do (
@@ -24,11 +41,31 @@ global aaa
         on userParams changed val do (
             gp.userParams = val
         )
+
+        on depthBias changed val do (
+            gp.renderFlags2 = bit.set gp.renderFlags2 1 val
+            renderFlags2.value = gp.renderFlags2
+        )
+
+        on shadowed changed val do (
+            gp.renderFlags2 = bit.set gp.renderFlags2 2 val
+            renderFlags2.value = gp.renderFlags2
+        )
+
+        on texProj changed val do (
+            gp.renderFlags2 = bit.set gp.renderFlags2 6 val
+            renderFlags2.value = gp.renderFlags2
+        )
+
+        on noFog changed val do (
+            gp.renderFlags2 = bit.set gp.renderFlags2 8 val
+            renderFlags2.value = gp.renderFlags2
+        )
     )
 
     rollout LodRoll ""
     (
-        spinner lodDist "LOD distance:   " align:#left fieldwidth:45 range:[0,9999,10] scale:1
+        spinner lodDist "LOD distance:" align:#left fieldwidth:50 range:[0,9999,10] scale:1
         label exporterLabel "Exporter:" align:#left		
         checkbox dontOptimize "Don't optimize vertices" align:#left
 
@@ -43,8 +80,8 @@ global aaa
 
     rollout PortalRoll ""
     (
-        spinner nearRange "Near range:" range:[-900000,900000,0] align:#left fieldwidth:45
-        spinner farRange "Far range:  " range:[-900000,900000,0] fieldwidth:45 align:#left 
+        spinner nearRange "Near range:" range:[-900000,900000,0] align:#left fieldwidth:50
+        spinner farRange "Far range:  " range:[-900000,900000,0] fieldwidth:50 align:#left 
 
         on nearRange changed val do (
             gp.nearRange = val
@@ -97,6 +134,7 @@ global aaa
         else if stricmp strsel "sector" == 0 then (            
             for c in ObjectRoll.controls do c.enabled = true  
             ObjectRoll.renderFlags.enabled = false
+            ObjectRoll.renderFlags2.enabled = false
         )
         else if stricmp strsel "portal" == 0 then (            
             for c in ObjectRoll.controls do c.enabled = false 
@@ -111,6 +149,7 @@ global aaa
         else if stricmp strsel "dummy" == 0 then (
             for c in ObjectRoll.controls do c.enabled = true  
             ObjectRoll.renderFlags.enabled = false
+            ObjectRoll.renderFlags2.enabled = false
         )
 
         local remove_rolls = #()
@@ -150,11 +189,19 @@ global aaa
 
         if ObjectRoll.isDisplayed then (
             ObjectRoll.renderFlags.value = gp.renderFlags
+            ObjectRoll.renderFlags2.value = gp.renderFlags2
             ObjectRoll.cullFlags.value = gp.cullFlags
 
             if gp.userParams != undefined then (
                 ObjectRoll.userParams.text = gp.userParams
             ) 
+
+            local flags = gp.renderFlags2
+
+            ObjectRoll.depthBias.checked = bit.get flags 1
+            ObjectRoll.shadowed.checked = bit.get flags 2 
+            ObjectRoll.texProj.checked = bit.get flags 6 
+            ObjectRoll.noFog.checked = bit.get flags 8
         )
 
         if LodRoll.isDisplayed then (
@@ -176,8 +223,8 @@ global aaa
     rollout MafParamEditor "4DS Parameters"
     (
         label objectName "" align:#left
-        button addParams "Add" align:#left pos:[15,30]
-        button removeParams "Remove" align:#left pos:[55,30]
+        button addParams "Add" align:#left pos:[15,30] tooltip:"Add parameters"
+        button removeParams "Remove" align:#left pos:[55,30] tooltip:"Remove parameters"
         dropdownlist objectType "Object type:" align:#left width:130 offset:[0,10]	
 
         on objectType selected i do (
@@ -278,6 +325,12 @@ global aaa
     fn OnSelectionChanged =
     (    
         local obj = selection[1]
+
+        print obj
+        --print selection
+        print $
+
+
         if obj != undefined then (
             MafParamEditor.objectName.text = obj.name
 
@@ -346,7 +399,7 @@ global aaa
 
         )
         
-        print obj
+        
 
     )
 

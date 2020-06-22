@@ -687,11 +687,13 @@ fn ReadObjects f = (
 		local objectType = ReadByte f
 		local visualType
 		local renderFlags = 0
+		local renderFlags2 = 0
 
 		if objectType == 1 do --visual object
 		(
 			visualType = ReadByte f
-			renderFlags = ReadShort f
+			renderFlags = ReadByte f
+			renderFlags2 = ReadByte f
 		)
 		--general block
 
@@ -750,6 +752,7 @@ fn ReadObjects f = (
 		)
 
 		gp.renderFlags = renderFlags
+		gp.renderFlags2 = renderFlags2
 		gp.cullFlags = mobj.cullFlags
 		if mobj.userParams != undefined then gp.userParams = mobj.userParams
 		

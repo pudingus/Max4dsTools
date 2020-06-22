@@ -784,10 +784,12 @@ fn WriteObjects f = (
 
 
 		local renderFlags = 0
+		local renderFlags2 = 42
 		local cullFlags = 0
 		local userParams		
 		if gp != undefined then (
 			renderFlags = gp.renderFlags
+			renderFlags2 = gp.renderFlags2
 			cullFlags = gp.cullFlags
 			userParams = gp.userParams
 		)
@@ -799,7 +801,8 @@ fn WriteObjects f = (
 
 		if mobj.objectType == 1 then (
 			WriteByte f mobj.visualType #unsigned			
-			WriteShort f renderFlags
+			WriteByte f renderFlags #unsigned	
+			WriteByte f renderFlags2 #unsigned	
 		)
 		WriteShort f mobj.parentID #unsigned
 

@@ -7,6 +7,7 @@ MafParams_def = attributes "MafParams" attribID:#(0x4c8354c9, 0x47113d19)
 
 		 --only visual types
 		renderFlags type:#integer default:0    
+		renderFlags2 type:#integer default:42
 		cullFlags type:#integer default:9
 		userParams type:#string  default:""
 
