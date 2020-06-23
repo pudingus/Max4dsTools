@@ -1,10 +1,82 @@
 global OnNodeRenamed
 global OnSelectionChanged
 global aaa
+global MafParamEditor
 (
     local gp
     local EnabledMode
     local DisabledMode    
+    local OpenSelection
+    local OnDeselected
+
+    local visible = false
+
+    rollout MafParamEditor "4DS Parameters"
+    (
+        timer timerDeselected interval:50 active:false
+
+        on timerDeselected tick do (
+            format "DESELECTED!\n"
+            timerDeselected.active = false            
+            OnDeselected()
+        )
+
+        label objectName "" align:#left
+        --edittext objectName "" readOnly:true align:#left
+        --hyperlink objectName "" align:#left
+        button addParams "Add" align:#left pos:[10,25] tooltip:"Add parameters"
+        button removeParams "Remove" align:#left pos:[50,25] tooltip:"Remove parameters"
+        label objectTypeLabel "Object type:" across:2 offset:[0,3] align:#left
+        dropdownlist objectType "" align:#left width:80	
+
+        on objectType selected i do (
+            
+            local strsel = objectType.items[i]
+
+            if gp != undefined then gp.objectType = strsel
+
+            OpenSelection strsel
+        )
+
+        on addParams pressed do (
+            local obj = selection[1]
+            if obj != undefined then (
+                custAttributes.add obj MafParams_def
+                gp = custAttributes.get obj MafParams_def
+
+                local sel = objectType.selection
+                local strsel = objectType.items[sel]
+
+                gp.objectType = strsel
+
+                if stricmp strsel "sector" == 0 then (
+                    gp.cullFlags = 125
+                )
+                
+                EnabledMode()
+                MafParamEditor.objectType.selection = 1
+                OpenSelection strsel 
+            )
+        )
+
+        on removeParams pressed do (
+            local obj = selection[1]
+            if obj != undefined then (
+
+                if queryBox "Do you want to remove parameters from this object?" then (
+                    custAttributes.delete obj MafParams_def
+
+                    DisabledMode()
+                )
+            )
+        )
+
+        on MafParamEditor close do (
+            print "close"
+            callbacks.removeScripts #selectionSetChanged id:#selChangedID
+            callbacks.removeScripts #nodeRenamed id:#nodeRenamedID
+        )
+    )
 
     rollout ObjectRoll ""
     (
@@ -94,7 +166,6 @@ global aaa
 
     rollout BillRoll ""
     (
-        --Billboard
         radiobuttons rotMode "Rotation Mode:" labels:#("All axes", "Single axis:") align:#left columns:1
         dropdownlist rotAxis "" items:#("X", "Y", "Z") offset:[20,0] width:50
 
@@ -107,14 +178,13 @@ global aaa
         )
     )
 
-    -- fn RemoveRollouts = (
-    --     --removeRollout ObjectRoll aaa
-    --     removeRollout LodRoll aaa    
-    --     removeRollout PortalRoll aaa
-    --     removeRollout BillRoll aaa    
-    -- )
+    fn OnDeselected = (
+        MafParamEditor.objectName.text = ""
 
-    --local displayed_rolls = #()
+        DisabledMode()        
+
+        MafParamEditor.addParams.enabled = false
+    )
 	
 	local rolls = #(LodRoll, PortalRoll, BillRoll)
 
@@ -135,6 +205,10 @@ global aaa
             for c in ObjectRoll.controls do c.enabled = true  
             ObjectRoll.renderFlags.enabled = false
             ObjectRoll.renderFlags2.enabled = false
+            ObjectRoll.depthBias.enabled = false
+            ObjectRoll.shadowed.enabled = false
+            ObjectRoll.texProj.enabled = false
+            ObjectRoll.noFog.enabled = false
         )
         else if stricmp strsel "portal" == 0 then (            
             for c in ObjectRoll.controls do c.enabled = false 
@@ -150,6 +224,10 @@ global aaa
             for c in ObjectRoll.controls do c.enabled = true  
             ObjectRoll.renderFlags.enabled = false
             ObjectRoll.renderFlags2.enabled = false
+            ObjectRoll.depthBias.enabled = false
+            ObjectRoll.shadowed.enabled = false
+            ObjectRoll.texProj.enabled = false
+            ObjectRoll.noFog.enabled = false
         )
 
         local remove_rolls = #()
@@ -169,11 +247,11 @@ global aaa
             if findItem displayed_rolls roll == 0 then append add_rolls roll
         )
 
-        format "displayed_rolls: %\n" displayed_rolls
-        format "rlts: %\n" rlts
-        format "remove_rolls %\n" remove_rolls
-        format "add_rolls: %\n" add_rolls
-        format "update_rolls: %\n" update_rolls
+        -- format "displayed_rolls: %\n" displayed_rolls
+        -- format "rlts: %\n" rlts
+        -- format "remove_rolls %\n" remove_rolls
+        -- format "add_rolls: %\n" add_rolls
+        -- format "update_rolls: %\n" update_rolls
 
 
         for roll in remove_rolls do (
@@ -218,218 +296,134 @@ global aaa
             BillRoll.rotMode.state = gp.rotMode
             BillRoll.rotAxis.selection = gp.rotAxis
         )       
+    ) 
+
+    fn SetSelectionStr sel = (
+        local items = MafParamEditor.objectType.items
+        
+        local id = findItem items sel
+        if id == 0 then id = 1
+
+        MafParamEditor.objectType.selection = id      
     )
 
-    rollout MafParamEditor "4DS Parameters"
-    (
-        label objectName "" align:#left
-        button addParams "Add" align:#left pos:[15,30] tooltip:"Add parameters"
-        button removeParams "Remove" align:#left pos:[55,30] tooltip:"Remove parameters"
-        dropdownlist objectType "Object type:" align:#left width:130 offset:[0,10]	
-
-        on objectType selected i do (
-            
-            local strsel = objectType.items[i]
-
-            if gp != undefined then gp.objectType = strsel
-
-            OpenSelection strsel
-        )
-
-        on addParams pressed do (
-            local obj = selection[1]
-            if obj != undefined then (
-                custAttributes.add obj MafParams_def
-                gp = custAttributes.get obj MafParams_def
-
-                local sel = objectType.selection
-                local strsel = objectType.items[sel]
-
-                gp.objectType = strsel
-
-                if stricmp strsel "sector" == 0 then (
-                    gp.cullFlags = 129
-                )
-                
-                EnabledMode()
-                OpenSelection strsel 
-            )
-        )
-
-        on removeParams pressed do (
-            local obj = selection[1]
-            if obj != undefined then (
-
-                if queryBox "Do you want to remove parameters from this object?" then (
-                    custAttributes.delete obj MafParams_def
-
-                    DisabledMode()
-                )
-            )
-        )
-
-        on MafParamEditor close do (
-            print "close"
-            callbacks.removeScripts #selectionSetChanged id:#selChangedID
-            callbacks.removeScripts #nodeRenamed id:#nodeRenamedID
-        )
-    )
-
-    -- fn FindItemLower items value = (
-    --     local found = false
-    --     local i = 1
-    --     for item in items while not found do (
-    --         if stricmp item sel == 0 then found = true
-    --         else i = i + 1
-    --     )
-    -- )
-
-    fn EnabledMode sel:undefined = (
+    fn EnabledMode = (
         MafParamEditor.addParams.enabled = false
         MafParamEditor.removeParams.enabled = true        
-        MafParamEditor.objectType.enabled = true
+        MafParamEditor.objectType.enabled = true        
+        MafParamEditor.objectTypeLabel.enabled = true
 
-        local items = MafParamEditor.objectType.items
-        local found = false
-        local i = 1
+        if not visible then (
+            format "REVIS \n"
+            for c in ObjectRoll.controls do c.visible = true
+            for c in LodRoll.controls do c.visible = true
+            for c in PortalRoll.controls do c.visible = true
+            for c in BillRoll.controls do c.visible = true
 
-        if sel == undefined then (
-            sel = items[i]
-        )
-        else (
-            for item in items while not found do (
-                if stricmp item sel == 0 then found = true
-                else i = i + 1
-            )
-        )
-
-        MafParamEditor.objectType.selection = i            
-        
-        addRollout ObjectRoll aaa
+            visible = true
+        ) 
     )
 
     fn DisabledMode = (
         MafParamEditor.addParams.enabled = true
         MafParamEditor.removeParams.enabled = false
-        MafParamEditor.objectType.selection = 1 
-        MafParamEditor.objectType.enabled = false
+
+        MafParamEditor.objectTypeLabel.enabled = false 
+        MafParamEditor.objectType.enabled = false 
         
-        removeRollout ObjectRoll aaa
-        removeRollout LodRoll aaa    
-        removeRollout PortalRoll aaa
-        removeRollout BillRoll aaa   
+        MafParamEditor.objectType.selection = 1 
+
+        for c in ObjectRoll.controls do c.visible = false
+        for c in LodRoll.controls do c.visible = false
+        for c in PortalRoll.controls do c.visible = false
+        for c in BillRoll.controls do c.visible = false
+
+        visible = false
+    )
+
+    fn IsGeometry obj =
+    (
+        Superclassof obj == GeometryClass and ClassOf obj != TargetObject
     )
 
 
-
+    local start = timestamp()
+    local end = timestamp()
     fn OnSelectionChanged =
     (    
         local obj = selection[1]
 
+        print selection.count
+
         print obj
-        --print selection
-        print $
+
+        if obj == undefined then start = timeStamp()       
+        else (
+            end = timeStamp()  
+            format "dur: % ms\n" (end - start)               
+        )
+
+        -- Workaround for performance reasons - when selecting in scene explorer,
+        -- callback fires twice, once with 'undefined', then with correct object.
+        if obj == undefined then (
+            MafParamEditor.timerDeselected.active = true
+        )
+        else (
+            MafParamEditor.timerDeselected.active = false
+        )
 
 
-        if obj != undefined then (
+        if selection.count >= 2 then (
+            MafParamEditor.objectName.text = ""
+            DisabledMode()        
+            MafParamEditor.addParams.enabled = false
+        )
+        else if selection.count == 1 then (
             MafParamEditor.objectName.text = obj.name
+            --MafParamEditor.objectName.tooltip = obj.name
 
-            -- for c in ObjectRoll.controls do c.enabled = true
-            -- for c in LodRoll.controls do c.enabled = true
-            -- for c in PortalRoll.controls do c.enabled = true
-            -- for c in BillRoll.controls do c.enabled = true
-
-            -- for c in ObjectRoll.controls do c.visible = true
-            -- for c in LodRoll.controls do c.visible = true
-            -- for c in PortalRoll.controls do c.visible = true
-            -- for c in BillRoll.controls do c.visible = true
-
-
-            if matchPattern obj.name pattern:"sector*" then (
-                MafParamEditor.objectType.items = #("Sector")
-            )
-            else if matchPattern obj.name pattern:"$portal*" then(
-                MafParamEditor.objectType.items = #("Portal")
-            )
-            else if matchPattern obj.name pattern:"$lod*" then(
-                MafParamEditor.objectType.items = #("Lod")
+            if IsGeometry obj then (
+                if matchPattern obj.name pattern:"sector*" then (
+                    MafParamEditor.objectType.items = #("Sector")
+                )
+                else if matchPattern obj.name pattern:"$portal*" then(
+                    MafParamEditor.objectType.items = #("Portal")
+                )
+                else if matchPattern obj.name pattern:"$lod*" then(
+                    MafParamEditor.objectType.items = #("Lod")
+                )                
+                else (
+                    MafParamEditor.objectType.items = #("Mesh", "Billboard")
+                ) 
             )
             else if isKindOf obj helper then (
                 MafParamEditor.objectType.items = #("Dummy", "Glow")
-            ) 
-            else (
-                MafParamEditor.objectType.items = #("Mesh", "Billboard")
-            )
-
-            
-
-            
+            )                  
 
             gp = custAttributes.get obj MafParams_def
 
             if gp != undefined then (    
                 local items = MafParamEditor.objectType.items   
-                format "gp.objectType: %\n" gp.objectType
-                if findItem items gp.objectType == 0 then gp.objectType = items[1]
+                --format "gp.objectType: %\n" gp.objectType
+                if findItem items gp.objectType == 0 then gp.objectType = items[1]                
 
-                EnabledMode sel:gp.objectType
+                EnabledMode()
+                SetSelectionStr gp.objectType
                 OpenSelection gp.objectType 
             )
             else (  --no custom attributes
                 DisabledMode()
             )
-        )	   
-        else (
-            --MafParamEditor.objectName.text = ""
-            --MafParamEditor.objectType.enabled = false
-            --RemoveRollouts()
-
-            --MafParamEditor.addParams.enabled = false
-            --MafParamEditor.removeParams.enabled = false
-
-            -- for c in ObjectRoll.controls do c.enabled = false
-            -- for c in LodRoll.controls do c.enabled = false
-            -- for c in PortalRoll.controls do c.enabled = false
-            -- for c in BillRoll.controls do c.enabled = false
-
-            -- for c in ObjectRoll.controls do c.visible = false
-            -- for c in LodRoll.controls do c.visible = false
-            -- for c in PortalRoll.controls do c.visible = false
-            -- for c in BillRoll.controls do c.visible = false
-
-        )
-        
-        
+        )       
 
     )
 
-    fn OnNodeRenamed = (
-        -- local obj = selection[1]
-        -- if obj != undefined then (
-        --     MafParamEditor.objectName.text = obj.name
-
-        --     if matchPattern obj.name pattern:"sector*" then (
-        --         MafParamEditor.objectType.items = #("Sector")
-        --     )
-        --     else if matchPattern obj.name pattern:"$portal*" then(
-        --         MafParamEditor.objectType.items = #("Portal")
-        --     )
-        --     else if matchPattern obj.name pattern:"$lod*" then(
-        --         MafParamEditor.objectType.items = #("Lod")
-        --     )
-        --     else (
-        --         MafParamEditor.objectType.items = #("Mesh", "Billboard")
-        --     )
-        -- )
-
+    fn OnNodeRenamed = ( 
         OnSelectionChanged()
-    )
-    
+    )    
 
     callbacks.addScript #selectionSetChanged "OnSelectionChanged()" id:#selChangedID
-
     callbacks.addScript #nodeRenamed "OnNodeRenamed()" id:#nodeRenamedID
-
 
     if aaa != undefined then (    
         if aaa.open then (
@@ -445,11 +439,9 @@ global aaa
         aaa = newRolloutFloater "aaaa" 190 460
     )
 
-
     addRollout MafParamEditor aaa
     addRollout ObjectRoll aaa
+    for c in ObjectRoll.controls do c.visible = false
 
     OnSelectionChanged()
-
-
 )
