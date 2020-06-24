@@ -41,8 +41,9 @@ global MafParamEditor
         on addParams pressed do (
             local obj = selection[1]
             if obj != undefined then (
-                custAttributes.add obj MafParams_def
-                gp = custAttributes.get obj MafParams_def
+                
+                custAttributes.add obj MafParams_def baseObject:false
+                gp = custAttributes.get obj MafParams_def baseObject:false
 
                 local sel = objectType.selection
                 local strsel = objectType.items[sel]
@@ -63,8 +64,9 @@ global MafParamEditor
             local obj = selection[1]
             if obj != undefined then (
 
-                if queryBox "Do you want to remove parameters from this object?" then (
-                    custAttributes.delete obj MafParams_def
+                if queryBox "Do you want to remove parameters from this object?" then (                    
+
+                    custAttributes.delete obj MafParams_def baseObject:false
 
                     DisabledMode()
                 )
@@ -353,9 +355,9 @@ global MafParamEditor
     (    
         local obj = selection[1]
 
-        print selection.count
+        --print selection.count
 
-        print obj
+        --print obj
 
         if obj == undefined then start = timeStamp()       
         else (
@@ -398,9 +400,9 @@ global MafParamEditor
             )
             else if isKindOf obj helper then (
                 MafParamEditor.objectType.items = #("Dummy", "Glow")
-            )                  
-
-            gp = custAttributes.get obj MafParams_def
+            )     
+            
+            gp = custAttributes.get obj MafParams_def baseObject:false
 
             if gp != undefined then (    
                 local items = MafParamEditor.objectType.items   
@@ -410,6 +412,20 @@ global MafParamEditor
                 EnabledMode()
                 SetSelectionStr gp.objectType
                 OpenSelection gp.objectType 
+
+                local instances
+
+                local count = InstanceMgr.GetInstances obj &instances 
+
+                
+                if instances[count] == obj then (
+                    format "MASTER INSTANCE\n"
+                    for c in LodRoll.controls do c.visible = true
+                )
+                else (
+                    for c in LodRoll.controls do c.visible = false
+                )
+                
             )
             else (  --no custom attributes
                 DisabledMode()

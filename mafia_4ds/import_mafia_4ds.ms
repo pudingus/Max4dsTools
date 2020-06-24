@@ -180,7 +180,7 @@ fn ReadStandardMesh f mobj = (
 	duplicateID = ReadShort f
 	if duplicateID != 0 then
 	(
-		nnode = reference mnodes[duplicateID]
+		nnode = instance mnodes[duplicateID]
 	)
 	else
 	(
@@ -262,10 +262,10 @@ fn ReadStandardMesh f mobj = (
 
 			if numLods > 1 then (
 				AddToLodLayer lodId lmesh
-			)		
+			)
 
-			custAttributes.add lmesh MafParams_def
-			local gp = custAttributes.get lmesh mafParams_def
+			custAttributes.add lmesh MafParams_def baseObject:false 
+			local gp = custAttributes.get lmesh mafParams_def baseObject:false
 
 			gp.objectType = "Lod"
 			gp.lodDist = clippingRange
@@ -366,8 +366,8 @@ fn ReadBillboard f mobj = (
 	local axis = ReadLong f
 	local axisMode = ReadByte f
 
-	custAttributes.add nnode MafParams_def
-	local gp = custAttributes.get nnode MafParams_def
+	custAttributes.add nnode MafParams_def baseObject:false
+	local gp = custAttributes.get nnode MafParams_def baseObject:false
 
 	gp.rotAxis = axis + 1
 	gp.rotMode = axisMode + 1
@@ -516,10 +516,10 @@ fn ReadSector f mobj = (
 		p.wirecolor = (color 255 0 199)
 
 
-		AddToPortalLayer p
+		AddToPortalLayer p		
 
-		custAttributes.add p MafParams_def
-		local gp = custAttributes.get p MafParams_def
+		custAttributes.add p MafParams_def baseObject:false
+		local gp = custAttributes.get p MafParams_def baseObject:false
 		
 
 		gp.objectType = "Portal"
@@ -729,11 +729,10 @@ fn ReadObjects f = (
 		nnode.name = mobj.name
 		nnode.parent = mobj.parent
 
-		ApplyTransform nnode mobj
+		ApplyTransform nnode mobj	
 
-
-		custAttributes.add nnode MafParams_def
-		local gp = custAttributes.get nnode MafParams_def
+		custAttributes.add nnode MafParams_def baseObject:false
+		local gp = custAttributes.get nnode MafParams_def baseObject:false
 
 
 		if objectType == 1 then (
