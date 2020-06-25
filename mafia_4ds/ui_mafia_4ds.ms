@@ -25,7 +25,7 @@ utility MafiaTools "Mafia 4DS Tools v4"
 
 	on btnParamEditor pressed do
 	(		
-		filein "parameditor.ms"		
+		filein "param_editor.ms"		
 	)
 	
 	-- on btnBitmapPaths pressed do

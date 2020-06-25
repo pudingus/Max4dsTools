@@ -799,7 +799,7 @@ fn WriteObjects f = (
 		if mobj.objectType == 5 then (
 			WritePoint3 f [0,0,0]
 			WritePoint3 f [1,1,1]
-			WriteQuat f [0,0,0,0]
+			WriteQuat f [0,0,0,1]
 		)
 		else (
 			if (mobj.parentID != 0) and (mobjects[mobj.parentID].objectType == 5) then (

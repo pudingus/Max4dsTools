@@ -1,7 +1,7 @@
 (
 
 local mnodes
-local nnode
+--local nnode
 local godmat
 
 
@@ -11,6 +11,7 @@ local sector_layer
 local portal_layer
 local bone_layer
 local glow_layer
+local billboard_layer
 
 local filename
 
@@ -50,14 +51,14 @@ fn AddToBoneLayer obj = (
 	AddToLayer obj str bone_layer
 )
 
-fn AddToGlowLayer obj = (
-	local str = "Glows"
-	AddToLayer obj str glow_layer
+fn AddToBillboardLayer obj = (
+	local str = "Billboards"
+	AddToLayer obj str billboard_layer
 )
 
 fn AddToLodLayer lodId obj = (
 	local layer = lod_layers[lodId + 1]
-	local str = "LOD" + (lodId as string) + " LAYER"
+	local str = "Lod" + (lodId as string)
 	if layer == undefined then (
 		layer = LayerManager.getLayerFromName str
 		if layer == undefined then (
@@ -119,7 +120,8 @@ struct MObject
 	rot,
 	cullFlags,
 	name,
-	userParams
+	userParams,
+	numLods = 0
 )
 
 
@@ -176,26 +178,25 @@ n_normal_array = #()
 
 sstandardmeshes = 0
 fn ReadStandardMesh f mobj = (
-	local numlods = 0
-	duplicateID = ReadShort f
-	if duplicateID != 0 then
-	(
-		nnode = instance mnodes[duplicateID]
+	local instanceID = ReadShort f
+	
+	local nnode
+	
+	if instanceID != 0 then (
+		nnode = instance mnodes[instanceID]
 	)
-	else
-	(
-		numLods = ReadByte f
+	else (
+		local numlods = ReadByte f
+		mobj.numlods = numlods
 
-		if numLods == 0 then (
+		if numlods == 0 then (
 			nnode = editable_mesh()
 		)
 
-		for lodId = 0 to numLods - 1 do
+		for lodId = 0 to numlods - 1 do
 		(
 			local clippingRange = ReadFloat f  --clipping range
-
 			local normals_array = #()
-
 			local numVerts = readshort f #unsigned
 
 			local tr = TriMesh()
@@ -218,9 +219,7 @@ fn ReadStandardMesh f mobj = (
 			local numFacegroups = readbyte f #unsigned
 
 			for i = 1 to numFacegroups do (
-
-				local numFaces = readshort f #unsigned
-				
+				local numFaces = readshort f #unsigned				
 				local offset = getNumFaces tr
 				local num = offset + numFaces
 				setNumFaces tr num true			-- keep topology	
@@ -248,10 +247,8 @@ fn ReadStandardMesh f mobj = (
 			)
 
 			local lmesh = mesh mesh:tr
-
 			lmesh.wirecolor = color 0 0 0
-
-
+			
 			if lodId == 0 then (
 				nnode = lmesh
 			)
@@ -260,7 +257,7 @@ fn ReadStandardMesh f mobj = (
 				lmesh.parent = nnode
 			)
 
-			if numLods > 1 then (
+			if numlods > 1 then (
 				AddToLodLayer lodId lmesh
 			)
 
@@ -280,12 +277,14 @@ fn ReadStandardMesh f mobj = (
 
 	sstandardmeshes += 1
 
-	numLods
+	nnode
 )
 
 ssinglemeshes = 0
 fn ReadSingleMesh f mobj = (
-	local numLods = ReadStandardMesh f mobj
+	local nnode = ReadStandardMesh f mobj
+	
+	local numLods = mobj.numlods
 	sstandardmeshes -= 1
 
 	for i = 1 to numLods do (
@@ -311,6 +310,8 @@ fn ReadSingleMesh f mobj = (
 	)	
 
 	ssinglemeshes += 1
+	
+	nnode
 )
 
 fn ReadBaseMorph f mobj = (
@@ -343,24 +344,28 @@ fn ReadBaseMorph f mobj = (
 
 ssinglemorphs = 0
 fn ReadSingleMorph f mobj = (
-	ReadSingleMesh f mobj
+	local nnode = ReadSingleMesh f mobj
 	ReadBaseMorph f mobj
 
 	ssinglemorphs += 1
+	
+	nnode
 )
 
 smorphs = 0
 fn ReadMorph f mobj = (
-	ReadStandardMesh f mobj
+	local nnode = ReadStandardMesh f mobj
 	sstandardmeshes -= 1
 	ReadBaseMorph f mobj
 
 	smorphs += 1
+	
+	nnode
 )
 
 sbillboards = 0
 fn ReadBillboard f mobj = (
-	ReadStandardMesh f mobj
+	local nnode = ReadStandardMesh f mobj
 	sstandardmeshes -= 1
 
 	local axis = ReadLong f
@@ -371,35 +376,58 @@ fn ReadBillboard f mobj = (
 
 	gp.rotAxis = axis + 1
 	gp.rotMode = axisMode + 1
+	
+	AddToBillboardLayer nnode
 
 
 	--print ("Billboard: " + mobj.name)
 
 	sbillboards += 1
+	
+	nnode
 )
 
 sglows = 0
 fn ReadGlow f mobj = (
 
 	local numGlows = ReadByte f
+	--format "[Glow] % - numGlows = %\n" mobj.name numGlows
 	for i = 1 to numGlows do
 	(
 		local position = ReadFloat f
 		local matID = ReadShort f
+		
+		--format "  [glow %]\n" i
+		--format "    position = %\n" position
+		--format "    matID = %\n" matID
 	)
+	
+	--format "\n"
 
 	--nnode = point()
 	--nnode.constantscreensize = true
 	--nnode.box = true
 
-	nnode = dummy()
+	local nnode = dummy()
 	nnode.boxsize = [0.2, 0.2, 0.2]
+	
+	
+
+	--custAttributes.add nnode MafParams_def baseObject:false
+	--local gp = custAttributes.get nnode MafParams_def baseObject:false
+	
+	
+	
 
 	AddToGlowLayer nnode
+	
+	
 
 	--print ("Glow (numGlows: " + (numGlows as string) + "): " + mobj.name)
 
 	sglows += 1
+	
+	nnode
 )
 
 smirrors = 0
@@ -431,16 +459,18 @@ fn ReadMirror f mobj = (
 		setFace tr i face
 	)
 
-	nnode = mesh mesh:tr
+	local nnode = mesh mesh:tr
 
 	--print ("Mirror: " + mobj.name)
 
 	smirrors += 1
+	
+	nnode
 )
 
 sdummies = 0
 fn ReadDummy f mobj = (
-	nnode = dummy()
+	local nnode = dummy()
 
 	local dmin = ReadPoint3 f
 	local dmax = ReadPoint3 f
@@ -452,6 +482,8 @@ fn ReadDummy f mobj = (
 	hide nnode
 
 	sdummies += 1
+	
+	nnode
 )
 
 ssectors = 0
@@ -477,7 +509,7 @@ fn ReadSector f mobj = (
 		setFaceSmoothGroup tr i 0
 	)
 
-	nnode = mesh mesh:tr
+	local nnode = mesh mesh:tr
 
 	AddToSectorLayer nnode
 
@@ -533,11 +565,13 @@ fn ReadSector f mobj = (
 	-- print ("Sector: " + mobj.name)
 
 	ssectors += 1
+	
+	nnode
 )
 
 stargets = 0
 fn ReadTarget f mobj = (
-	nnode = dummy()
+	local nnode = dummy()
 	nnode.boxsize = [0.1, 0.1, 0.1]
 
 	local unk0 = ReadByte f
@@ -555,12 +589,14 @@ fn ReadTarget f mobj = (
 	)
 
 	stargets += 1
+	
+	nnode
 )
 
 sbones = 0
 fn ReadBone f mobj = (
 	--nnode = bone()
-	nnode = dummy()
+	local nnode = dummy()
 	nnode.boxsize = [0.1, 0.1, 0.1]
 	
 	for i = 1 to 64 do ReadByte f --rotation matrix	
@@ -571,6 +607,8 @@ fn ReadBone f mobj = (
 	AddToBoneLayer nnode
 
 	sbones += 1
+	
+	nnode
 )
 
 fn ReadHeader f = (
@@ -697,32 +735,24 @@ fn ReadObjects f = (
 		)
 		--general block
 
-		nnode = 0
+		--nnode = 0
 		local mobj = ReadBaseObject f
 		
-		if objectType == 1 then  --VISUAL OBJECT
-		(
-			if visualType == 0 then ReadStandardMesh f mobj
-			if visualType == 2 then (
-				ReadSingleMesh f mobj;
-				--print ("SingleMesh: " + mobj.name)
+		local nnode = case objectType of (
+			1: case visualType of (
+				0: ReadStandardMesh f mobj
+				2: ReadSingleMesh f mobj
+				3: ReadSingleMorph f mobj
+				4: ReadBillboard f mobj
+				5: ReadMorph f mobj
+				6: ReadGlow f mobj
+				8: ReadMirror f mobj
 			)
-			if visualType == 3 then (
-				ReadSingleMorph f mobj
-				--print ("SingleMorph: " + mobj.name)
-			)
-			if visualType == 4 then ReadBillboard f mobj
-			if visualType == 5 then (
-				ReadMorph f mobj; 
-				--print ("Morph: " + mobj.name)
-			)
-			if visualType == 6 then ReadGlow f mobj
-			if visualType == 8 then ReadMirror f mobj
+			5: ReadSector f mobj
+			6: ReadDummy f mobj
+			7: ReadTarget f mobj
+			10: ReadBone f mobj
 		)
-		if objectType == 5 then ReadSector f mobj
-		if objectType == 6 then ReadDummy f mobj
-		if objectType == 7 then ReadTarget f mobj
-		if objectType == 10 then ReadBone f mobj
 
 		--print ("Handle: " + (nnode.inode.handle as string))
 
@@ -736,7 +766,10 @@ fn ReadObjects f = (
 
 
 		if objectType == 1 then (
-			if visualType == 4 then (
+			if visualType == 6 then (
+				gp.objectType = "Dummy"
+			)
+			else if visualType == 4 then (
 				gp.objectType = "Billboard"
 			)
 			else (

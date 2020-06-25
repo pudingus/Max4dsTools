@@ -1,6 +1,6 @@
 global OnNodeRenamed
 global OnSelectionChanged
-global aaa
+global floater
 global MafParamEditor
 (
     local gp
@@ -16,7 +16,7 @@ global MafParamEditor
         timer timerDeselected interval:50 active:false
 
         on timerDeselected tick do (
-            format "DESELECTED!\n"
+            --format "DESELECTED!\n"
             timerDeselected.active = false            
             OnDeselected()
         )
@@ -86,7 +86,7 @@ global MafParamEditor
         spinner renderFlags2 "" range:[0,255,0] type:#integer fieldwidth:30 enabled:false
         checkbox depthBias "Depth bias" across:2
         checkbox shadowed "Shadowed" 
-        checkbox texProj "Tex. proj." across:2
+        checkbox texProj "Tex. proj." across:2 tooltip:"Texture projection"
         checkbox noFog "No fog"
 
         spinner cullFlags "Culling flags:  " range:[0,255,0]  type:#integer align:#left fieldwidth:50 tooltip:"9=normal, 125=sector, \n61=wall, 29=in portal, \n16=disabled, 17=disabled"
@@ -179,6 +179,16 @@ global MafParamEditor
             gp.rotAxis = i
         )
     )
+    
+    -- rollout GlowRoll ""
+    -- (        
+    --     button add "Add"
+    --     button remove "Remove"
+    --     listbox glows ""
+    --     spinner position "Position" type:#float
+    --     spinner matID "Material ID" type:#integer range:[0,65535,0]       
+    --     materialButton mat "Material" 
+    -- )
 
     fn OnDeselected = (
         MafParamEditor.objectName.text = ""
@@ -231,6 +241,11 @@ global MafParamEditor
             ObjectRoll.texProj.enabled = false
             ObjectRoll.noFog.enabled = false
         )
+        -- else if stricmp strsel "glow" == 0 then (
+        --     for c in ObjectRoll.controls do c.enabled = true  
+            
+        --     rlts = #(GlowRoll)
+        -- )
 
         local remove_rolls = #()
         local update_rolls = #()
@@ -257,11 +272,11 @@ global MafParamEditor
 
 
         for roll in remove_rolls do (
-            removeRollout roll aaa
+            removeRollout roll floater
         )
 
         for roll in add_rolls do (
-            addRollout roll aaa
+            addRollout roll floater
         )
 
         displayed_rolls = rlts
@@ -316,7 +331,7 @@ global MafParamEditor
         MafParamEditor.objectTypeLabel.enabled = true
 
         if not visible then (
-            format "REVIS \n"
+            --format "REVIS \n"
             for c in ObjectRoll.controls do c.visible = true
             for c in LodRoll.controls do c.visible = true
             for c in PortalRoll.controls do c.visible = true
@@ -356,14 +371,13 @@ global MafParamEditor
         local obj = selection[1]
 
         --print selection.count
-
         --print obj
 
-        if obj == undefined then start = timeStamp()       
-        else (
-            end = timeStamp()  
-            format "dur: % ms\n" (end - start)               
-        )
+        -- if obj == undefined then start = timeStamp()       
+        -- else (
+        --     end = timeStamp()  
+        --     format "dur: % ms\n" (end - start)               
+        -- )
 
         -- Workaround for performance reasons - when selecting in scene explorer,
         -- callback fires twice, once with 'undefined', then with correct object.
@@ -399,7 +413,7 @@ global MafParamEditor
                 ) 
             )
             else if isKindOf obj helper then (
-                MafParamEditor.objectType.items = #("Dummy", "Glow")
+                MafParamEditor.objectType.items = #("Dummy")
             )     
             
             gp = custAttributes.get obj MafParams_def baseObject:false
@@ -419,7 +433,7 @@ global MafParamEditor
 
                 
                 if instances[count] == obj then (
-                    format "MASTER INSTANCE\n"
+                    --format "MASTER INSTANCE\n"
                     for c in LodRoll.controls do c.visible = true
                 )
                 else (
@@ -440,23 +454,25 @@ global MafParamEditor
 
     callbacks.addScript #selectionSetChanged "OnSelectionChanged()" id:#selChangedID
     callbacks.addScript #nodeRenamed "OnNodeRenamed()" id:#nodeRenamedID
+    
+    local title = "4DS Params"
 
-    if aaa != undefined then (    
-        if aaa.open then (
-            closeRolloutFloater aaa
+    if floater != undefined then (    
+        if floater.open then (
+            closeRolloutFloater floater
         )
         else (
-            local pos = aaa.pos
-            local size = aaa.size
-            aaa = newRolloutFloater "aaaa" size[1] size[2] pos[1] pos[2]
+            local pos = floater.pos
+            local size = floater.size
+            floater = newRolloutFloater title size[1] size[2] pos[1] pos[2]
         )    
     )
     else (
-        aaa = newRolloutFloater "aaaa" 190 460
+        floater = newRolloutFloater title 190 460
     )
 
-    addRollout MafParamEditor aaa
-    addRollout ObjectRoll aaa
+    addRollout MafParamEditor floater
+    addRollout ObjectRoll floater
     for c in ObjectRoll.controls do c.visible = false
 
     OnSelectionChanged()

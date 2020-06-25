@@ -2,12 +2,14 @@ MafParams_def = attributes "MafParams" attribID:#(0x4c8354c9, 0x47113d19)
 (
 	parameters main
 	(
-		objectType type:#string default:"mesh"
+		objectType type:#string default:""
 
 
 		 --only visual types
 		renderFlags type:#integer default:0    
 		renderFlags2 type:#integer default:42
+		
+		--all objects
 		cullFlags type:#integer default:9
 		userParams type:#string  default:""
 
