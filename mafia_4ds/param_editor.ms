@@ -74,7 +74,7 @@ global MafParamEditor
         )
 
         on MafParamEditor close do (
-            print "close"
+            --print "close"
             callbacks.removeScripts #selectionSetChanged id:#selChangedID
             callbacks.removeScripts #nodeRenamed id:#nodeRenamedID
         )
@@ -364,8 +364,8 @@ global MafParamEditor
     )
 
 
-    local start = timestamp()
-    local end = timestamp()
+    --local start = timestamp()
+    --local end = timestamp()
     fn OnSelectionChanged =
     (    
         local obj = selection[1]
@@ -451,9 +451,7 @@ global MafParamEditor
     fn OnNodeRenamed = ( 
         OnSelectionChanged()
     )    
-
-    callbacks.addScript #selectionSetChanged "OnSelectionChanged()" id:#selChangedID
-    callbacks.addScript #nodeRenamed "OnNodeRenamed()" id:#nodeRenamedID
+	
     
     local title = "4DS Params"
 
@@ -471,9 +469,16 @@ global MafParamEditor
         floater = newRolloutFloater title 190 460
     )
 
-    addRollout MafParamEditor floater
-    addRollout ObjectRoll floater
-    for c in ObjectRoll.controls do c.visible = false
-
-    OnSelectionChanged()
+	if floater.open then (
+		callbacks.addScript #selectionSetChanged "OnSelectionChanged()" id:#selChangedID
+        callbacks.addScript #nodeRenamed "OnNodeRenamed()" id:#nodeRenamedID	
+        	
+		addRollout MafParamEditor floater
+        addRollout ObjectRoll floater
+        
+        for c in ObjectRoll.controls do c.visible = false
+        
+		OnSelectionChanged()		
+	)
+	
 )

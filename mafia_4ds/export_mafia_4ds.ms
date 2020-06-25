@@ -320,19 +320,19 @@ fn CollectObjects = (
 		qsort mobj.portals CompareNames
 	)
 	
-	if debug then (
-		local id = 0
-		for mobj in mobjSet.mobjects do (
-			format "\n%: % ot:% vt:%" id mobj.baseNode.name mobj.objectType mobj.visualType
-			for lodd in mobj.lods do (
-				format "\n  %" lodd.name 
-			)
-			for prtl in mobj.portals do (
-				format "\n  %" prtl.name 
-			)
-			id = id + 1
-		)
-	)	
+	-- if debug then (
+	-- 	local id = 0
+	-- 	for mobj in mobjSet.mobjects do (
+	-- 		format "\n%: % ot:% vt:%" id mobj.baseNode.name mobj.objectType mobj.visualType
+	-- 		for lodd in mobj.lods do (
+	-- 			format "\n  %" lodd.name 
+	-- 		)
+	-- 		for prtl in mobj.portals do (
+	-- 			format "\n  %" prtl.name 
+	-- 		)
+	-- 		id = id + 1
+	-- 	)
+	-- )	
 
 	mobjSet
 	--mobjects
