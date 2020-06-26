@@ -3,6 +3,8 @@ global OnSelectionChanged
 global floater
 global MafParamEditor
 (
+    include "util.ms"
+    
     local gp
     local EnabledMode
     local DisabledMode    
@@ -168,7 +170,7 @@ global MafParamEditor
 
     rollout BillRoll ""
     (
-        radiobuttons rotMode "Rotation Mode:" labels:#("All axes", "Single axis:") align:#left columns:1
+        radiobuttons rotMode "Rotation mode:" labels:#("All axes", "Single axis:") align:#left columns:1
         dropdownlist rotAxis "" items:#("X", "Y", "Z") offset:[20,0] width:50
 
         on rotMode changed val do (
@@ -357,12 +359,6 @@ global MafParamEditor
 
         visible = false
     )
-
-    fn IsGeometry obj =
-    (
-        Superclassof obj == GeometryClass and ClassOf obj != TargetObject
-    )
-
 
     --local start = timestamp()
     --local end = timestamp()

@@ -1,6 +1,95 @@
 (
+	
+include "util.ms"
 
 local debug = false
+
+struct MObject (
+	type,
+	objectType,
+	visualType,
+	baseNode,
+	lods = #(),
+	portals = #(),
+	parentID = 0,
+	instanceID = 0,
+
+	fn OnCreate = (
+		if type == #mesh then (
+			objectType = 1
+			visualType = 0
+		)
+		else if type == #sector then (
+			objectType = 5
+		)
+		else if type == #dummy then (
+			objectType = 6
+		)
+		else if type == #billboard then (
+			objectType = 1
+			visualType = 4
+		)
+
+		true
+	),
+
+	initialized = OnCreate()
+)
+
+struct TObjectSet (
+	mobjects = #(), 		--list of objects as they are about to be exported
+	mobject_ids = #(),		--key = node handle, value = id in mobjects
+
+	fn GetIdFromHandle handle = (    --Get Mafia object id from node handle
+		mobject_ids[handle]
+	),
+
+	fn GetByNode obj = (           --Get MObject from node
+		local handle = obj.inode.handle
+		local mid = GetIdFromHandle handle
+		mobjects[mid]
+	),
+
+	fn Add mobj = (          --Add MObject to collection
+		local handle = mobj.baseNode.inode.handle				
+		append mobjects mobj
+		mobject_ids[handle] = mobjects.count
+	)	
+)
+
+struct MVert (
+	key, --string
+	pos,	--Point3
+	normal,	--Point3
+	uv		--Point3 (Point2)
+)
+
+struct MFacegroup (
+	faces = #(),    -- array of 3-element array
+	matid	  -- short int
+)
+
+struct MLod (
+	verts = #(),  --array of MVert
+	facegroups = #(),   --array of MFacegroup
+	facegroup_ids = #(),
+	loddist,
+
+	fn GetFacegroupFromMatID matid = (
+		matid = matid + 1
+		local grp_id = facegroup_ids[matid]	
+
+		if grp_id == undefined then (
+			local grp = MFacegroup matid:matid
+			append facegroups grp
+			facegroup_ids[matid] = facegroups.count
+			grp_id = facegroups.count
+		)
+		facegroups[grp_id]
+	)
+)
+
+
 
 fn WriteText f txt = (
 	if txt == undefined then (
@@ -24,6 +113,34 @@ fn WriteColor f clr = (
 	WriteFloat f (clr.b / 255.0)
 )
 
+fn WritePoint3 f p3 = (
+	WriteFloat f p3.x
+	WriteFloat f p3.z
+	WriteFloat f p3.y
+)
+
+fn WriteQuat f q = (
+	WriteFloat f q.w
+	WriteFloat f q.x
+	WriteFloat f q.z
+	WriteFloat f q.y
+)
+
+fn WriteFace f face = (
+	a = (face[1] - 1) as integer  --vertices are indexed from 0 in 4ds, from 1 in max
+	b = (face[3] - 1) as integer
+	c = (face[2] - 1) as integer
+	Writeshort f a #unsigned
+	Writeshort f b #unsigned
+	Writeshort f c #unsigned
+)
+
+fn WriteUV f uv = (
+	WriteFloat f uv.x
+	WriteFloat f (1 - uv.y)
+)
+
+
 fn WriteHeader f = (
     WriteLong f 5456948 	-- 4DS
 	WriteShort f 29			--format version
@@ -31,17 +148,7 @@ fn WriteHeader f = (
 	WriteLong f 29382754	--timestamp part 2
 )
 
-fn GetModByClass obj mclass = (    --to support versions prior 2013
-	local found = false	
-	local foundMod
-	for modd in obj.modifiers while not found do (
-		if classof modd == mclass then (
-			found = true
-			foundMod = modd
-		)
-	)
-	foundMod
-)
+
 
 local mafia_materials = #()
 local mat_map = #()
@@ -197,65 +304,7 @@ fn WriteMaterials f =
 		
 )
 
-fn IsGeometry obj =
-(
-	Superclassof obj == GeometryClass and ClassOf obj != TargetObject
-)
-
 fn CompareNames obj1 obj2 = stricmp obj1.name obj2.name
-
-struct MObject (
-	type,
-	objectType,
-	visualType,
-	baseNode,
-	lods = #(),
-	portals = #(),
-	parentID = 0,
-	instanceID = 0,
-
-	fn OnCreate = (
-		if type == #mesh then (
-			objectType = 1
-			visualType = 0
-		)
-		else if type == #sector then (
-			objectType = 5
-		)
-		else if type == #dummy then (
-			objectType = 6
-		)
-		else if type == #billboard then (
-			objectType = 1
-			visualType = 4
-		)
-
-		true
-	),
-
-	initialized = OnCreate()
-)
-
-struct TObjectSet (
-	mobjects = #(), 		--list of objects as they are about to be exported
-	mobject_ids = #(),		--key = node handle, value = id in mobjects
-
-	fn GetIdFromHandle handle = (    --Get Mafia object id from node handle
-		mobject_ids[handle]
-	),
-
-	fn GetByNode obj = (           --Get MObject from node
-		local handle = obj.inode.handle
-		local mid = GetIdFromHandle handle
-		mobjects[mid]
-	),
-
-	fn Add mobj = (          --Add MObject to collection
-		local handle = mobj.baseNode.inode.handle				
-		append mobjects mobj
-		mobject_ids[handle] = mobjects.count
-	)	
-)
 
 
 fn CollectObjects = (
@@ -339,33 +388,6 @@ fn CollectObjects = (
 )
 
 
-fn WritePoint3 f p3 = (
-	WriteFloat f p3.x
-	WriteFloat f p3.z
-	WriteFloat f p3.y
-)
-
-fn WriteQuat f q = (
-	WriteFloat f q.w
-	WriteFloat f q.x
-	WriteFloat f q.z
-	WriteFloat f q.y
-)
-
-fn WriteFace f face = (
-	a = (face[1] - 1) as integer  --vertices are indexed from 0 in 4ds, from 1 in max
-	b = (face[3] - 1) as integer
-	c = (face[2] - 1) as integer
-	Writeshort f a #unsigned
-	Writeshort f b #unsigned
-	Writeshort f c #unsigned
-)
-
-fn WriteUV f uv = (
-	WriteFloat f uv.x
-	WriteFloat f (1 - uv.y)
-)
-
 fn WriteSector f mobj = (
 	WriteLong f 2049    --unknown
 	WriteLong f 0		--unknown
@@ -428,37 +450,6 @@ fn WriteDummy f mobj = (
 	)
 )
 
-struct MVert (
-	key, --string
-	pos,	--Point3
-	normal,	--Point3
-	uv		--Point3 (Point2)
-)
-
-struct MFacegroup (
-	faces = #(),    -- array of 3-element array
-	matid	  -- short int
-)
-
-struct MLod (
-	verts = #(),  --array of MVert
-	facegroups = #(),   --array of MFacegroup
-	facegroup_ids = #(),
-	loddist,
-
-	fn GetFacegroupFromMatID matid = (
-		matid = matid + 1
-		local grp_id = facegroup_ids[matid]	
-
-		if grp_id == undefined then (
-			local grp = MFacegroup matid:matid
-			append facegroups grp
-			facegroup_ids[matid] = facegroups.count
-			grp_id = facegroups.count
-		)
-		facegroups[grp_id]
-	)
-)
 
 
 fn GetMafiaMatId mat matid = (

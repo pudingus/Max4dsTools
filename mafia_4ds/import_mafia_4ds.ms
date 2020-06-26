@@ -1,76 +1,127 @@
 (
+	
+include "layers.ms"
 
 local mnodes
---local nnode
 local godmat
-
-
-local lod_layers = #()
-local dummy_layer
-local sector_layer
-local portal_layer
-local bone_layer
-local glow_layer
-local billboard_layer
-
 local filename
 
-
-fn AddToLayer obj layerName layer = (
-	if layer == undefined then (
-		layer = LayerManager.getLayerFromName layerName
-		if layer == undefined then (
-			layer = LayerManager.newLayerFromName layerName
-		)
-	)
-	layer.addnode obj
+struct MObject
+(
+	parent,
+	offset,
+	scl,
+	rot,
+	cullFlags,
+	name,
+	userParams
 )
 
-fn AddToGlowLayer obj = (
-	local str = "Glows"
-	AddToLayer obj str glow_layer
+struct TMesh (
+	instanceId,
+	lods = #()
 )
 
-fn AddToDummyLayer obj = (
-	local str = "Dummies"
-	AddToLayer obj str dummy_layer
+struct TLod (
+	distance,
+	mesh,
+	normals = #()	
 )
 
-fn AddToSectorLayer obj = (
-	local str = "Sectors"
-	AddToLayer obj str sector_layer
+
+struct TSkin (	
+	lods = #() --array of TSkinLod
 )
 
-fn AddToPortalLayer obj = (
-	local str = "Portals"
-	AddToLayer obj str portal_layer
+struct TSkinLod (
+	numW0Verts,
+	dmin,
+	dmax,
+	bones = #()	--array of TSkinLodBone
 )
 
-fn AddToBoneLayer obj = (
-	local str = "Bones"
-	AddToLayer obj str bone_layer
+struct TSkinLodBone (
+	matrix = #(),  --4x4 matrix - array of float (16)
+	numW1Verts,
+	boneId,
+	dmin,
+	dmax,
+	weights = #()	--array of float
 )
 
-fn AddToBillboardLayer obj = (
-	local str = "Billboards"
-	AddToLayer obj str billboard_layer
+
+struct TMorph (
+	targets = #()
 )
 
-fn AddToLodLayer lodId obj = (
-	local layer = lod_layers[lodId + 1]
-	local str = "Lod" + (lodId as string)
-	if layer == undefined then (
-		layer = LayerManager.getLayerFromName str
-		if layer == undefined then (
-			layer = LayerManager.newLayerFromName str
-			lod_layers[lodId + 1] = layer
-
-			if lodId >= 1 then layer.ishidden = true
-		)
-
-	)
-	layer.addnode obj
+struct TMorphTarget (
+	unknown,
+	channels = #()
 )
+
+struct TMorphChannel (
+	aaa
+)
+
+
+struct TBillboard (
+	rotAxis,
+	rotMode
+)
+
+
+struct TGlow (
+	glows = #() --array of TGlowData
+)
+
+struct TGlowData (
+	position,  --screen offset
+	materialId	
+)
+
+
+struct TMirror (
+	dmin,
+	dmax,
+	unknown = #(),
+	matrix = #(),
+	backColor,
+	drawDistance,
+	mesh
+)
+
+struct TDummy (
+	dmin,
+	dmax
+)
+
+
+struct TSector (
+	mesh,
+	dmin,
+	dmax,
+	portals = #() --array of TPortal
+)
+
+struct TPortal (
+	nearRange,
+	farRange,
+	verts = #() --array of point3
+)
+
+
+struct TTarget (
+	unk1,
+	unk2,
+	linkIds = #()
+)
+
+
+struct TBone (
+	matrix = #(),
+	boneId
+)
+
 
 fn ReadText f = (
 	local len = ReadByte f
@@ -111,18 +162,21 @@ fn ReadQuat f = (
 	qt
 )
 
-
-struct MObject
-(
-	parent,
-	offset,
-	scl,
-	rot,
-	cullFlags,
-	name,
-	userParams,
-	numLods = 0
+fn ReadFace f = (
+	a = ReadShort f #unsigned
+	b = ReadShort f #unsigned
+	c = ReadShort f #unsigned
+	[a+1, c+1, b+1]       --face vertex indexes are 1-based in 3ds Max
 )
+
+fn ReadUV f = (
+	x = ReadFloat f
+	y = ReadFloat f
+	[x, 1-y, 0]
+)
+
+
+
 
 
 fn ReadBaseObject f = (
@@ -160,161 +214,156 @@ fn ApplyTransform nnode mobj = (
 	)
 )
 
-fn ReadFace f = (
-	a = ReadShort f #unsigned
-	b = ReadShort f #unsigned
-	c = ReadShort f #unsigned
-	[a+1, c+1, b+1]       --face vertex indexes are 1-based in 3ds Max
-)
-
-fn ReadUV f = (
-	x = ReadFloat f
-	y = ReadFloat f
-	[x, 1-y, 0]
-)
-
 n_mesh_array = #()
 n_normal_array = #()
 
-sstandardmeshes = 0
-fn ReadStandardMesh f mobj = (
-	local instanceID = ReadShort f
+
+
+fn ReadMesh f = (
+	local mmesh = TMesh()	
+	mmesh.instanceId = ReadShort f	
 	
-	local nnode
-	
-	if instanceID != 0 then (
-		nnode = instance mnodes[instanceID]
+	if mmesh.instanceId == 0 then (
+		local numlods = ReadByte f
+				
+		if numlods > 0 then (
+			for lodId = 0 to numlods - 1 do (
+				local mlod = TLod()				
+				mlod.distance = ReadFloat f								
+				local numVerts = ReadShort f #unsigned
+				local tr = TriMesh()
+				setNumVerts tr numverts
+				setNumTVerts tr numverts
+
+				for i = 1 to numVerts do (
+					local vert = ReadPoint3 f
+					local normal = ReadPoint3 f					
+					local uv = ReadUV f
+					
+					append mlod.normals normal
+					setVert tr i vert
+					setTVert tr i uv
+				)
+
+				local numFacegroups = readbyte f #unsigned
+
+				for i = 1 to numFacegroups do (
+					local numFaces = readshort f #unsigned				
+					local offset = getNumFaces tr
+					local num = offset + numFaces
+					setNumFaces tr num true			-- keep topology	
+
+					for j = 1 to numFaces do (
+						local face = ReadFace f
+						setFace tr (offset+j) face
+					)					
+					local matId = ReadShort f
+					if matId == 0 then (
+						matId = godmat.numsubs
+					)
+					for j = 1 to numFaces do (
+						setFaceMatID tr (offset+j) matId
+					)
+				)
+				
+				buildTVFaces tr
+				for i = 1 to tr.numfaces do (
+					setTVFace tr i (getFace tr i)
+				)				
+				mlod.mesh = tr				
+				append mmesh.lods mlod
+			)			
+		)
+	)
+
+	mmesh
+)
+
+fn CreateMesh mmesh mobj = (
+	local nnode	
+	if mmesh.instanceId != 0 then (
+		nnode = instance mnodes[mmesh.instanceId]
 	)
 	else (
-		local numlods = ReadByte f
-		mobj.numlods = numlods
-
-		if numlods == 0 then (
-			nnode = editable_mesh()
+		if mmesh.lods.count == 0 then (
+			nnode = Editable_mesh()
 		)
-
-		for lodId = 0 to numlods - 1 do
-		(
-			local clippingRange = ReadFloat f  --clipping range
-			local normals_array = #()
-			local numVerts = readshort f #unsigned
-
-			local tr = TriMesh()
-			setNumVerts tr numverts
-			setNumTVerts tr numverts
-
-			for i = 1 to numVerts do
-			(
-				local vert = ReadPoint3 f
-
-				local normal = ReadPoint3 f
-				append normals_array [normal.x, normal.y, normal.z]
-
-				local uv = ReadUV f
-
-				setVert tr i vert
-				setTVert tr i uv
-			)
-
-			local numFacegroups = readbyte f #unsigned
-
-			for i = 1 to numFacegroups do (
-				local numFaces = readshort f #unsigned				
-				local offset = getNumFaces tr
-				local num = offset + numFaces
-				setNumFaces tr num true			-- keep topology	
-
-				for j = 1 to numFaces do (
-					local face = ReadFace f
-					setFace tr (offset+j) face
-				)
-				--local matId = (ReadShort f) + 1 	-- coz 'material_none' is 0 in mafia, but 1 in max
-
-				local matId = ReadShort f
-
-				if matId == 0 then (
-					matId = godmat.numsubs
+		else (
+			local lodId = 0
+			for mlod in mmesh.lods do (	
+				local lmesh = mesh mesh:mlod.mesh
+				lmesh.wirecolor = color 0 0 0
+				
+				if lodId == 0 then nnode = lmesh
+				else (
+					lmesh.name = "$lod" + (lodId as string) + "__" + mobj.name
+					lmesh.parent = nnode
 				)
 
-				for j = 1 to numFaces do (
-					setFaceMatID tr (offset+j) matId
-				)
-			)
-			
-			buildTVFaces tr
-			for i = 1 to tr.numfaces do (
-			 	setTVFace tr i (getFace tr i)
-			)
+				if mmesh.lods.count > 1 then Layers.AddLod lmesh lodId
 
-			local lmesh = mesh mesh:tr
-			lmesh.wirecolor = color 0 0 0
-			
-			if lodId == 0 then (
-				nnode = lmesh
-			)
-			else (
-				lmesh.name = "$lod" + (lodId as string) + "__" + mobj.name
-				lmesh.parent = nnode
-			)
+				custAttributes.add lmesh MafParams_def baseObject:false 
+				local gp = custAttributes.get lmesh mafParams_def baseObject:false
 
-			if numlods > 1 then (
-				AddToLodLayer lodId lmesh
-			)
+				gp.objectType = "Lod"
+				gp.lodDist = mlod.distance
+				gp.dontOptimize = true
 
-			custAttributes.add lmesh MafParams_def baseObject:false 
-			local gp = custAttributes.get lmesh mafParams_def baseObject:false
-
-			gp.objectType = "Lod"
-			gp.lodDist = clippingRange
-			gp.dontOptimize = true
-
-			lmesh.material = godmat
-
-			append n_mesh_array lmesh
-			append n_normal_array normals_array
-		)
+				lmesh.material = godmat
+				
+				lodId += 1
+			)				
+		)						
 	)
-
-	sstandardmeshes += 1
-
 	nnode
 )
 
-ssinglemeshes = 0
-fn ReadSingleMesh f mobj = (
-	local nnode = ReadStandardMesh f mobj
+
+
+fn ReadSkin f numlods = (	
 	
-	local numLods = mobj.numlods
-	sstandardmeshes -= 1
+	local mskin = TSkin()
 
 	for i = 1 to numLods do (
+		local lod = TSkinLod()
+		
 		local numBones = ReadByte f
-		local numW0Verts = ReadLong f
+		lod.numW0Verts = ReadLong f
 	
-		local dmin = ReadPoint3 f
-		local dmax = ReadPoint3 f
+		lod.dmin = ReadPoint3 f
+		lod.dmax = ReadPoint3 f
 	
 		for i = 1 to numBones do (
-			for b = 1 to 64 do ReadByte f   --rotation matrix
-			local numW1Verts = ReadLong f
+			local bone = TSkinLodBone()
+			
+			for b = 1 to 16 do append bone.matrix (ReadFloat f)
+			
+			bone.numW1Verts = ReadLong f
 			local numWeights = ReadLong f
-			local boneID = ReadLong f
+			bone.boneId = ReadLong f
 	
-			local dmin = ReadPoint3 f
-			local dmax = ReadPoint3 f
+			bone.dmin = ReadPoint3 f
+			bone.dmax = ReadPoint3 f
 	
 			for w = 1 to numWeights do (
-				ReadFloat f
+				append bone.weights (ReadFloat f)
 			)
+			append lod.bones bone
 		)
+		append mskin.lods lod
 	)	
-
-	ssinglemeshes += 1
 	
-	nnode
+	mskin
 )
 
-fn ReadBaseMorph f mobj = (
+fn CreateSkin = (
+	-- todo
+)
+
+
+
+fn ReadMorph f = (
+	local mmorph = TMorph()
 	local numTargets = ReadByte f
 
 	if numTargets > 0 then (
@@ -340,107 +389,89 @@ fn ReadBaseMorph f mobj = (
 	
 		for i = 1 to 4 do ReadFloat f   --unknown
 	)	
+	mmorph
 )
 
-ssinglemorphs = 0
-fn ReadSingleMorph f mobj = (
-	local nnode = ReadSingleMesh f mobj
-	ReadBaseMorph f mobj
+fn CreateMorph = (
+	-- todo
+)
 
-	ssinglemorphs += 1
+
+fn ReadBillboard f = (
+	local mbillboard = TBillboard()
+
+	mbillboard.rotAxis = ReadLong f
+	mbillboard.rotMode = ReadByte f
 	
-	nnode
+	mbillboard
 )
 
-smorphs = 0
-fn ReadMorph f mobj = (
-	local nnode = ReadStandardMesh f mobj
-	sstandardmeshes -= 1
-	ReadBaseMorph f mobj
-
-	smorphs += 1
-	
-	nnode
-)
-
-sbillboards = 0
-fn ReadBillboard f mobj = (
-	local nnode = ReadStandardMesh f mobj
-	sstandardmeshes -= 1
-
-	local axis = ReadLong f
-	local axisMode = ReadByte f
-
+fn CreateBillboard nnode mobj = (
+		
 	custAttributes.add nnode MafParams_def baseObject:false
 	local gp = custAttributes.get nnode MafParams_def baseObject:false
 
-	gp.rotAxis = axis + 1
-	gp.rotMode = axisMode + 1
+	gp.rotAxis = mbillboard.rotAxis + 1
+	gp.rotMode = mbillboard.rotMode + 1
 	
-	AddToBillboardLayer nnode
-
-
-	--print ("Billboard: " + mobj.name)
-
-	sbillboards += 1
+	--AddToBillboardLayer nnode
+	Layers.AddTo nnode #billboard
 	
 	nnode
 )
 
-sglows = 0
+
+
+
 fn ReadGlow f mobj = (
+	
+	local mglow = TGlow()
 
 	local numGlows = ReadByte f
 	--format "[Glow] % - numGlows = %\n" mobj.name numGlows
 	for i = 1 to numGlows do
 	(
-		local position = ReadFloat f
-		local matID = ReadShort f
+		local data = TGlowData()		
+		
+		data.position = ReadFloat f
+		data.materialId = ReadShort f
+		
+		append mglow.glows data
 		
 		--format "  [glow %]\n" i
 		--format "    position = %\n" position
 		--format "    matID = %\n" matID
 	)
 	
-	--format "\n"
+	--format "\n"	
+	
+	mglow
+)
 
-	--nnode = point()
+fn CreateGlow mglow mobj = (
+	--local nnode = point()
 	--nnode.constantscreensize = true
 	--nnode.box = true
-
+	
 	local nnode = dummy()
 	nnode.boxsize = [0.2, 0.2, 0.2]
-	
-	
-
-	--custAttributes.add nnode MafParams_def baseObject:false
-	--local gp = custAttributes.get nnode MafParams_def baseObject:false
-	
-	
-	
-
-	AddToGlowLayer nnode
-	
-	
-
-	--print ("Glow (numGlows: " + (numGlows as string) + "): " + mobj.name)
-
-	sglows += 1
-	
+	Layers.AddTo nnode #glow
 	nnode
 )
 
-smirrors = 0
-fn ReadMirror f mobj = (
 
-	local minBox = ReadPoint3 f
-	local maxBox = ReadPoint3 f
 
-	for i = 1 to 4 do unknown = ReadFloat f
-	for i = 1 to 16 do reflectionMatrix = ReadFloat f
+fn ReadMirror f = (
+	local mMirror = TMirror()	
+
+	mMirror.dmin = ReadPoint3 f
+	mMirror.dmax = ReadPoint3 f
+
+	for i = 1 to 4 do local unknown = ReadFloat f
+	for i = 1 to 16 do local reflectionMatrix = ReadFloat f
 	
-	local backColor = ReadColor f
-	local drawDistance = ReadFloat f
+	mMirror.backColor = ReadColor f
+	mMirror.drawDistance = ReadFloat f
 
 	local numVerts = ReadLong f
 	local numFaces = ReadLong f
@@ -458,36 +489,42 @@ fn ReadMirror f mobj = (
 		local face = ReadFace f
 		setFace tr i face
 	)
-
-	local nnode = mesh mesh:tr
-
-	--print ("Mirror: " + mobj.name)
-
-	smirrors += 1
 	
-	nnode
+	mMirror.mesh = tr
+	
+	mMirror
 )
 
-sdummies = 0
-fn ReadDummy f mobj = (
+fn CreateMirror mmirror mobj = (
+	nnode = mesh mesh:mmirror.mesh
+)
+
+
+fn ReadDummy f = (
+	local mDummy = TDummy()	
+	mDummy.dmin = ReadPoint3 f
+	mDummy.dmax = ReadPoint3 f		
+	mDummy
+)
+
+fn CreateDummy mdummy mobj = (
+	local dmin = mdummy.dmin
+	local dmax = mdummy.dmax
 	local nnode = dummy()
-
-	local dmin = ReadPoint3 f
-	local dmax = ReadPoint3 f
-
 	nnode.boxsize = [(abs (dmin.x-dmax.x)), (abs (dmin.y-dmax.y)), (abs (dmin.z-dmax.z))]
-
-	AddToDummyLayer nnode
-
-	hide nnode
-
-	sdummies += 1
 	
+	Layers.AddTo nnode #dummy
+	
+	hide nnode
+		
 	nnode
 )
 
-ssectors = 0
-fn ReadSector f mobj = (
+
+
+fn ReadSector f = (
+	local msector = TSector()	
+
 	ReadLong f --always 2049
 	ReadLong f --always 0
 
@@ -508,105 +545,108 @@ fn ReadSector f mobj = (
 		setFace tr i face
 		setFaceSmoothGroup tr i 0
 	)
-
-	local nnode = mesh mesh:tr
-
-	AddToSectorLayer nnode
-
-	nnode.wirecolor = (color 255 199 0)
-
-	local dmin = ReadPoint3 f
-	local dmax = ReadPoint3 f
+	
+	msector.mesh = tr	
+	msector.dmin = ReadPoint3 f
+	msector.dmax = ReadPoint3 f
 
 	local numPortals = ReadByte f
 
-	for i = 0 to numPortals-1 do (
-
+	for i = 1 to numPortals do (		
+		local mportal = TPortal()
 		local numVerts = ReadByte f
-		ReadLong f  --always 4
-		ReadLong f
-		ReadLong f
-		ReadLong f
-		ReadLong f  --flags?
-
-		local nearRange = ReadFloat f
-		local farRange = ReadFloat f
-
-		pmesh = mesh numverts:numVerts
-		pmesh.name = "$portal" + (formattedPrint i format:".2u") + "__" + mobj.name
-
+		for j = 1 to 5 do ReadLong f
+		mportal.nearRange = ReadFloat f
+		mportal.farRange = ReadFloat f
+				
 		for v = 1 to numVerts do (
 			local vert = ReadPoint3 f
+			append mportal.verts vert
+		)		
+		append msector.portals mportal	
+	)
+
+	
+	msector
+)
+
+fn CreateSector msector mobj = (
+	local nnode = mesh mesh:msector.mesh
+	nnode.wirecolor = (color 255 199 0)
+
+	Layers.AddTo nnode #sector
+	
+	local portalId = 0
+	for mportal in msector.portals do (
+		local numverts = mportal.verts.count
+		local pmesh = mesh numverts:numVerts
+		pmesh.name = "$portal" + (formattedPrint portalId format:".2u") + "__" + mobj.name
+		
+		for v = 1 to numVerts do (
+			local vert = mportal.verts[v]
 			setVert pmesh v vert
 		)
-
-		local verts = for v = 1 to numVerts collect v
-
-		p = convertToPoly pmesh
-		polyop.createPolygon p verts
+		local face = for v = 1 to numVerts collect v
+		local p = convertToPoly pmesh
+		polyop.createPolygon p face
 
 		p.wirecolor = (color 255 0 199)
-
-
-		AddToPortalLayer p		
-
+		p.parent = nnode		
+		
 		custAttributes.add p MafParams_def baseObject:false
-		local gp = custAttributes.get p MafParams_def baseObject:false
+		local gp = custAttributes.get p MafParams_def baseObject:false	
 		
-
 		gp.objectType = "Portal"
-		gp.nearRange = nearRange
-		gp.farRange = farRange
+		gp.nearRange = mportal.nearRange
+		gp.farRange = mportal.farRange		
 		
+		Layers.AddTo nnode #portal	
 		
-		p.parent = nnode
+		portalId += 1
 	)
-
-	-- print ("Sector: " + mobj.name)
-
-	ssectors += 1
-	
 	nnode
 )
 
-stargets = 0
-fn ReadTarget f mobj = (
-	local nnode = dummy()
-	nnode.boxsize = [0.1, 0.1, 0.1]
 
-	local unk0 = ReadByte f
-	local unk1 = ReadByte f
+
+-- returns TTarget
+fn ReadTarget f = (
+	local mTarget = TTarget()	
+
+	mTarget.unk1 = ReadByte f
+	mTarget.unk2 = ReadByte f
 	local numLinks = ReadByte f
-
-	-- print ("Target: " + mobj.name)
-	-- print ("  unk0: " + (unk0 as string))
-	-- print ("  unk1: " + (unk1 as string))
-	-- print ("  numLinks: " + (numLinks as string))
-
+	
 	for i = 1 to numLinks do (
-		local linkId = ReadShort f
-		-- print ("  linkId: " + (linkId as string) + " - " + mnodes[linkid].name)
+		append mTarget.linkIds (ReadShort f)
 	)
+	
+	mTarget
+)
 
-	stargets += 1
+-- returns Node
+fn CreateTarget mtarget mobj = (
+	local nnode = dummy()
+	nnode.boxsize = [0.1, 0.1, 0.1]
 	
 	nnode
 )
 
-sbones = 0
-fn ReadBone f mobj = (
-	--nnode = bone()
-	local nnode = dummy()
-	nnode.boxsize = [0.1, 0.1, 0.1]
-	
-	for i = 1 to 64 do ReadByte f --rotation matrix	
-	local boneId = ReadLong f
 
-	-- print ("Bone: " + mobj.name)
+fn ReadBone f = (
+	local mbone = TBone()	
+	for i = 1 to 16 do (
+		append mbone.matrix (ReadFloat f)			
+	)	
+	mbone.boneId = ReadLong f
+	mbone
+)
 
-	AddToBoneLayer nnode
-
-	sbones += 1
+fn CreateBone mbone mobj = (
+	local nnode = bone()
+	--local nnode = dummy()
+	--nnode.boxsize = [0.1, 0.1, 0.1]
+	Layers.AddTo nnode #bone
 	
 	nnode
 )
@@ -713,13 +753,6 @@ fn ReadObjects f = (
 
 	sobjects = numObjects
 
-	-- if MafiaTools.importNormals.checked == true then (
-	-- 	percent = 20.0 / numObjects
-	-- )
-	-- else (
-	-- 	percent = 100.0 / numObjects
-	-- )	
-
 	for i = 0 to numObjects - 1 do
 	(
 		local objectType = ReadByte f
@@ -732,29 +765,65 @@ fn ReadObjects f = (
 			visualType = ReadByte f
 			renderFlags = ReadByte f
 			renderFlags2 = ReadByte f
-		)
-		--general block
-
-		--nnode = 0
+		)		
 		local mobj = ReadBaseObject f
+		
+		format "%: %\n" i mobj.name 
 		
 		local nnode = case objectType of (
 			1: case visualType of (
-				0: ReadStandardMesh f mobj
-				2: ReadSingleMesh f mobj
-				3: ReadSingleMorph f mobj
-				4: ReadBillboard f mobj
-				5: ReadMorph f mobj
-				6: ReadGlow f mobj
-				8: ReadMirror f mobj
+				0: (
+					local mmesh = ReadMesh f 
+					CreateMesh mmesh mobj
+				)
+				2: (
+					local mmesh = ReadMesh f 
+					local mskin = ReadSkin f mmesh.lods.count
+					CreateMesh mmesh mobj
+				)
+				3: (
+					local mmesh = ReadMesh f
+					local mskin = ReadSkin f mmesh.lods.count
+					local mmorph = ReadMorph f
+					CreateMesh mmesh mobj
+				)
+				4: (
+					local mmesh = ReadMesh f
+					local mbillboard = ReadBillboard f 
+					CreateMesh mmesh mobj
+				)
+				5: (
+					local mmesh = ReadMesh f
+					local mmorph = ReadMorph f
+					CreateMesh mmesh mobj
+				)
+				6: (
+					local mglow = ReadGlow f
+					CreateGlow mglow mobj
+				)
+				8: (
+					local mmirror = ReadMirror f
+					CreateMirror mmirror mobj
+				)
 			)
-			5: ReadSector f mobj
-			6: ReadDummy f mobj
-			7: ReadTarget f mobj
-			10: ReadBone f mobj
+			5: (
+				local msector = ReadSector f
+				CreateSector msector mobj
+			)
+			6: (
+				local mdummy = ReadDummy f
+				CreateDummy mdummy mobj
+			)
+			7: (
+				local mtarget = ReadTarget f
+				CreateTarget mtarget mobj
+			)
+			10: (
+				local mbone = ReadBone f
+				CreateBone mbone mobj
+			)
 		)
-
-		--print ("Handle: " + (nnode.inode.handle as string))
+				
 
 		nnode.name = mobj.name
 		nnode.parent = mobj.parent
@@ -763,7 +832,6 @@ fn ReadObjects f = (
 
 		custAttributes.add nnode MafParams_def baseObject:false
 		local gp = custAttributes.get nnode MafParams_def baseObject:false
-
 
 		if objectType == 1 then (
 			if visualType == 6 then (
@@ -789,15 +857,10 @@ fn ReadObjects f = (
 		if mobj.userParams != undefined then gp.userParams = mobj.userParams
 		
 		append mnodes nnode
-
-		--progress += percent
-		--if mod i 50 == 0 then progressUpdate progress
 	)
 )
 
 fn ImportNormals = (
-	-- percent = 80.0 / n_mesh_array.count
-
 	max modify mode
 	select n_mesh_array
 
@@ -830,10 +893,6 @@ fn ImportNormals = (
 		local normal_sel = #{}
 		norm.ConvertVertexSelection &vert_sel &normal_sel node:p
 		norm.MakeExplicit selection:normal_sel node:p
-		
-		
-		--progress += percent
-		--if mod i 50 == 0 then progressUpdate progress
 	)
 
 
@@ -867,8 +926,6 @@ fn Main = (
 		local used_start = (heapsize - heapfree) / 1024.0
 
 		with redraw off (
-			--progressStart "4ds importing"
-
 			mnodes = #()
 
 			f = fopen file "rb"
@@ -882,9 +939,7 @@ fn Main = (
 			)
 
 			fclose f		
-
-			--progressEnd()
-
+			
 			format "\n-----------------------------------------------------------\n"	
 			format "StandardMeshes: %\n" sstandardmeshes
 			format "SingleMeshes: %\n" ssinglemeshes
