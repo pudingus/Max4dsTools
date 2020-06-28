@@ -11,7 +11,7 @@ utility MafiaTools "Mafia 4DS Tools v4"
 	--button       btnBitmapPaths   "Texture paths..." align:#left
 
 	label        bout              "by pudingus" offset:[0,20]
-	label        version              "v0.3.0"
+	label        version              "v0.3.1"
 
 	on btnImport pressed do
 	(		

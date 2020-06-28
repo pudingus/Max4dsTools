@@ -106,7 +106,7 @@ fn WriteMaterials f =
 			if mat.reflectionMapEnable then (
 				WriteFloat f (mat.reflectionMapAmount / 100.0)
 
-				if mat.reflectionMap != undefined then (
+				if (mat.reflectionMap != undefined) and (classof mat.reflectionMap == Bitmaptexture) then (
 					local filename = filenameFromPath mat.reflectionMap.filename
 					WriteText f filename
 				)
@@ -114,15 +114,20 @@ fn WriteMaterials f =
 			)
 
 			--diffuse map
-			if (mat.diffuseMapEnable) and (diffuseMap != undefined) then (
+			if (mat.diffuseMapEnable) and (mat.diffuseMap != undefined) and (classof mat.diffuseMap == Bitmaptexture) then (
+				
 				local filename = filenameFromPath mat.diffuseMap.filename
 				WriteText f filename
 
-				--alpha map
-				if mat.opacityMapEnable then (
-					local filename = filenameFromPath mat.opacityMap.filename
-					WriteText f filename
+				if (mat.opacityMapEnable) and (filename.count > 0) then (
+					--alpha map
+					if (mat.opacityMap != undefined) and (classof mat.opacityMap == Bitmaptexture) then (
+						local filename = filenameFromPath mat.opacityMap.filename
+						WriteText f filename
+					)
+					else WriteByte f 0  
 				)
+
 			)
 			else WriteByte f 0
 
@@ -162,7 +167,7 @@ fn WriteMaterials f =
 			if mat.envMapEnable then (
 				WriteFloat f (mat.envMapAmount / 100.0)
 
-				if mat.envMap != undefined then (
+				if (mat.envMap != undefined) and (classof mat.envMap == Bitmaptexture) then (
 					local filename = filenameFromPath mat.envMap.filename
 					WriteText f filename
 				)
@@ -170,15 +175,19 @@ fn WriteMaterials f =
 			)
 		
 			--diffuse map
-			if (mat.diffuseMapEnable) and (diffuseMap != undefined) then (			
+			if (mat.diffuseMapEnable) and (mat.diffuseMap != undefined) and (classof mat.diffuseMap == Bitmaptexture) then (	
+				
 				local filename = filenameFromPath mat.diffuseMap.filename
 				WriteText f filename
-
-				--alpha map
-				if mat.alphaMapEnable then (
-					local filename = filenameFromPath mat.alphaMap.filename
-					WriteText f filename
-				)			
+				
+				if (mat.alphaMapEnable) and (filename.count > 0) then (
+					--alpha map
+					if (mat.alphaMap != undefined) and (classof mat.alphaMap == Bitmaptexture) then (
+						local filename = filenameFromPath mat.alphaMap.filename
+						WriteText f filename
+					)
+					else WriteByte f 0   
+				)														
 			)
 			else WriteByte f 0
 		
@@ -190,9 +199,7 @@ fn WriteMaterials f =
 				WriteLong f 0
 				WriteLong f 0
 			)
-		)
-	
-		
+		)		
 	)
 		
 )
@@ -529,7 +536,11 @@ fn CollectLodsCompat mobj = (
 
 		for i = 1 to lodmesh.numVerts do (
 			local vert = (in coordsys local getVert lodmesh i) + lodnode.objectOffsetPos
-			local tvert = getTVert lodmesh i
+			local tvert = [0,0,0]
+			if meshop.getMapsupport lodmesh 1 then (
+				tvert = getTVert lodmesh i
+			)
+			
 			local normal
 			
 			if normMod != undefined then (
@@ -582,12 +593,19 @@ fn CollectVerts lodmesh lodnode = (
 
 	for i = 1 to lodmesh.numfaces do (
 		local face = getFace lodmesh i
-		local tface = meshop.getMapFace lodmesh 1 i   
+		local tface 		
+		if meshop.getMapsupport lodmesh 1 then (
+			tface = meshop.getMapFace lodmesh 1 i   
+		)
+		
 		local rnormals = meshop.getFaceRNormals lodmesh i
 
 		for v = 1 to 3 do (						
 			local pos = (in coordsys local getVert lodmesh (face[v] as integer)) + lodnode.objectOffsetPos
-			local uv = getTVert lodmesh (tface[v] as integer)
+			local uv = [0,0,0]
+			if tface != undefined then (
+				uv = getTVert lodmesh (tface[v] as integer)
+			)
 			local normal
 			if normmod != undefined then (
 				local n = EN_getnormalid i v node:lodnode

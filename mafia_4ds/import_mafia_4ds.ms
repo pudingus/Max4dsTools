@@ -73,14 +73,14 @@ fn AddToLodLayer lodId obj = (
 )
 
 fn ReadText f = (
-	local len = ReadByte f
+	local len = ReadByte f #unsigned
 
 	local result
 	if len > 0 then (
 		local fmt = "%"
 		local ss = StringStream ""
 		for i = 1 to len do (
-			format fmt (bit.intAsChar(ReadByte f)) to:ss
+			format fmt (bit.intAsChar(ReadByte f #unsigned)) to:ss
 		)
 		result = ss as string
 	)	
@@ -730,8 +730,8 @@ fn ReadObjects f = (
 		if objectType == 1 do --visual object
 		(
 			visualType = ReadByte f
-			renderFlags = ReadByte f
-			renderFlags2 = ReadByte f
+			renderFlags = ReadByte f #unsigned
+			renderFlags2 = ReadByte f #unsigned
 		)
 		--general block
 
