@@ -7,17 +7,24 @@ struct Layers (
     bones,
     glows,
     billboards,
+    disabled,
     
     --private
-    fn AddToLayer obj layerName layer = (
+    fn GetLayer layerName layer = (
         if layer == undefined then (
             layer = LayerManager.getLayerFromName layerName
             if layer == undefined then (
                 layer = LayerManager.newLayerFromName layerName
             )
         )
+        layer
+    ),
+    
+    fn AddToLayer obj layerName layer = (
+        layer = GetLayer layerName layer
         layer.addnode obj
     ),
+    
     
     --public
     fn AddTo obj type = (
@@ -28,6 +35,7 @@ struct Layers (
             #portal: AddToLayer obj "Portals" portals
             #bone: AddToLayer obj "Bones" bones
             #billboard: AddToLayer obj "Billboards" billboards
+            #disabled: AddToLayer obj "Disabled" disabled
         )
     ),
     

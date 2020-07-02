@@ -65,17 +65,25 @@ struct TSkinVertexGroup (
 
 
 struct TMorph (
-	targets = #()
+	sections = #(),
+	numTargets
+)
+
+struct TMorphSection (
+	vertices = #(),   --array of TMorphVertex
+	vertexLinks = #()
+)
+
+struct TMorphVertex (
+	targets = #()	--array of TMorphTarget
 )
 
 struct TMorphTarget (
-	unknown,
-	channels = #()
+	pos,   	--point3
+	normal	--point3
 )
 
-struct TMorphChannel (
-	aaa
-)
+
 
 
 struct TBillboard (
@@ -392,23 +400,35 @@ fn CreateSkin mskin nnode mobj = (
 fn ReadMorph f = (
 	local mmorph = TMorph()
 	local numTargets = ReadByte f #unsigned
+	mmorph.numTargets = numTargets
 
 	if numTargets > 0 then (
-		local numChannels = ReadByte f #unsigned
+		local numLayers = ReadByte f #unsigned
 		ReadByte f #unsigned   --unknown	
-		for i = 1 to numChannels do	(
+		for i = 1 to numLayers do	(
+			local ms = TMorphSection()
 			local numVerts = ReadShort f #unsigned
 	
-			for v = 1 to (numTargets * numVerts) do	(
-				local vert = ReadPoint3 f
-				local normal = ReadPoint3 f
+			for v = 1 to numVerts do (
+				local mv = TMorphVertex()
+				
+				for t = 1 to numTargets do (
+					local mt = TMorphTarget()
+					mt.pos = ReadPoint3 f
+					mt.normal = ReadPoint3 f
+					append mv.targets mt
+				)
+				append ms.vertices mv								
 			)
 	
 			if (numTargets * numVerts) > 0 then	ReadByte f #unsigned  --unknown
 	
 			for v = 1 to numVerts do	(
 				local vertexLink = ReadShort f #unsigned 
+				append ms.vertexLinks vertexLink
 			)
+			
+			append mmorph.sections ms
 		)
 	
 		local dmin = ReadPoint3 f
@@ -419,8 +439,72 @@ fn ReadMorph f = (
 	mmorph
 )
 
-fn CreateMorph = (
-	-- todo
+fn CreateMorph mmorph mobj mmesh nnode = (	
+	local inc = -0.4
+	local totalInc = inc	
+	
+	local baseMesh = mmesh.lods[1].mesh	
+	local meshes = #()
+	
+	for chan in mmorph.sections do (
+		local sectionMeshes = #()
+				
+		for i = 1 to mmorph.numTargets do (
+			sectionMeshes[i] = copy baseMesh
+		)
+		
+		for i = 1 to chan.vertices.count do (
+			local vertId = chan.vertexLinks[i] + 1			
+			local mvert = chan.vertices[i]
+			
+			for j = 1 to mvert.targets.count do (
+				local target = mvert.targets[j]
+				local vert = target.pos
+				setVert sectionMeshes[j] vertId vert
+			)
+		)
+		append meshes sectionMeshes	
+		
+	)
+	
+	local tmod = Morpher()
+	addModifier nnode tmod
+	tmod.Autoload_of_targets = 1
+	
+	local sectionNames = #("mouth", "eyes", "brows")
+	
+	local sectionId = 1
+	local marker = 1
+	
+	for sectMesh in meshes do (
+		local sectionName = sectionNames[sectionId]
+		WM3_CreateMarker tmod marker sectionName
+		
+		local targetId = 1
+		
+		for targetMesh in sectMesh do (
+			local tnode = mesh mesh:targetMesh
+			tnode.material = godmat			
+			local name = stringstream ""
+			format "ch % (%) | trgt %" sectionId sectionName targetId to:name	
+			tnode.name = name as string			
+			tnode.transform = mobj.GetMatrix() * (transMatrix [totalInc, 0, 0])	
+			
+			hide tnode
+			
+			local finalId = (marker + targetId - 1)
+			
+			WM3_MC_BuildFromNode tmod finalId tnode				
+			WM3_MC_SetName tmod finalId (sectionName + " " + (targetId as string))			
+						
+			targetId += 1			
+			totalInc += inc	
+		)
+		marker = (sectionId * 10 + 1)
+		sectionId += 1
+	)
+	
+	WM3_SetCurrentMarker tmod 1		
 )
 
 
@@ -468,13 +552,16 @@ fn ReadGlow f = (
 )
 
 fn CreateGlow mglow mobj = (
-	--local nnode = point()
-	--nnode.constantscreensize = true
-	--nnode.box = true
+	local nnode = point()
+	nnode.constantscreensize = true
+	nnode.box = true
+	nnode.centermarker = true
+	--nnode.wirecolor = color 248 88 0
+	nnode.wirecolor = color 248 128 0
 	
-	local nnode = dummy()
-	nnode.boxsize = [0.2, 0.2, 0.2]
-	Layers.AddTo nnode #glow
+	--local nnode = dummy()
+	--nnode.boxsize = [0.2, 0.2, 0.2]
+	
 	nnode
 )
 
@@ -530,9 +617,7 @@ fn CreateDummy mdummy mobj = (
 	local dmin = mdummy.dmin
 	local dmax = mdummy.dmax
 	local nnode = dummy()
-	nnode.boxsize = [(abs (dmin.x-dmax.x)), (abs (dmin.y-dmax.y)), (abs (dmin.z-dmax.z))]
-	
-	Layers.AddTo nnode #dummy
+	nnode.boxsize = [(abs (dmin.x-dmax.x)), (abs (dmin.y-dmax.y)), (abs (dmin.z-dmax.z))]	
 	
 	hide nnode
 		
@@ -591,9 +676,7 @@ fn ReadSector f = (
 
 fn CreateSector msector mobj = (
 	local nnode = mesh mesh:msector.mesh
-	nnode.wirecolor = (color 255 199 0)
-
-	Layers.AddTo nnode #sector
+	nnode.wirecolor = (color 255 199 0)	
 	
 	local portalId = 0
 	for mportal in msector.portals do (
@@ -619,7 +702,7 @@ fn CreateSector msector mobj = (
 		gp.nearRange = mportal.nearRange
 		gp.farRange = mportal.farRange		
 		
-		Layers.AddTo nnode #portal	
+		Layers.AddTo p #portal	
 		
 		portalId += 1
 	)
@@ -645,8 +728,18 @@ fn ReadTarget f = (
 
 -- returns Node
 fn CreateTarget mtarget mobj = (
-	local nnode = dummy()
-	nnode.boxsize = [0.1, 0.1, 0.1]
+	--local nnode = dummy()
+	--nnode.boxsize = [0.1, 0.1, 0.1]
+	
+	--local nnode = TargetObject()
+	local nnode = point()
+	nnode.size = 0.1
+	nnode.constantscreensize = false
+	nnode.box = true
+	nnode.centermarker = true
+	nnode.wirecolor = color 28 122 210
+	
+	--hide nnode
 	
 	nnode
 )
@@ -676,7 +769,6 @@ fn CreateBone mbone mobj = (
 	nnode.width = 0.01
 	nnode.height = 0.01		
 	
-	Layers.AddTo nnode #bone	
 	--format "  boneId: %\n" mbone.boneId	
 	nnode
 )
@@ -881,6 +973,8 @@ fn ReadObjects f = (
 					append skinNodebuffer nnode
 					
 					
+					CreateMorph mmorph mobj mmesh nnode
+					
 					--CreateSkin mskin nnode mobj
 				)
 				4: (
@@ -899,6 +993,7 @@ fn ReadObjects f = (
 				6: (
 					local mglow = ReadGlow f
 					nnode = CreateGlow mglow mobj
+					Layers.AddTo nnode #glow
 				)
 				8: (
 					local mmirror = ReadMirror f
@@ -908,10 +1003,12 @@ fn ReadObjects f = (
 			5: (
 				local msector = ReadSector f
 				nnode = CreateSector msector mobj
+				Layers.AddTo nnode #sector
 			)
 			6: (
 				local mdummy = ReadDummy f
 				nnode = CreateDummy mdummy mobj
+				Layers.AddTo nnode #dummy
 			)
 			7: (
 				local mtarget = ReadTarget f
@@ -919,7 +1016,8 @@ fn ReadObjects f = (
 			)
 			10: (
 				local mbone = ReadBone f
-				nnode = CreateBone mbone mobj
+				nnode = CreateBone mbone mobj				
+				Layers.AddTo nnode #bone	
 				
 				
 				bones[mbone.boneId+1] = nnode
@@ -927,6 +1025,10 @@ fn ReadObjects f = (
 				append bonebuffer mbone
 				append boneNodeBuffer nnode				
 			)
+		)
+		
+		if mobj.cullFlags == 16 then (
+			Layers.AddTo nnode #disabled
 		)
 				
 
