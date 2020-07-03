@@ -316,7 +316,7 @@ fn CreateMesh mmesh mobj = (
 					lmesh.parent = nnode
 				)
 
-				if mmesh.lods.count > 1 then Layers.AddLod lmesh lodId
+				if mmesh.lods.count > 1 then Layers.AddTo lmesh ("Lod"+(lodId as string))
 
 				custAttributes.add lmesh MafParams_def baseObject:false 
 				local gp = custAttributes.get lmesh mafParams_def baseObject:false
@@ -556,6 +556,7 @@ fn CreateGlow mglow mobj = (
 	nnode.constantscreensize = true
 	nnode.box = true
 	nnode.centermarker = true
+	nnode.cross = false
 	--nnode.wirecolor = color 248 88 0
 	nnode.wirecolor = color 248 128 0
 	
@@ -702,7 +703,7 @@ fn CreateSector msector mobj = (
 		gp.nearRange = mportal.nearRange
 		gp.farRange = mportal.farRange		
 		
-		Layers.AddTo p #portal	
+		Layers.AddTo p "Portals"
 		
 		portalId += 1
 	)
@@ -737,7 +738,16 @@ fn CreateTarget mtarget mobj = (
 	nnode.constantscreensize = false
 	nnode.box = true
 	nnode.centermarker = true
+	nnode.cross = false
 	nnode.wirecolor = color 28 122 210
+	
+	for linkId in mtarget.linkIds do (
+		local lnode = mnodes[linkId]
+		lnode.rotation.controller = LookAt_Constraint()
+		lnode.rotation.controller.relative = true
+		lnode.rotation.controller.viewline_length_abs = false
+		lnode.rotation.controller.appendTarget nnode 50
+	)
 	
 	--hide nnode
 	
@@ -983,7 +993,7 @@ fn ReadObjects f = (
 					nnode = CreateMesh mmesh mobj
 					CreateBillboard mbillboard nnode
 					
-					Layers.AddTo nnode #billboard
+					Layers.AddTo nnode "Billboards"
 				)
 				5: (
 					local mmesh = ReadMesh f
@@ -993,7 +1003,7 @@ fn ReadObjects f = (
 				6: (
 					local mglow = ReadGlow f
 					nnode = CreateGlow mglow mobj
-					Layers.AddTo nnode #glow
+					Layers.AddTo nnode "Glows"
 				)
 				8: (
 					local mmirror = ReadMirror f
@@ -1003,12 +1013,12 @@ fn ReadObjects f = (
 			5: (
 				local msector = ReadSector f
 				nnode = CreateSector msector mobj
-				Layers.AddTo nnode #sector
+				Layers.AddTo nnode "Sectors"
 			)
 			6: (
 				local mdummy = ReadDummy f
 				nnode = CreateDummy mdummy mobj
-				Layers.AddTo nnode #dummy
+				Layers.AddTo nnode "Dummies"
 			)
 			7: (
 				local mtarget = ReadTarget f
@@ -1017,7 +1027,7 @@ fn ReadObjects f = (
 			10: (
 				local mbone = ReadBone f
 				nnode = CreateBone mbone mobj				
-				Layers.AddTo nnode #bone	
+				Layers.AddTo nnode "Bones"	
 				
 				
 				bones[mbone.boneId+1] = nnode
@@ -1028,7 +1038,7 @@ fn ReadObjects f = (
 		)
 		
 		if mobj.cullFlags == 16 then (
-			Layers.AddTo nnode #disabled
+			Layers.AddTo nnode "Disabled"
 		)
 				
 
@@ -1151,6 +1161,9 @@ fn Main = (
 			ReadObjects f
 			
 			CreateSkins()
+			
+			Layers.Hide #("Disabled")
+			Layers.HideLods #{1..9}
 
 			if MafiaTools.importNormals.checked == true then (
 				ImportNormals()			
