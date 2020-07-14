@@ -6,10 +6,10 @@ extends:Standard replaceUI:true version:2 remap:#(#(#isAnimatedM,#useMips,#useCo
 	parameters main rollout:params
 	(
 
-		ambient type:#color ui:ambient default:[150,150,150]
+		ambient type:#color ui:ambient default:[25,25,25]
 		on ambient set val do delegate.ambient = val
 			
-		diffuse type:#color ui:diffuse default:[150,150,150]
+		diffuse type:#color ui:diffuse default:[127,127,127]
 		on diffuse set val do delegate.diffuse = val
 			
 		emission type:#color ui:emission

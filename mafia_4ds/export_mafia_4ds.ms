@@ -1,39 +1,16 @@
 (
 	
 include "util.ms"
+include "types.ms"
 
 local debug = false
 
-struct MObject (
-	type,
-	objectType,
-	visualType,
+struct TNode (
+	--type,  --#mesh, #sector, #helper
 	baseNode,
 	lods = #(),
 	portals = #(),
-	parentID = 0,
-	instanceID = 0,
-
-	fn OnCreate = (
-		if type == #mesh then (
-			objectType = 1
-			visualType = 0
-		)
-		else if type == #sector then (
-			objectType = 5
-		)
-		else if type == #dummy then (
-			objectType = 6
-		)
-		else if type == #billboard then (
-			objectType = 1
-			visualType = 4
-		)
-
-		true
-	),
-
-	initialized = OnCreate()
+	morphs = #()
 )
 
 struct TObjectSet (
@@ -48,6 +25,16 @@ struct TObjectSet (
 		local handle = obj.inode.handle
 		local mid = GetIdFromHandle handle
 		mobjects[mid]
+	),
+	
+	fn GetIdByNode obj = (           --Get MObject ID from node
+		if obj != undefined then (
+			local handle = obj.inode.handle		
+			mobject_ids[handle]
+		)
+		else (
+			0
+		)		
 	),
 
 	fn Add mobj = (          --Add MObject to collection
@@ -89,6 +76,36 @@ struct MLod (
 	)
 )
 
+
+fn CompareNames obj1 obj2 = stricmp obj1.name obj2.name
+
+
+fn GetNodeType obj = (
+	local gp = custAttributes.get obj MafParams_def baseObject:false
+	if IsGeometry obj then (
+		if matchPattern obj.name pattern:"$portal*" then (
+			#portal
+		)		
+		else if matchPattern obj.name pattern:"$lod*" then (
+			#lod
+		)
+		else if matchPattern obj.name pattern:"sector*" then (					
+			#sector
+		)		
+		else if matchPattern obj.name pattern:"$morph*" then (					
+			#morph
+		)		
+		else if (gp != undefined) and (stricmp gp.objectType "billboard" == 0) then (					
+			#billboard
+		)
+		else (
+			#mesh
+		)				
+	)	
+	else if isKindOf obj Dummy then (
+		#dummy
+	)
+)
 
 
 fn WriteText f txt = (
@@ -140,7 +157,6 @@ fn WriteUV f uv = (
 	WriteFloat f (1 - uv.y)
 )
 
-
 fn WriteHeader f = (
     WriteLong f 5456948 	-- 4DS
 	WriteShort f 29			--format version
@@ -149,12 +165,10 @@ fn WriteHeader f = (
 )
 
 
-
 local mafia_materials = #()
 local mat_map = #()
 
-fn WriteMaterials f =
-(
+fn WriteMaterials f = (
 	for mat in sceneMaterials do (
 		if isKindOf mat MultiMaterial then (
 			for submat in mat.materialList where submat != undefined do (
@@ -165,7 +179,6 @@ fn WriteMaterials f =
 					mat_map[handle] = mafia_materials.count
 				)
 			)
-
 		)
 		else (
 			local handle = GetHandleByAnim mat
@@ -311,70 +324,44 @@ fn WriteMaterials f =
 		
 )
 
-fn CompareNames obj1 obj2 = stricmp obj1.name obj2.name
-
-
 fn CollectObjects = (
 	local mobjSet = TObjectSet()
 
-	for obj in objects do (
-		local mobj
-
-		if IsGeometry obj then (  --can be sector, portal, regular mesh, lod...
-			if matchPattern obj.name pattern:"$portal*" then (
+	for obj in objects do (	
+		local mnode = TNode()
+		
+		local nodeType = GetNodeType obj
+		case nodeType of (
+			#portal: (
 				if obj.parent != undefined then (
 					local parent_mobj = mobjSet.GetByNode obj.parent
 					append parent_mobj.portals obj
 				)
 			)
-			else if matchPattern obj.name pattern:"$lod*" then (
+			#lod: (
 				if obj.parent != undefined then (
 					local parent_mobj = mobjSet.GetByNode obj.parent
 					append parent_mobj.lods obj
 				) 
 			)
-			else (			
-				if matchPattern obj.name pattern:"sector*" then (					
-					mobj = MObject type:#sector
-				)				
-				else (					
-					local gp = custAttributes.get obj MafParams_def baseObject:false
-					if (gp != undefined) and (stricmp gp.objectType "billboard" == 0) then (
-						mobj = MObject type:#billboard
-					)
-					else (
-						mobj = MObject type:#mesh
-					)
+			#morph: (
+				if obj.parent != undefined then (
+					local parent_mobj = mobjSet.GetByNode obj.parent
+					append parent_mobj.morphs obj
 				)
-			)
-
-		) 
-		else if isKindOf obj Dummy then (
-			mobj = MObject type:#dummy
-		)
-
-
-		if mobj != undefined then (	
-			local instances
-			local count = InstanceMgr.GetInstances obj &instances
-			local masterInstance = instances[count]	
-			
-			if masterInstance != obj then (  --search for instance id
-				mobj.instanceID = mobjSet.GetIDFromHandle masterInstance.inode.handle
-			)
-		
-			mobj.baseNode = obj
-			if obj.parent != undefined then (
-				mobj.parentID = mobjSet.GetIDFromHandle obj.parent.inode.handle
+			)	
+			default: (
+				mnode.baseNode = obj
+				mobjSet.Add mnode
 			)		
-			mobjSet.Add mobj
-		)
+		)		
 	)
+	
+	for mnode in mobjSet.mobjects do (
+		qsort mnode.lods CompareNames
+		qsort mnode.portals CompareNames
+	)	
 
-	for mobj in mobjSet.mobjects do (
-		qsort mobj.lods CompareNames
-		qsort mobj.portals CompareNames
-	)
 	
 	-- if debug then (
 	-- 	local id = 0
@@ -394,78 +381,95 @@ fn CollectObjects = (
 	--mobjects
 )
 
-
-fn WriteSector f mobj = (
-	WriteLong f 2049    --unknown
-	WriteLong f 0		--unknown
-
-	--local smesh = copy mobj.baseNode.mesh
-	local smesh = snapshotAsMesh mobj.baseNode
-
-	local numVerts = smesh.numVerts
-	local numFaces = smesh.numFaces
-
-	WriteLong f numVerts
-	WriteLong f numFaces
-
-	for i = 1 to numVerts do (
-		local vert = getVert smesh i
-		WritePoint3 f vert
-	)
-
-	for i = 1 to numFaces do (
-		local face = getFace smesh i
-		WriteFace f face
-	)
-
-	WritePoint3 f mobj.baseNode.min
-	WritePoint3 f mobj.baseNode.max
-
-	WriteByte f mobj.portals.count
-
-	for portal in mobj.portals do (
-		local vertIds = polyop.getFaceVerts portal 1
-		local numVerts = vertIds.count
-
-		WriteByte f numVerts
-		WriteLong f 4					--unknown
-		for i = 1 to 4 do WriteLong f 0	--unknown
-
-		local nearRange = 0.0
-		local farRange = 10.0
-		local gp = custAttributes.get portal MafParams_def baseObject:false
+fn ExtractSector mnode = (	
+	local sector = TSector()
+	sector.mesh = snapshotAsMesh mnode.baseNode
+	sector.dmin = mnode.baseNode.min
+	sector.dmax = mnode.baseNode.max
+	
+	for portalNode in mnode.portals do (		
+		local portal = TPortal()
+		local gp = custAttributes.get portalNode MafParams_def baseObject:false
 		
-		if gp != undefined then (
-			nearRange = gp.nearRange
-			farRange = gp.farRange
+		if gp == undefined then (
+			portal.nearRange = 0.0
+			portal.farRange = 10.0
 		)		
-
-		WriteFloat f nearRange
-		WriteFloat f farRange
+		else (
+			portal.nearRange = gp.nearRange
+			portal.farRange = gp.farRange
+		)
+		local vertIds = polyop.getFaceVerts portal 1
 
 		for id in vertIds do (
 			local vert = polyop.getVert portal id
+			append portal.verts vert
+		)
+		append sector.portals portal
+	)
+	
+	sector
+)
+
+fn WriteSector f msector = (
+	WriteLong f 2049    --unknown
+	WriteLong f 0		--unknown
+	
+	local smesh = msector.mesh
+	
+	WriteLong smesh.numVerts
+	WriteLong smesh.numFaces
+	
+	for i = 1 to smesh.numVerts do (
+		local vert = getVert smesh i
+		WritePoint3 f vert
+	)
+	
+	for i = 1 to smesh.numFaces do (
+		local face = getFace smesh i
+		WriteFace f face
+	)
+	
+	WritePoint3 f sector.dmin
+	WritePoint3 f sector.dmax	
+	WriteByte f sector.portals.count
+	
+	for portal in sector.portals do (
+		WriteByte f portal.verts.count
+		WriteLong f 4 	--unknown
+		for i = 1 to 4 do WriteLong f 0	--unknown
+		
+		WriteFloat f portal.nearRange
+		WriteFloat f portal.farRange
+		
+		for vert in portal.verts do (
 			WritePoint3 f vert
 		)
 	)
 )
 
-fn WriteDummy f mobj = (
-	in coordsys local (
-		WritePoint3 f mobj.baseNode.min
-		WritePoint3 f mobj.baseNode.max
-	)
+fn ExtractDummy mnode = (
+	local mdummy = TDummy()
+	mdummy.dmin = in coordsys local mnode.baseNode.min
+	mdummy.dmax = in coordsys local mnode.baseNode.max
+	mdummy
+)
+
+fn WriteDummy f mdummy = (
+	WritePoint3 f mdummy.dmin
+	WritePoint3 f mdummy.dmax
 )
 
 
 
 fn GetMafiaMatId mat matid = (
 	local subMat = mat
+	
 	if isKindOf mat MultiMaterial then (
 		subMat = mat[matid]		
-	)
-	
+	)	
 	local mid
+	
 	if subMat == undefined then (
 		mid = 0
 	)
@@ -479,10 +483,7 @@ fn GetMafiaMatId mat matid = (
 
 
 --returns array of MLod
-fn CollectLodsCompat mobj = (	
-	local lodnodes = copy mobj.lods #noMap
-	insertItem mobj.baseNode lodnodes 1
-
+fn CollectLodsCompat lodnodes = (	
 	local m_lods = #()
 	local prevDist = 0.0
 
@@ -497,8 +498,7 @@ fn CollectLodsCompat mobj = (
 		else (
 			if lodnode == lodnodes[lodnodes.count] then m_lod.loddist = 0.0
 			else m_lod.loddist = prevDist + 100.0
-		)
-		
+		)		
 		prevDist = m_lod.loddist
 
 		local normMod
@@ -523,15 +523,13 @@ fn CollectLodsCompat mobj = (
 				)
 			)
 		)
-
-
 		for i = 1 to lodmesh.numVerts do (
 			local vert = (in coordsys local getVert lodmesh i) + lodnode.objectOffsetPos
 			local tvert = [0,0,0]
+			
 			if meshop.getMapsupport lodmesh 1 then (
 				tvert = getTVert lodmesh i
-			)
-			
+			)			
 			local normal
 			
 			if normMod != undefined then (
@@ -540,11 +538,9 @@ fn CollectLodsCompat mobj = (
 			else (
 				normal = getNormal lodmesh i
 			)
-
 			local m_vert = MVert pos:vert normal:normal uv:tvert
 			append m_lod.verts m_vert
-		)		
-
+		)
 		for i = 1 to lodmesh.numfaces do (
 			local face = getFace lodmesh i
 			local matid = getFaceMatID lodmesh i
@@ -552,7 +548,6 @@ fn CollectLodsCompat mobj = (
 			local m_facegroup = m_lod.GetFacegroupFromMatID m_matid
 			append m_facegroup.faces face
 		)
-
 		append m_lods m_lod
 	)
 
@@ -641,11 +636,7 @@ fn RemoveDuplicates verts_big_unsorted = (
 )
 
 
-
-
-fn CollectLods mobj = (
-	local lodnodes = copy mobj.lods #noMap
-	insertItem mobj.baseNode lodnodes 1
+fn CollectLods lodnodes = (
 
 	local m_lods = #()
 	local prevDist = 0.0
@@ -668,25 +659,15 @@ fn CollectLods mobj = (
 		local normMod
 		if MafiaTools.exportNormals.state == 2 then normMod = GetModByClass lodnode Edit_Normals
 
-		-----
+		-----			
 
-		
-
-		----***FIRST PASS		
-
-		local verts_big_unsorted = CollectVerts lodmesh lodnode
-		
-		---***REMOVE DUPLICATES		
-		
+		local verts_big_unsorted = CollectVerts lodmesh lodnode		
 		m_lod.verts = RemoveDuplicates verts_big_unsorted
-
-		---***SECOND PASS
 
 		local unique_ids = for i = 1 to m_lod.verts.count collect i
 		local kkek = 1
 		
-		for i = 1 to lodmesh.numfaces do (
-			
+		for i = 1 to lodmesh.numfaces do (			
 			local matid = getFaceMatID lodmesh i
 			local m_matid = GetMafiaMatId (lodnode.mat) matid
 			local m_facegroup = m_lod.GetFacegroupFromMatID m_matid
@@ -709,148 +690,189 @@ fn CollectLods mobj = (
 	m_lods	
 )
 
+fn ExtractMesh mnode = (
+	local mmesh = TMesh()	
 
-
-fn WriteStandardMesh f mobj = (
+	local instances
+	local count = InstanceMgr.GetInstances mnode.baseNode &instances
+	local masterInstance = instances[count]	
 	
-	if mobj.instanceID == 0 then ( --is master instance
+	if masterInstance != mnode.baseNode then (  --search for instance id
+		mmesh.instanceId = mobjSet.GetIDByNode masterInstance
+	)
+	else mmesh.instanceId = 0
+
+	if mmesh.instanceId == 0 then ( --is master instance
 		local m_lods
-		local gp = custAttributes.get mobj.baseNode MafParams_def baseObject:false
+		local gp = custAttributes.get mnode.baseNode MafParams_def baseObject:false
+		
+		local lodnodes = copy mnode.lods #noMap
+		insertItem mnode.baseNode lodnodes 1
 		
 		if (gp != undefined) and (gp.dontOptimize) then (
-			m_lods = CollectLodsCompat mobj
-			--m_lods = CollectLods mobj
+			m_lods = CollectLodsCompat lodnodes
 		)
 		else (
-			m_lods = CollectLods mobj
+			m_lods = CollectLods lodnodes
 		)
+		mmesh.lods = m_lods
+	)
+	
+	mmesh
+)
 
-		WriteShort f 0 --not duplicate
-		WriteByte f m_lods.count
-
-		for m_lod in m_lods do (
+fn WriteMesh f mmesh = (
+	WriteShort f mmesh.instanceId
+		
+	if mmesh.instanceId == 0 then (
+		WriteByte f mmesh.lods.count	
 			
-			WriteFloat f m_lod.loddist
-			local count = m_lod.verts.count
-			
-			if count > 65535 then (
-				messageBox ("Too many vertices in " + mobj.baseNode.name + ".  " + (count as string) + " / 65535.") icon:#critical
-			)
-
+		for m_lod in mmesh.lods do (
+			WriteFloat f m_lod.loddist			
 			WriteShort f m_lod.verts.count
-
+			
 			for m_vert in m_lod.verts do (
 				WritePoint3 f m_vert.pos
 				WritePoint3 f m_vert.normal
 				WriteUV f m_vert.uv
 			)
-
 			WriteByte f m_lod.facegroups.count
-
+			
 			for m_facegroup in m_lod.facegroups do (
 				WriteShort f m_facegroup.faces.count
-
+				
 				for face in m_facegroup.faces do (
 					WriteFace f face
-				)
+				)				
 				WriteShort f (m_facegroup.matid - 1)
 			)
-		)	
+		)
+	)
+)
+
+fn ExtractBillboard mnode = (
+	local mbillboard = TBillboard()
+	local gp = custAttributes.get mnode.baseNode MafParams_def baseObject:false
+	mbillboard.rotAxis = gp.rotAxis - 1
+	mbillboard.rotMode = gp.rotMode - 1	
+	mbillboard
+)
+
+fn WriteBillboard f mbillboard = (
+	WriteByte f mbillboard.rotAxis
+	WriteLong f mbillboard.rotMode
+)
+
+fn ExtractObject mnode mobjSet = (
+	local mobj = MObject()
+		
+
+	local nnode = mnode.baseNode
+	local nodeType = GetNodeType nnode	
+	
+	mobj.cullFlags = 9
+	mobj.renderFlags2 = 42
+	
+	case nodeType of (
+		#mesh: (
+			mobj.objectType = 1
+			mobj.visualType = 0
+			mobj.definitions[1] = ExtractMesh mnode				
+		)
+		#billboard: (
+			mobj.objectType = 1
+			mobj.visualType = 4
+			mobj.definitions[1] = ExtractMesh mnode
+			mobj.definitions[2] = ExtractBillboard mnode			
+		)
+		#sector: (
+			mobj.objectType = 5
+			mobj.cullFlags = 125
+			mobj.definitions[1] = ExtractSector mnode
+		)
+		#dummy: (
+			mobj.objectType = 6
+			mobj.definitions[1] = ExtractDummy mnode
+		)
+	)	
+	
+	local gp = custAttributes.get nnode MafParams_def baseObject:false
+	if gp != undefined then (
+		mobj.cullFlags = gp.cullFlags
+		mobj.renderFlags = gp.renderFlags
+		mobj.renderFlags2 = gp.renderFlags2
+		mobj.strParams = gp.strParams
+	)
+	
+	mobj.name = mnode.baseNode.name	
+	mobj.parentId = mobjSet.GetIDByNode mnode.baseNode.parent	
+	
+	if mobj.objectType == 5 then (
+		mobj.offset = [0,0,0]
+		mobj.scl = [1,1,1]
+		mobj.rot = [0,0,0,1]
 	)
 	else (
-	 	WriteShort f mobj.instanceID				
+		if (nnode.parent != undefined) and (GetNodeType nnode.parent == #sector) then (
+			in coordsys world
+			(
+				mobj.offset = mnode.baseNode.pos
+				mobj.scl = mnode.baseNode.scale
+				mobj.rot = mnode.baseNode.rotation
+			)
+		)
+		else (
+			in coordsys parent
+			(
+				mobj.offset = mnode.baseNode.pos
+				mobj.scl = mnode.baseNode.scale
+				mobj.rot = mnode.baseNode.rotation
+			)
+		)
+	)
+	
+	mobj	
+)
+
+fn WriteObject f mobj = (
+	WriteByte f mobj.objectType
+	
+	if mobj.objectType == 1 then (
+		WriteByte f mobj.visualType
+		WriteByte f mobj.renderFlags
+		WriteByte f mobj.renderFlags2
+	)
+	
+	WriteShort f mobj.parentId	
+	WritePoint3 f mobj.offset
+	WritePoint3 f mobj.scl
+	WriteQuat f mobj.rot
+	WriteByte f mobj.cullFlags
+	WriteText f mobj.name
+	WriteText f mobj.strParams
+	
+	case mobj.objectType of (
+		1: case mobj.visualType of (
+			0: WriteMesh f mobj.definitions[1]
+			4: (
+				WriteMesh f mobj.definitions[1]
+				WriteBillboard f mobj.definitions[2]
+			) 
+		)
+		5: WriteSector f mobj.definitions[1]
+		6: WriteDummy f mobj.definitions[1]
 	)	
 )
 
-fn WriteBillboard f mobj = (
-	WriteStandardMesh f mobj	
-
-	local gp = custAttributes.get mobj.baseNode MafParams_def baseObject:false
-
-	WriteByte f (gp.rotAxis - 1)
-	WriteLong f (gp.rotMode - 1)
-)
-
-
 fn WriteObjects f = (
 	local mobjSet = CollectObjects()
-	local mobjects = mobjSet.mobjects
+	local mnodes = mobjSet.mobjects
 
-	WriteShort f mobjects.count
+	WriteShort f mnodes.count
 
-	for mobj in mobjects do (		
-		local gp = custAttributes.get mobj.baseNode MafParams_def baseObject:false
-
-
-		local renderFlags = 0
-		local renderFlags2 = 42
-		local cullFlags = 0
-		local userParams		
-		if gp != undefined then (
-			renderFlags = gp.renderFlags
-			renderFlags2 = gp.renderFlags2
-			cullFlags = gp.cullFlags
-			userParams = gp.userParams
-		)
-		else if mobj.objectType == 5 then cullFlags = 125
-		else if mobj.objectType == 1 then cullFlags = 9
-
-
-		WriteByte f mobj.objectType #unsigned
-
-		if mobj.objectType == 1 then (
-			WriteByte f mobj.visualType #unsigned			
-			WriteByte f renderFlags #unsigned	
-			WriteByte f renderFlags2 #unsigned	
-		)
-		WriteShort f mobj.parentID #unsigned
-
-		if mobj.objectType == 5 then (
-			WritePoint3 f [0,0,0]
-			WritePoint3 f [1,1,1]
-			WriteQuat f [0,0,0,1]
-		)
-		else (
-			if (mobj.parentID != 0) and (mobjects[mobj.parentID].objectType == 5) then (
-				in coordsys world
-				(
-					WritePoint3 f mobj.baseNode.pos
-					WritePoint3 f mobj.baseNode.scale
-					WriteQuat f mobj.baseNode.rotation
-				)
-			)
-			else (
-				in coordsys parent
-				(
-					WritePoint3 f mobj.baseNode.pos
-					WritePoint3 f mobj.baseNode.scale
-					WriteQuat f mobj.baseNode.rotation
-				)
-			)
-			
-		)	
-
-		-- WritePoint3 f mobj.baseNode.objectTransform.translationPart
-		-- WritePoint3 f mobj.baseNode.objectTransform.scalePart
-	 	-- WriteQuat f mobj.baseNode.objectTransform.rotationPart
-
-
-		WriteByte f cullFlags
-		WriteText f mobj.baseNode.name
-		WriteText f userParams
-		------------------
-
-		if mobj.objectType == 1 then (
-			if mobj.visualType == 0 then (
-				WriteStandardMesh f mobj
-			)
-			else if mobj.visualType == 4 then (
-				WriteBillboard f mobj
-			)
-		)
-		else if mobj.objectType == 5 then WriteSector f mobj
-		else if mobj.objectType == 6 then WriteDummy f mobj
-		
+	for mnode in mnodes do (	
+		local mobj = ExtractObject mnode mobjSet
+		WriteObject f mobj
 	)
 )
 

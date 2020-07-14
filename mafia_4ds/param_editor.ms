@@ -93,7 +93,7 @@ global MafParamEditor
 
         spinner cullFlags "Culling flags:  " range:[0,255,0]  type:#integer align:#left fieldwidth:50 tooltip:"9=normal, 125=sector, \n61=wall, 29=in portal, \n16=disabled, 17=disabled"
         label paramsLabel "String params:" align:#left
-        edittext userParams "" align:#left width:130    
+        edittext strParams "" align:#left width:130    
 
         on renderFlags changed val do (
             gp.renderFlags = val
@@ -114,8 +114,8 @@ global MafParamEditor
             gp.cullFlags = val
         )
 
-        on userParams changed val do (
-            gp.userParams = val
+        on strParams changed val do (
+            gp.strParams = val
         )
 
         on depthBias changed val do (
@@ -184,12 +184,23 @@ global MafParamEditor
     
     -- rollout GlowRoll ""
     -- (        
-    --     button add "Add"
+    --     button add "Add" across:2
     --     button remove "Remove"
     --     listbox glows ""
     --     spinner position "Position" type:#float
-    --     spinner matID "Material ID" type:#integer range:[0,65535,0]       
+    --     --spinner matID "Material ID" type:#integer range:[0,65535,0]       
     --     materialButton mat "Material" 
+        
+    --     on mat picked mtl do
+    --     (
+    --         print mtl
+    --         mat.caption = mtl.name
+    --     )
+    --     on mat rightclick mtl do
+    --     (
+    --         print mtl
+    --         mat.caption = mtl.name
+    --     )
     -- )
 
     fn OnDeselected = (
@@ -289,8 +300,8 @@ global MafParamEditor
             ObjectRoll.renderFlags2.value = gp.renderFlags2
             ObjectRoll.cullFlags.value = gp.cullFlags
 
-            if gp.userParams != undefined then (
-                ObjectRoll.userParams.text = gp.userParams
+            if gp.strParams != undefined then (
+                ObjectRoll.strParams.text = gp.strParams
             ) 
 
             local flags = gp.renderFlags2

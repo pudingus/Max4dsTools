@@ -1,4 +1,7 @@
-MafParams_def = attributes "MafParams" attribID:#(0x4c8354c9, 0x47113d19)
+MafParams_def = attributes "MafParams"
+attribID:#(0x4c8354c9, 0x47113d19)
+version:2 
+remap:#(#(#userParams), #(#strParams))
 (
 	parameters main
 	(
@@ -11,7 +14,7 @@ MafParams_def = attributes "MafParams" attribID:#(0x4c8354c9, 0x47113d19)
 		
 		--all objects
 		cullFlags type:#integer default:9
-		userParams type:#string  default:""
+		strParams type:#string  default:""
 
 		--LOD
 		lodDist type:#float default:0.0

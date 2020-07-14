@@ -1,148 +1,14 @@
 (
 	
 include "layers.ms"
+include "types.ms"
 
 local mnodes
 local mobjects = #()
 local godmat
 local filename
 
-struct MObject
-(
-	objectType,
-	visualType,
-	renderFlags = 0,
-	renderFlags2 = 0,
-	parent,
-	parentId,
-	offset,
-	scl,
-	rot,
-	cullFlags,
-	name,
-	userParams,
-	--transform,
-	
-	fn GetMatrix = (
-		local tMatrix = matrix3 [1, 0, 0] [0, 1, 0] [0, 0, 1] [offset.x, offset.y, offset.z]
-		local sclMatrix = matrix3 [scl.x, 0, 0] [0, scl.y, 0] [0, 0, scl.z] [0, 0, 0]
-		local rotMatrix = ((inverse rot) as matrix3)
-		(sclMatrix * rotMatrix * tMatrix)		
-	)
-)
 
-struct TMesh (
-	instanceId,
-	lods = #()
-)
-
-struct TLod (
-	distance,
-	mesh,
-	normals = #()	
-)
-
-
-struct TSkin (	
-	lods = #() --array of TSkinLod
-)
-
-struct TSkinLod (
-	numW0Verts,
-	dmin,
-	dmax,
-	groups = #()	--array of TSkinVertexGroup
-)
-
-struct TSkinVertexGroup (
-	matrix = #(),  --4x4 matrix
-	numW1Verts,
-	boneId,
-	dmin,
-	dmax,
-	weights = #()	--array of float
-)
-
-
-struct TMorph (
-	sections = #(),
-	numTargets
-)
-
-struct TMorphSection (
-	vertices = #(),   --array of TMorphVertex
-	vertexLinks = #()
-)
-
-struct TMorphVertex (
-	targets = #()	--array of TMorphTarget
-)
-
-struct TMorphTarget (
-	pos,   	--point3
-	normal	--point3
-)
-
-
-
-
-struct TBillboard (
-	rotAxis,
-	rotMode
-)
-
-
-struct TGlow (
-	glows = #() --array of TGlowData
-)
-
-struct TGlowData (
-	position,  --screen offset
-	materialId	
-)
-
-
-struct TMirror (
-	dmin,
-	dmax,
-	unknown = #(),
-	matrix = #(),
-	backColor,
-	drawDistance,
-	mesh
-)
-
-struct TDummy (
-	dmin,
-	dmax
-)
-
-
-struct TSector (
-	mesh,
-	dmin,
-	dmax,
-	portals = #() --array of TPortal
-)
-
-struct TPortal (
-	nearRange,
-	farRange,
-	verts = #() --array of point3
-)
-
-
-struct TTarget (
-	unk1,
-	unk2,
-	linkIds = #()
-)
-
-
-struct TBone (
-	matrix = #(), --4x4 matrix
-	boneId
-)
 
 
 fn ReadText f = (
@@ -227,7 +93,7 @@ fn ReadBaseObject f = (
 	mobj.rot = ReadQuat f
 	mobj.cullFlags = ReadByte f #unsigned
 	mobj.name = ReadText f 
-	mobj.userParams = ReadText f		
+	mobj.strParams = ReadText f		
 	
 	mobj
 )
@@ -471,14 +337,16 @@ fn CreateMorph mmorph mobj mmesh nnode = (
 	addModifier nnode tmod
 	tmod.Autoload_of_targets = 1
 	
-	local sectionNames = #("mouth", "eyes", "brows")
+	--local sectionNames = #("mouth", "eyes", "brows")
+	local sectionNames = #("A", "B", "C")
+	local layerNames = #("layer A", "layer B", "layer C")
 	
 	local sectionId = 1
 	local marker = 1
 	
 	for sectMesh in meshes do (
 		local sectionName = sectionNames[sectionId]
-		WM3_CreateMarker tmod marker sectionName
+		WM3_CreateMarker tmod marker layerNames[sectionId]
 		
 		local targetId = 1
 		
@@ -486,9 +354,10 @@ fn CreateMorph mmorph mobj mmesh nnode = (
 			local tnode = mesh mesh:targetMesh
 			tnode.material = godmat			
 			local name = stringstream ""
-			format "ch % (%) | trgt %" sectionId sectionName targetId to:name	
+			format "$morph %%" sectionName targetId to:name	
 			tnode.name = name as string			
 			tnode.transform = mobj.GetMatrix() * (transMatrix [totalInc, 0, 0])	
+			tnode.parent = nnode
 			
 			hide tnode
 			
@@ -552,16 +421,18 @@ fn ReadGlow f = (
 )
 
 fn CreateGlow mglow mobj = (
-	local nnode = point()
-	nnode.constantscreensize = true
-	nnode.box = true
-	nnode.centermarker = true
-	nnode.cross = false
-	--nnode.wirecolor = color 248 88 0
-	nnode.wirecolor = color 248 128 0
+	-- local nnode = point()
+	-- nnode.constantscreensize = true
+	-- nnode.box = true
+	-- nnode.centermarker = true
+	-- nnode.cross = false	
 	
-	--local nnode = dummy()
-	--nnode.boxsize = [0.2, 0.2, 0.2]
+	-- local nnode = box length:0.1 width:0.1 height:0.1	
+	-- nnode.wirecolor = color 248 128 0	
+	
+	
+	local nnode = dummy()
+	nnode.boxsize = [0.2, 0.2, 0.2]
 	
 	nnode
 )
@@ -741,15 +612,15 @@ fn CreateTarget mtarget mobj = (
 	nnode.cross = false
 	nnode.wirecolor = color 28 122 210
 	
-	for linkId in mtarget.linkIds do (
-		local lnode = mnodes[linkId]
-		lnode.rotation.controller = LookAt_Constraint()
-		lnode.rotation.controller.relative = true
-		lnode.rotation.controller.viewline_length_abs = false
-		lnode.rotation.controller.appendTarget nnode 50
-	)
+	--for linkId in mtarget.linkIds do (
+	--	local lnode = mnodes[linkId]
+	--	lnode.rotation.controller = LookAt_Constraint()
+	--	lnode.rotation.controller.relative = true
+	--	lnode.rotation.controller.viewline_length_abs = false
+	--	lnode.rotation.controller.appendTarget nnode 50
+	--)
 	
-	--hide nnode
+	hide nnode
 	
 	nnode
 )
@@ -884,7 +755,8 @@ local skinNodeBuffer = #()
 local bonebuffer = #()
 local boneNodeBuffer = #()
 
-local bones = #()   --key = bone id, data = node
+local bones_ = #()   --key = bone id, data = node
+local bones_ids = #()
 
 fn CreateSkins = (
 	for s = 1 to skinbuffer.count do (
@@ -894,49 +766,74 @@ fn CreateSkins = (
 		local oskin = Skin()
 	
 		addModifier nnode oskin	
-						
-		--format "numW0Verts: %\n" mskin.lods[1].numW0Verts
-		--local vertId = mskin.lods[1].numW0Verts + 1
+		
+		max modify mode
+		
+		select nnode
+								
 		local vertId = 1			
 		
-		local id = 1
-		for bonenode in bones do (
-			skinOps.AddBone oskin bonenode 1
-			
-			-- for j = 1 to nnode.numverts do (
-			-- 	skinOps.ReplaceVertexWeights oskin j id 0.0				
-			-- )
-			id += 1
+		for i = 1 to bones_.count do (
+			skinOps.AddBone oskin bones_[i] 1
+		)
+				
+		for i = 1 to bones_.count do (			
+			for j = 1 to nnode.numverts do (				
+				skinOps.ReplaceVertexWeights oskin j i 0.0				
+			)
+		)
+		
+		for i = 1 to nnode.numverts do (
+			skinOps.unNormalizeVertex oskin i true
 		)
 		
 		local boneid1 = 1
-		for bn in mskin.lods[1].groups do (			
-			--format "bn: %\n" bn
+		for bn in mskin.lods[1].groups do (		
 			local boneid2 = bn.boneId + 1
-			--local bonenode = bones[boneid2]
-			--format "bonenode: %\n" bonenode
+			
+			-- format "%" bones_[boneid1].name
+			-- if boneid1 == boneid2 then (
+			-- 	format "\n"	
+			-- )
+			-- else (
+			-- 	format " | %\n" bones_[boneid2].name				
+			-- )
+			
+			local parnode = bones_[boneid1].parent
+			local parid
+			if parnode != undefined then (
+				parid = bones_ids[parnode.inode.handle]
+			)
+				
+-- 			format "  parent: "
+-- 			if parid != undefined then (
+-- 				format "%\n" bones_[parid].name
+-- 			)
+-- 			else (
+-- 				format "none\n"
+-- 			)	
+			
+			--format "\n"
 			
 			for j = 1 to bn.numW1Verts do (
-				local weight1 = 1.0
-				local weight2 = 0.0
-				skinOps.ReplaceVertexWeights oskin vertId boneid2 weight2
-				skinOps.ReplaceVertexWeights oskin vertId boneid1 weight1
+				local weight = 1.0
+				skinOps.SetVertexWeights oskin vertId boneid1 weight				
 				
-				--format "vertid: % - numW1Verts\n" vertId				
 				vertId += 1
 			)
 			
-			for weight in bn.weights do (
-				local weight1 = weight
-				local weight2 = 1.0 - weight
-				skinOps.ReplaceVertexWeights oskin vertId boneid2 weight2
-				skinOps.ReplaceVertexWeights oskin vertId boneid1 weight1
+			for weight in bn.weights do (								
+				skinOps.SetVertexWeights oskin vertId boneid1 weight
 				
-				--format "vertid: % - weights\n" vertId				
+				if parid != undefined then (
+					skinOps.SetVertexWeights oskin vertId parid (1.0 - weight)
+				)
+						
 				vertId += 1
 			)
 			boneid1 += 1
-		)
+		)	
+		
 	)
 )
 
@@ -959,11 +856,11 @@ fn ReadObjects f = (
 		
 		case mobj.objectType of (
 			1: case mobj.visualType of (
-				0: (
+				0: ( --standarmesh
 					local mmesh = ReadMesh f 
 					nnode = CreateMesh mmesh mobj
 				)
-				2: (
+				2: (  --singlemesh
 					local mmesh = ReadMesh f 
 					local mskin = ReadSkin f mmesh.lods.count
 					nnode = CreateMesh mmesh mobj		
@@ -973,7 +870,7 @@ fn ReadObjects f = (
 					
 					--CreateSkin mskin nnode mobj
 				)
-				3: (
+				3: (  --singlemorph
 					local mmesh = ReadMesh f
 					local mskin = ReadSkin f mmesh.lods.count
 					local mmorph = ReadMorph f
@@ -987,7 +884,7 @@ fn ReadObjects f = (
 					
 					--CreateSkin mskin nnode mobj
 				)
-				4: (
+				4: ( 
 					local mmesh = ReadMesh f
 					local mbillboard = ReadBillboard f 
 					nnode = CreateMesh mmesh mobj
@@ -995,10 +892,12 @@ fn ReadObjects f = (
 					
 					Layers.AddTo nnode "Billboards"
 				)
-				5: (
+				5: ( --morph
 					local mmesh = ReadMesh f
 					local mmorph = ReadMorph f
 					nnode = CreateMesh mmesh mobj
+					
+					CreateMorph mmorph mobj mmesh nnode
 				)
 				6: (
 					local mglow = ReadGlow f
@@ -1029,8 +928,9 @@ fn ReadObjects f = (
 				nnode = CreateBone mbone mobj				
 				Layers.AddTo nnode "Bones"	
 				
+				bones_ids[nnode.inode.handle] = mbone.boneId+1
 				
-				bones[mbone.boneId+1] = nnode
+				bones_[mbone.boneId+1] = nnode
 				
 				append bonebuffer mbone
 				append boneNodeBuffer nnode				
@@ -1077,12 +977,12 @@ fn ReadObjects f = (
 		gp.renderFlags = mobj.renderFlags
 		gp.renderFlags2 = mobj.renderFlags2
 		gp.cullFlags = mobj.cullFlags
-		if mobj.userParams != undefined then gp.userParams = mobj.userParams
+		if mobj.strParams != undefined then gp.strParams = mobj.strParams
 		
 		append mnodes nnode
 	)
 	
-	--print bones
+	--print bones_
 )
 
 fn ImportNormals = (
