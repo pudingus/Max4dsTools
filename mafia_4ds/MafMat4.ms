@@ -1,83 +1,72 @@
 plugin material MafMat4
 name:"4DS Material v4"
 classID:#(0x61cbf531, 0x2197994)
-extends:Standard replaceUI:true version:2 remap:#(#(#isAnimatedM,#useMips,#useColoring,#useColorKey,#useAddBlend),#(#animatedDiffuse,#mipMapping,#colored,#colorKey,#additiveMixing))
+extends:Standard
+replaceUI:true
+version:2 
+remap:#(#(#isAnimatedM,#useMips,#useColoring,#useColorKey,#useAddBlend),#(#animatedDiffuse,#mipMapping,#colored,#colorKey,#additiveMixing))
 (
 	parameters main rollout:params
-	(
+	(		
+		ambient 		type:#color 		ui:ambient 			default:[25,25,25]		
+		diffuse 		type:#color 		ui:diffuse 			default:[127,127,127]
+		emission 		type:#color 		ui:emission		
+		opacity 		type:#integer 		ui:opacity 			default:100		
+		diffuseMapEnable type:#boolean 		ui:diffuseMapEnable				
+		'Diffuse Map'	type:#texturemap 	ui:diffuseMap		
+		envMapEnable 	type:#boolean 		ui:envMapEnable
+		envMapAmount 	type:#integer 		ui:envMapAmount 	default:100
+		'Env Map' 		type:#texturemap 	ui:envMap
+		alphaMapEnable 	type:#boolean 		ui:alphaMapEnable		
+		'Alpha Map' 	type:#texturemap 	ui:alphaMap
+		twoSided 		type:#boolean 		ui:twoSided
 
-		ambient type:#color ui:ambient default:[25,25,25]
+		--19 - Diffuse Map
+		colored 		type:#boolean 		ui:colored			default:false 	--28
+		mipMapping 		type:#boolean 		ui:mipMapping 		default:true 	--24
+		animatedDiffuse	type:#boolean 		ui:animatedDiffuse	default:false 	--27  --animovaná textura difuze
+		animFrames 		type:#integer 		ui:animFrames		default:1 		
+		animPeriod 		type:#integer 		ui:animPeriod		default:1 		
+
+		--20 - Environment Map
+		envOverlay 		type:#boolean 		ui:envOverlay		default:true 	--9
+		envMultiply 	type:#boolean 		ui:envMultiply		default:false 	--10
+		envAdditive 	type:#boolean 		ui:envAdditive		default:false 	--11
+		YProj 			type:#boolean 		ui:YProj			default:true 	--13
+		YDetail 		type:#boolean 		ui:YDetail			default:false 	--14
+		ZDetail 		type:#boolean 		ui:ZDetail			default:false 	--15
+
+		--16 - Additional Effect
+		addEffect 		type:#boolean  		ui:addEffect		default:false	--16
+		colorKey 		type:#boolean  		ui:colorKey			default:false	--30
+		additiveMixing 	type:#boolean  		ui:additiveMixing	default:false	--32
+		animatedAlpha 	type:#boolean  		ui:animatedAlpha	default:false
+		
+		
 		on ambient set val do delegate.ambient = val
-			
-		diffuse type:#color ui:diffuse default:[127,127,127]
 		on diffuse set val do delegate.diffuse = val
-			
-		emission type:#color ui:emission
 		on emission set val do delegate.selfIllumColor = val		
-		
-		opacity type:#integer ui:opacity default:100
 		on opacity set val do delegate.opacity = val
-		
-		diffuseMapEnable type:#boolean ui:diffuseMapEnable	
 		on diffuseMapEnable set val do delegate.diffuseMapEnable = val
-			
-		'Diffuse Map' type:#texturemap ui:diffuseMap
 		on 'Diffuse Map' set val do (
 			delegate.diffuseMap = val		
 			if val != undefined then diffuseMapEnable = true
 			else diffuseMapEnable = false
 		)
-		
-		
-		envMapEnable type:#boolean ui:envMapEnable
 		on envMapEnable set val do delegate.reflectionMapEnable = val
-
-		envMapAmount type:#integer ui:envMapAmount default:100
 		on envMapAmount set val do delegate.reflectionMapAmount = val
-
-		'Env Map' type:#texturemap ui:envMap
 		on 'Env Map' set val do (
 			delegate.reflectionMap = val
 			if val != undefined then envMapEnable = true
 			else envMapEnable = false
-		)			
-		
-		alphaMapEnable type:#boolean ui:alphaMapEnable		
+		)				
 		on alphaMapEnable set val do delegate.opacityMapEnable = val
-		'Alpha Map' type:#texturemap ui:alphaMap
 		on 'Alpha Map' set val do (
 			delegate.opacityMap = val
 			if val != undefined then alphaMapEnable = true
 			else alphaMapEnable = false
 		)
-
-
-		twoSided type:#boolean ui:twoSided
-		on twoSided set val do delegate.twoSided = val			
-		
-
-
-		--19 - Diffuse Map
-		colored 	type:#boolean 	default:false 	ui:colored		--28
-		mipMapping 		type:#boolean 	default:true 	ui:mipMapping 			--24
-		animatedDiffuse  	type:#boolean 	default:false 		ui:animatedDiffuse	--27  --animovaná textura difuze
-		animFrames 		type:#integer 	default:1 		ui:animFrames
-		animPeriod 		type:#integer 	default:1 		ui:animPeriod
-
-		--20 - Environment Map
-		envOverlay type:#boolean default:false ui:envOverlay		--9
-		envMultiply type:#boolean default:false ui:envMultiply	--10
-		envAdditive type:#boolean default:false ui:envAdditive	--11
-		YProj type:#boolean default:false ui:YProj				--13
-		YDetail type:#boolean default:false ui:YDetail			--14
-		ZDetail type:#boolean default:false ui:ZDetail			--15
-
-		--16 - Additional Effect
-		addEffect type:#boolean default:false ui:addEffect		--16
-		colorKey type:#boolean default:false ui:colorKey	--30
-		additiveMixing type:#boolean default:false ui:additiveMixing	--32
-
-		animatedAlpha type:#boolean default:false ui:animatedAlpha
+		on twoSided set val do delegate.twoSided = val
 	)
 	rollout params "4DS Params"
 	(		

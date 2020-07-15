@@ -168,34 +168,92 @@ fn WriteHeader f = (
 local mafia_materials = #()
 local mat_map = #()
 
+fn ConvertStandardMaterial mat = (
+	local cm = MafMat4()
+			
+	cm.diffuseMapEnable = mat.diffuseMapEnable
+	cm.envMapEnable = mat.reflectionMapEnable
+	cm.alphaMapEnable = mat.opacityMapEnable
+	cm.twoSided = mat.twoSided
+	
+	cm.ambient = mat.ambient
+	cm.diffuse = mat.diffuse
+	cm.emission = mat.selfIllumColor
+	
+	cm.opacity = mat.opacity
+	cm.envMapAmount = mat.reflectionMapAmount
+	cm.envMap = mat.reflectionMap
+	cm.diffuseMap = mat.diffuseMap
+	cm.alphaMap = mat.opacityMap
+	
+	if cm.alphaMapEnable then (
+		cm.addEffect = true
+	)
+	
+	cm
+)
+
+fn ConvertPhysicalMaterial mat = (
+	local cm = MafMat4()
+		
+	cm.diffuse = mat.base_color
+	cm.emission = mat.emit_color
+	
+	cm.diffuseMapEnable = mat.base_color_map_on
+	cm.diffuseMap = mat.base_color_map
+	
+	cm.alphaMapEnable = mat.cutout_map_on 
+	cm.alphaMap = mat.cutout_map
+	if cm.alphaMapEnable then (
+		cm.addEffect = true
+	)
+	
+	cm.opacity = (1.0 - mat.transparency) * 100
+	
+	local glossiness = 0.0
+	if mat.roughness_inv then (
+		glossiness = mat.roughness		
+	)
+	else (
+		glossiness = 1.0 - mat.roughness	
+	)
+	
+	if glossiness >= 0.05 then (
+		cm.envMapAmount = glossiness * 100
+		cm.envMap = bitmaptexture filename:"env2.bmp"
+	)
+	
+	cm
+)
+
+fn AddToMafiaMaterials mat = (
+	local handle = GetHandleByAnim mat
+	
+	if mat_map[handle] == undefined then (
+		append mafia_materials mat
+		mat_map[handle] = mafia_materials.count
+	)
+)
+
 fn WriteMaterials f = (
 	for mat in sceneMaterials do (
 		if isKindOf mat MultiMaterial then (
 			for submat in mat.materialList where submat != undefined do (
-				local handle = GetHandleByAnim submat
-
-				if mat_map[handle] == undefined then (
-					append mafia_materials submat
-					mat_map[handle] = mafia_materials.count
-				)
+				
+				if containsItem #(Standard, Physical_Material, MafMat4) (classOf subMat) then (
+					AddToMafiaMaterials submat
+				) 
 			)
 		)
 		else (
-			local handle = GetHandleByAnim mat
-
-			if mat_map[handle] == undefined then (
-				append mafia_materials mat
-				mat_map[handle] = mafia_materials.count
-			)
+			if containsItem #(Standard, Physical_Material, MafMat4) (classOf mat) then (
+				AddToMafiaMaterials mat
+			) 
 		)
 	)
 
 	--for mat in mafia_materials do print mat
-	--for matm in mat_map where matm != undefined do print matm
-
-	
-
-	
+	--for matm in mat_map where matm != undefined do print matm	
 	
 	local numMats = mafia_materials.count
 	WriteShort f numMats
@@ -205,61 +263,23 @@ fn WriteMaterials f = (
 		local flags = 0
 		flags += (bit.set 0 1 true)
 
-		if classof mat == Standard then (
-			flags += (bit.set 0 19 mat.diffuseMapEnable)
-			flags += (bit.set 0 20 mat.reflectionMapEnable)
-			flags += (bit.set 0 31 mat.opacityMapEnable)
-			if mat.opacityMapEnable then flags += (bit.set 0 16 true) --add effect
-			flags += (bit.set 0 24 true) --mipmapping
-			flags += (bit.set 0 29 mat.twoSided)
-			if mat.reflectionMapEnable then flags += (bit.set 0 9 true) --overlay
-
-			WriteLong f flags
-
-			WriteColor f mat.ambient
-			WriteColor f mat.diffuse
-			WriteColor f mat.selfIllumColor
-
-			WriteFloat f (mat.opacity / 100.0)
-
-			--env map
-			if mat.reflectionMapEnable then (
-				WriteFloat f (mat.reflectionMapAmount / 100.0)
-
-				if (mat.reflectionMap != undefined) and (classof mat.reflectionMap == Bitmaptexture) then (
-					local filename = filenameFromPath mat.reflectionMap.filename
-					WriteText f filename
-				)
-				else WriteByte f 0
-			)
-
-			--diffuse map
-			if (mat.diffuseMapEnable) and (mat.diffuseMap != undefined) and (classof mat.diffuseMap == Bitmaptexture) then (
-				
-				local filename = filenameFromPath mat.diffuseMap.filename
-				WriteText f filename
-
-				if (mat.opacityMapEnable) and (filename.count > 0) then (
-					--alpha map
-					if (mat.opacityMap != undefined) and (classof mat.opacityMap == Bitmaptexture) then (
-						local filename = filenameFromPath mat.opacityMap.filename
-						WriteText f filename
-					)
-					else WriteByte f 0  
-				)
-
-			)
-			else WriteByte f 0
-
+		if classof mat == Standard then (			
+			mat = ConvertStandardMaterial mat
 		)
-		else if classof mat == MafMat4 then	(	
-			flags += (bit.set 0 9 mat.envOverlay)
-			flags += (bit.set 0 10 mat.envMultiply)
-			flags += (bit.set 0 11 mat.envAdditive)
-
-			flags += (bit.set 0 13 mat.YProj)
-			flags += (bit.set 0 14 mat.YDetail)
-			flags += (bit.set 0 15 mat.ZDetail)
+		else if classof mat == Physical_Material then (			
+			mat = ConvertPhysicalMaterial mat
+		)
+		
+		if classof mat == MafMat4 then	(
+			if mat.envMapEnable and (mat.envMap != undefined) then (
+				flags += (bit.set 0 9 mat.envOverlay)
+				flags += (bit.set 0 10 mat.envMultiply)
+				flags += (bit.set 0 11 mat.envAdditive)
+				flags += (bit.set 0 13 mat.YProj)
+				flags += (bit.set 0 14 mat.YDetail)
+				flags += (bit.set 0 15 mat.ZDetail)
+			)
+			
 			flags += (bit.set 0 16 mat.addEffect)
 
 			flags += (bit.set 0 19 mat.diffuseMapEnable)
@@ -319,9 +339,8 @@ fn WriteMaterials f = (
 				WriteLong f 0
 				WriteLong f 0
 			)
-		)		
-	)
-		
+		)			
+	)		
 )
 
 fn CollectObjects = (
@@ -399,10 +418,10 @@ fn ExtractSector mnode = (
 			portal.nearRange = gp.nearRange
 			portal.farRange = gp.farRange
 		)
-		local vertIds = polyop.getFaceVerts portal 1
+		local vertIds = polyop.getFaceVerts portalNode 1
 
 		for id in vertIds do (
-			local vert = polyop.getVert portal id
+			local vert = polyop.getVert portalNode id
 			append portal.verts vert
 		)
 		append sector.portals portal
@@ -411,14 +430,14 @@ fn ExtractSector mnode = (
 	sector
 )
 
-fn WriteSector f msector = (
+fn WriteSector f sector = (
 	WriteLong f 2049    --unknown
 	WriteLong f 0		--unknown
 	
-	local smesh = msector.mesh
+	local smesh = sector.mesh
 	
-	WriteLong smesh.numVerts
-	WriteLong smesh.numFaces
+	WriteLong f smesh.numVerts
+	WriteLong f smesh.numFaces
 	
 	for i = 1 to smesh.numVerts do (
 		local vert = getVert smesh i
@@ -463,20 +482,16 @@ fn WriteDummy f mdummy = (
 
 
 fn GetMafiaMatId mat matid = (
-	local subMat = mat
-	
+	local mid = 0
 	if isKindOf mat MultiMaterial then (
-		subMat = mat[matid]		
-	)	
-	local mid
-	
-	if subMat == undefined then (
-		mid = 0
+		mat = mat[matid]		
 	)
-	else (
-		local handle = getHandleByAnim subMat
+	
+	if mat != undefined then (
+		local handle = getHandleByAnim mat
 		mid = mat_map[handle]
-	)	
+		if mid == undefined then mid = 0
+	)
 
 	mid
 )

@@ -13,3 +13,7 @@ fn GetModByClass obj mclass = (    --to support versions prior 2013
 fn IsGeometry obj = (
 	Superclassof obj == GeometryClass and ClassOf obj != TargetObject
 )
+
+fn containsItem array value = (
+	(findItem array value) > 0
+)
