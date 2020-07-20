@@ -98,71 +98,23 @@ fn GetNodeType obj = (
 		else if (gp != undefined) and (stricmp gp.objectType "billboard" == 0) then (					
 			#billboard
 		)
+		else if isKindOf obj BoneGeometry then (
+			#bone
+		)
+		else if GetModByClass obj Skin != undefined then (
+			#singlemesh
+		)
 		else (
 			#mesh
 		)				
 	)	
 	else if isKindOf obj Dummy then (
 		#dummy
-	)
+	)	
 )
 
 
-fn WriteText f txt = (
-	if txt == undefined then (
-		WriteByte f 0 #unsigned
-	)
-	else (
-		local count = txt.count
-		if count > 255 then (
-			count = 255
-			messageBox ("String '" + txt + "' is over the maximum of 255 characters!") icon:#warning
-		)
-		WriteByte f count #unsigned
-		for i = 1 to count do
-			WriteByte f (bit.charasint txt[i])
-	)
-)
 
-fn WriteColor f clr = (
-	WriteFloat f (clr.r / 255.0)
-	WriteFloat f (clr.g / 255.0)
-	WriteFloat f (clr.b / 255.0)
-)
-
-fn WritePoint3 f p3 = (
-	WriteFloat f p3.x
-	WriteFloat f p3.z
-	WriteFloat f p3.y
-)
-
-fn WriteQuat f q = (
-	WriteFloat f q.w
-	WriteFloat f q.x
-	WriteFloat f q.z
-	WriteFloat f q.y
-)
-
-fn WriteFace f face = (
-	a = (face[1] - 1) as integer  --vertices are indexed from 0 in 4ds, from 1 in max
-	b = (face[3] - 1) as integer
-	c = (face[2] - 1) as integer
-	Writeshort f a #unsigned
-	Writeshort f b #unsigned
-	Writeshort f c #unsigned
-)
-
-fn WriteUV f uv = (
-	WriteFloat f uv.x
-	WriteFloat f (1 - uv.y)
-)
-
-fn WriteHeader f = (
-    WriteLong f 5456948 	-- 4DS
-	WriteShort f 29			--format version
-	WriteLong f 343586816	--timestamp
-	WriteLong f 29382754	--timestamp part 2
-)
 
 
 local mafia_materials = #()
@@ -430,42 +382,7 @@ fn ExtractSector mnode = (
 	sector
 )
 
-fn WriteSector f sector = (
-	WriteLong f 2049    --unknown
-	WriteLong f 0		--unknown
-	
-	local smesh = sector.mesh
-	
-	WriteLong f smesh.numVerts
-	WriteLong f smesh.numFaces
-	
-	for i = 1 to smesh.numVerts do (
-		local vert = getVert smesh i
-		WritePoint3 f vert
-	)
-	
-	for i = 1 to smesh.numFaces do (
-		local face = getFace smesh i
-		WriteFace f face
-	)
-	
-	WritePoint3 f sector.dmin
-	WritePoint3 f sector.dmax	
-	WriteByte f sector.portals.count
-	
-	for portal in sector.portals do (
-		WriteByte f portal.verts.count
-		WriteLong f 4 	--unknown
-		for i = 1 to 4 do WriteLong f 0	--unknown
-		
-		WriteFloat f portal.nearRange
-		WriteFloat f portal.farRange
-		
-		for vert in portal.verts do (
-			WritePoint3 f vert
-		)
-	)
-)
+
 
 fn ExtractDummy mnode = (
 	local mdummy = TDummy()
@@ -474,10 +391,6 @@ fn ExtractDummy mnode = (
 	mdummy
 )
 
-fn WriteDummy f mdummy = (
-	WritePoint3 f mdummy.dmin
-	WritePoint3 f mdummy.dmax
-)
 
 
 
@@ -495,6 +408,150 @@ fn GetMafiaMatId mat matid = (
 
 	mid
 )
+
+
+
+
+fn CompareWeights v1 v2 = (
+	if v1.boneid > v2.boneid then 1
+	else if v1.boneid < v2.boneid then -1
+	else (
+		if v1.weight > v2.weight then 1
+		else if v1.weight < v2.weight then -1
+		else 0
+	)
+)
+
+struct WeightedVertex (
+	boneid,
+	weight,
+	vertid
+)
+
+
+fn ConvertMatrix mat3 = (
+	local row1 = #(mat3.row1.x, mat3.row1.z, mat3.row1.y, 0)
+	local row2 = #(mat3.row3.x, mat3.row3.z, mat3.row3.y, 0)
+	local row3 = #(mat3.row2.x, mat3.row2.z, mat3.row2.y, 0)
+	local row4 = #(mat3.row4.x, mat3.row4.z, mat3.row4.y, 1)	
+	
+	#(row1, row2, row3, row4)
+)
+
+fn ExtractSkin mnode = (
+	local baseNode = mnode.baseNode
+	
+	local mskins = #()
+	
+		
+	local mskin = TSkin()
+	mskin.numW0Verts = 0
+	local range = 0.2
+	mskin.dmin = [range, range, range]
+	mskin.dmax = [-range, -range, -range]	
+	
+	local bskin = GetModByClass baseNode Skin
+	
+	local weights = #()
+	
+	local numverts = skinOps.GetNumberVertices bskin
+	for i = 1 to numverts do (
+				
+		local count = skinOps.GetVertexWeightCount bskin i 
+		
+		local weight = 0.0
+		if count > 0 then (
+			weight = skinOps.GetVertexWeight bskin i 1
+		)
+		
+		local boneid = skinOps.GetVertexWeightBoneID bskin i 1
+		
+		wv = WeightedVertex()
+		wv.boneid = boneid
+		wv.weight = weight
+		wv.vertid = i
+		
+		append weights wv
+	)
+	
+	--qsort weights CompareWeights
+	
+	local grp
+	
+	local oldid = 0
+	local groups = #()
+	for weight in weights do (
+		if oldid != weight.boneid then (
+			local jump = weight.boneid - oldid
+			
+			for i = 0 to jump-1 do (				
+				if grp != undefined then append groups grp
+				
+				local boneid = oldid + i + 1
+				
+				format "boneid:%, weight.boneid:%, i:%, oldid:%, oldid+i:%\n" boneid weight.boneid i oldid (oldid + i)
+				
+				grp = TSkinVertexGroup()
+				grp.numW1Verts = 0
+				--grp.boneid = boneid - 1
+				local range = 0.2
+				grp.dmin = [range, range, range]
+				grp.dmax = [-range, -range, -range]		
+				
+				local boneNode = skinOps.GetBoneNode bskin (boneid)
+				
+				local gp = custAttributes.get boneNode MafParams_def baseObject:false
+				grp.boneid = gp.linkedBoneId
+				
+				local mm = boneNode.transform
+				mm[4] = mm[4] - baseNode.transform.pos
+				
+				local mmi = inverse mm
+				
+				grp.matrix = ConvertMatrix mmi
+			)	
+		)
+		
+		if weight.weight == 1.0 then grp.numW1Verts += 1
+		else (
+			append grp.weights weight.weight
+		)
+		
+		oldid = weight.boneid
+	)
+	append groups grp
+	
+	
+	format "numVgroups: %\n" groups.count
+	for grp in groups do (
+		format "numW1Verts:% numWeights:% " grp.numW1Verts grp.weights.count
+		format "%\n" grp
+	)
+	
+	
+	
+	mskin.vgroups = groups
+	
+	
+	
+	append mskins mskin
+	
+	------struct------
+	-- boneid = 1
+	-- weight = 0.5
+	
+	------struct------
+	-- boneid = 2
+	-- weight = 0.5
+	
+	------struct------
+	-- boneid = 1
+	-- weight = 1.0	
+	
+	mskins
+)
+
+
 
 
 --returns array of MLod
@@ -773,9 +830,42 @@ fn ExtractBillboard mnode = (
 	mbillboard
 )
 
-fn WriteBillboard f mbillboard = (
-	WriteByte f mbillboard.rotAxis
-	WriteLong f mbillboard.rotMode
+fn FloatArrayToMatrix floats = (
+	local i = 1
+	local mtr = #()
+	for m = 1 to 4 do (
+		mtr[m] = #()
+		for n = 1 to 4 do (
+			mtr[m][n] = floats[i]
+			i += 1
+		)
+	)
+	mtr
+	
+)
+
+
+fn ExtractBone mnode = (
+	mbone = TBone()
+	mbone.boneId = mnode.baseNode.boneId
+	local gp = custAttributes.get mnode.baseNode MafParams_def baseObject:false
+	
+	
+	
+	--mbone.matrix = gp.bonematrix
+	
+	--mbone.matrix = ConvertMatrix mnode.baseNode.transform
+	
+	mbone.matrix = #( 
+		#(1,0,0,0), 
+		#(0,1,0,0),
+		#(0,0,1,0),
+		#(0,0,0,1)
+	)
+	
+	--mbone.matrix = FloatArrayToMatrix gp.bonematrix
+
+	mbone
 )
 
 fn ExtractObject mnode mobjSet = (
@@ -794,6 +884,12 @@ fn ExtractObject mnode mobjSet = (
 			mobj.visualType = 0
 			mobj.definitions[1] = ExtractMesh mnode				
 		)
+		#singlemesh: (
+			mobj.objectType = 1
+			mobj.visualType = 2
+			mobj.definitions[1] = ExtractMesh mnode				
+			mobj.definitions[2] = ExtractSkin mnode				
+		)
 		#billboard: (
 			mobj.objectType = 1
 			mobj.visualType = 4
@@ -808,6 +904,10 @@ fn ExtractObject mnode mobjSet = (
 		#dummy: (
 			mobj.objectType = 6
 			mobj.definitions[1] = ExtractDummy mnode
+		)
+		#bone: (
+			mobj.objectType = 10
+			mobj.definitions[1] = ExtractBone mnode
 		)
 	)	
 	
@@ -869,6 +969,10 @@ fn WriteObject f mobj = (
 	case mobj.objectType of (
 		1: case mobj.visualType of (
 			0: WriteMesh f mobj.definitions[1]
+			2: (
+				WriteMesh f mobj.definitions[1]
+				WriteSkin f mobj.definitions[2]
+			) 
 			4: (
 				WriteMesh f mobj.definitions[1]
 				WriteBillboard f mobj.definitions[2]
@@ -876,6 +980,7 @@ fn WriteObject f mobj = (
 		)
 		5: WriteSector f mobj.definitions[1]
 		6: WriteDummy f mobj.definitions[1]
+		10: WriteBone f mobj.definitions[1]
 	)	
 )
 
