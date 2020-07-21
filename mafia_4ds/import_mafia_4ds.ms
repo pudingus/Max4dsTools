@@ -11,53 +11,56 @@ local filename
 local n_mesh_array = #()
 local n_normal_array = #()
 
+--returns array of nodes
 fn CreateMesh mmesh mobj = (
-	local nnode	
+	local nodes = #()
+	
 	if mmesh.instanceId != 0 then (
-		nnode = instance mnodes[mmesh.instanceId]
+		nodes[1] = instance mnodes[mmesh.instanceId]
 	)
 	else (
 		if mmesh.lods.count == 0 then (
-			nnode = Editable_mesh()
+			nodes[1] = Editable_mesh()
 		)
 		else (
 			local lodId = 0
 			for mlod in mmesh.lods do (	
-				local lmesh = mesh mesh:mlod.mesh
-				lmesh.wirecolor = color 0 0 0
+				local lodNode = mesh mesh:mlod.mesh
+				lodNode.wirecolor = color 0 0 0
 				
-				for j = 1 to lmesh.numFaces do (
+				for j = 1 to lodNode.numFaces do (
 					local matId = mlod.matIds[j]
 					if matId == 0 then matId = godmat.numsubs
-					setFaceMatID lmesh j matId
-				)
+					setFaceMatID lodNode j matId
+				)				
 				
-				
-				if lodId == 0 then nnode = lmesh
-				else (
-					lmesh.name = "$lod" + (lodId as string) + "__" + mobj.name
-					lmesh.parent = nnode
+				if lodId > 0 then (  --todo: move to CreateObjects
+					lodNode.name = "$lod" + (lodId as string) + "__" + mobj.name
+					lodNode.parent = nodes[1]
 				)
 
-				if mmesh.lods.count > 1 then Layers.AddTo lmesh ("Lod"+(lodId as string))
+				if mmesh.lods.count > 1 then Layers.AddTo lodNode ("Lod"+(lodId as string))
 
-				custAttributes.add lmesh MafParams_def baseObject:false 
-				local gp = custAttributes.get lmesh mafParams_def baseObject:false
+				custAttributes.add lodNode MafParams_def baseObject:false 
+				local gp = custAttributes.get lodNode mafParams_def baseObject:false
 
 				gp.objectType = "Lod"
 				gp.lodDist = mlod.distance
 				gp.dontOptimize = true
 
-				lmesh.material = godmat
+				lodNode.material = godmat
 				
-				append n_mesh_array lmesh
+				append nodes lodNode
+				
+				
+				append n_mesh_array lodNode
 				append n_normal_array mlod.normals
 				
 				lodId += 1
 			)				
 		)						
 	)
-	nnode
+	nodes
 )
 
 
@@ -186,40 +189,44 @@ fn CreateDummy mdummy mobj = (
 )
 
 
-
+--returns array of nodes
 fn CreateSector msector mobj = (
-	local nnode = mesh mesh:msector.mesh
-	nnode.wirecolor = (color 255 199 0)	
+	local nodes	= #()
+	
+	nodes[1] = mesh mesh:msector.mesh
+	nodes[1].wirecolor = (color 255 199 0)	
 	
 	local portalId = 0
 	for mportal in msector.portals do (
 		local numverts = mportal.verts.count
-		local pmesh = mesh numverts:numVerts
-		pmesh.name = "$portal" + (formattedPrint portalId format:".2u") + "__" + mobj.name
+		local portalNode = mesh numverts:numVerts
+		portalNode.name = "$portal" + (formattedPrint portalId format:".2u") + "__" + mobj.name
 		
 		for v = 1 to numVerts do (
 			local vert = mportal.verts[v]
-			setVert pmesh v vert
+			setVert portalNode v vert
 		)
 		local face = for v = 1 to numVerts collect v
-		local p = convertToPoly pmesh
-		polyop.createPolygon p face
+		portalNode = convertToPoly portalNode
+		polyop.createPolygon portalNode face
 
-		p.wirecolor = (color 255 0 199)
-		p.parent = nnode		
+		portalNode.wirecolor = (color 255 0 199)
+		portalNode.parent = nodes[1]		
 		
-		custAttributes.add p MafParams_def baseObject:false
-		local gp = custAttributes.get p MafParams_def baseObject:false	
+		custAttributes.add portalNode MafParams_def baseObject:false
+		local gp = custAttributes.get portalNode MafParams_def baseObject:false	
 		
 		gp.objectType = "Portal"
 		gp.nearRange = mportal.nearRange
 		gp.farRange = mportal.farRange		
 		
-		Layers.AddTo p "Portals"
+		Layers.AddTo portalNode "Portals"
+		
+		append nodes portalNode
 		
 		portalId += 1
 	)
-	nnode
+	nodes
 )
 
 
@@ -227,10 +234,10 @@ fn CreateSector msector mobj = (
 
 -- returns Node
 fn CreateTarget mtarget mobj = (
-	local nnode = dummy()
-	nnode.boxsize = [0.1, 0.1, 0.1]
+	--local nnode = dummy()
+	--nnode.boxsize = [0.1, 0.1, 0.1]
 	
-	--local nnode = TargetObject()
+	local nnode = TargetObject()
 	-- local nnode = point()
 	-- nnode.size = 0.1
 	-- nnode.constantscreensize = false
@@ -246,6 +253,10 @@ fn CreateTarget mtarget mobj = (
 	--	lnode.rotation.controller.viewline_length_abs = false
 	--	lnode.rotation.controller.appendTarget nnode 50
 	--)
+	
+	for linkIds in mtarget.linkIds do (
+		
+	)
 	
 	hide nnode
 	
@@ -375,138 +386,121 @@ fn CreateMaterials mmats = (
 	)
 )
 
-local skinbuffer = #()
-local skinNodeBuffer = #()
+struct TBuffer (
+	mskinsArrays = #(),
+	skinNodesArrays = #(),
+	boneNodes = #(),   --sorted in boneid order
+	bones_ids = #()
+)
 
-local bones_ = #()   --key = bone id, data = node
-local bones_ids = #()
+fn CreateSkins buffer = (
+	local boneNodes = buffer.boneNodes
+	local bones_ids = buffer.bones_ids
 
-fn CreateSkins = (
-	for s = 1 to skinbuffer.count do (
-		local mskins = skinbuffer[s]
-		local mskin = mskins[1]
-		local nnode = skinNodeBuffer[s]
+	for s = 1 to buffer.mskinsArrays.count do (
+		local mskins = buffer.mskinsArrays[s]
+		local nodes = buffer.skinNodesArrays[s]		
 		
-		local oskin = Skin()
-	
-		addModifier nnode oskin	
+		for q = 1 to nodes.count do (			
+			local nnode = nodes[q]
+			local mskin = mskins[q]
 		
-		max modify mode
-		
-		select nnode
-								
-		local vertId = 1			
-		
-		for i = 1 to bones_.count do (
-			skinOps.AddBone oskin bones_[i] 1
+			local oskin = Skin()	
+			addModifier nnode oskin				
+			max modify mode			
+			select nnode
+									
+			local vertId = 1			
 			
-			
-		)
-				
-		for i = 1 to bones_.count do (			
-			for j = 1 to nnode.numverts do (				
-				skinOps.ReplaceVertexWeights oskin j i 0.0				
+			for i = 1 to boneNodes.count do (
+				skinOps.AddBone oskin boneNodes[i] 1
 			)
-		)
-		
-		for i = 1 to nnode.numverts do (
-			skinOps.unNormalizeVertex oskin i true
-		)
-		
-		local boneid1 = 1
-		for bn in mskin.vgroups do (		
-			local boneid2 = bn.boneId + 1
-			
-			
-			local gp = custAttributes.get bones_[boneid1] MafParams_def baseObject:false
-			gp.linkedBoneId = bn.boneId
-			
-			-- format "%" bones_[boneid1].name
-			-- if boneid1 == boneid2 then (
-			-- 	format "\n"	
-			-- )
-			-- else (
-			-- 	format " | %\n" bones_[boneid2].name				
-			-- )
-			
-			local parnode = bones_[boneid1].parent
-			local parid
-			if parnode != undefined then (
-				parid = bones_ids[parnode.inode.handle]
-			)
-				
-			-- format "  parent: "
-			-- if parid != undefined then (
-			-- 	format "%\n" bones_[parid].name
-			-- )
-			-- else (
-			-- 	format "none\n"
-			-- )	
-			
-			-- format "\n"
-			
-			format "%: %" boneid1 bones_[boneid1].name
-			if parid != undefined then format " | parent= %: %" parid bones_[parid].name
-			format "\n"
-			
-			for j = 1 to bn.numW1Verts do (
-				local weight = 1.0
-				skinOps.SetVertexWeights oskin vertId boneid1 weight				
-				
-				vertId += 1
-			)
-			
-			for weight in bn.weights do (								
-				skinOps.SetVertexWeights oskin vertId boneid1 weight
-				
-				if parid != undefined then (
-					skinOps.SetVertexWeights oskin vertId parid (1.0 - weight)
+					
+			for i = 1 to boneNodes.count do (			
+				for j = 1 to nnode.numverts do (				
+					skinOps.ReplaceVertexWeights oskin j i 0.0				
 				)
-						
-				vertId += 1
 			)
-			boneid1 += 1
-		)	
-		
+			
+			for i = 1 to nnode.numverts do (
+				skinOps.unNormalizeVertex oskin i true
+			)
+			
+			local boneid1 = 1
+			for bn in mskin.vgroups do (		
+				local boneid2 = bn.boneId + 1
+				
+				local gp = custAttributes.get boneNodes[boneid1] MafParams_def baseObject:false
+				gp.linkedBoneId = bn.boneId
+				
+				local parnode = boneNodes[boneid1].parent
+				local parid
+				if parnode != undefined then (
+					parid = bones_ids[parnode.inode.handle]
+				)				
+				
+				for j = 1 to bn.numW1Verts do (
+					local weight = 1.0
+					skinOps.SetVertexWeights oskin vertId boneid1 weight				
+					
+					vertId += 1
+				)
+				
+				for weight in bn.weights do (								
+					skinOps.SetVertexWeights oskin vertId boneid1 weight
+					
+					if parid != undefined then (
+						skinOps.SetVertexWeights oskin vertId parid (1.0 - weight)
+					)
+							
+					vertId += 1
+				)
+				boneid1 += 1
+			)
+		)		
 	)
 )
 
-fn CreateObjects mobjects = (
-	for i = 1 to mobjects.count do (
-		
-		local mobj = mobjects[i]
-		
+fn CreateObjects mobjects = (	
+	local buffer = TBuffer()	
+	
+	for i = 1 to mobjects.count do (		
+		local mobj = mobjects[i]		
 		local nnode
 		
 		case mobj.objectType of (
 			1: case mobj.visualType of (
 				0: (  --standardmesh
 					local mmesh = mobj.definitions[1]
-					nnode = CreateMesh mmesh mobj
+					local nodes = CreateMesh mmesh mobj
+					nnode = nodes[1]
 				)
 				2: (  --singlemesh
 					local mmesh = mobj.definitions[1]
 					local mskins = mobj.definitions[2]
-					nnode = CreateMesh mmesh mobj	
+					local nodes = CreateMesh mmesh mobj
+					nnode = nodes[1]
 								
-					append skinbuffer mskins
-					append skinNodebuffer nnode
+					append buffer.mskinsArrays mskins
+					append buffer.skinNodesArrays nodes
 				)
 				3: (  --singlemorph
 					local mmesh = mobj.definitions[1]
 					local mskins = mobj.definitions[2]
 					local mmorph = mobj.definitions[3]
-					nnode = CreateMesh mmesh mobj
+					local nodes = CreateMesh mmesh mobj
+					nnode = nodes[1]
 					
-					append skinbuffer mskins
-					append skinNodebuffer nnode					
+					append buffer.mskinsArrays mskins
+					append buffer.skinNodesArrays nodes					
 					
 					CreateMorph mmorph mobj mmesh nnode
 				)
 				4: ( 
 					local mmesh = mobj.definitions[1]
 					local mbillboard = mobj.definitions[2]
-					nnode = CreateMesh mmesh mobj
+					local nodes = CreateMesh mmesh mobj
+					nnode = nodes[1]
 					CreateBillboard mbillboard nnode
 					
 					Layers.AddTo nnode "Billboards"
@@ -514,7 +508,8 @@ fn CreateObjects mobjects = (
 				5: ( --morph
 					local mmesh = mobj.definitions[1]
 					local mmorph = mobj.definitions[2]
-					nnode = CreateMesh mmesh mobj					
+					local nodes = CreateMesh mmesh mobj
+					nnode = nodes[1]			
 					CreateMorph mmorph mobj mmesh nnode
 				)
 				6: (
@@ -529,7 +524,7 @@ fn CreateObjects mobjects = (
 			)
 			5: (
 				local msector = mobj.definitions[1]
-				nnode = CreateSector msector mobj
+				nnode = (CreateSector msector mobj)[1]
 				Layers.AddTo nnode "Sectors"
 			)
 			6: (
@@ -546,9 +541,9 @@ fn CreateObjects mobjects = (
 				nnode = CreateBone mbone mobj				
 				Layers.AddTo nnode "Bones"	
 				
-				bones_ids[nnode.inode.handle] = mbone.boneId+1
+				buffer.bones_ids[nnode.inode.handle] = mbone.boneId+1
 				
-				bones_[mbone.boneId+1] = nnode					
+				buffer.boneNodes[mbone.boneId+1] = nnode					
 				
 				
 				format "% | objId: % | boneid: %\n" mobj.name i mbone.boneid
@@ -557,8 +552,7 @@ fn CreateObjects mobjects = (
 		
 		if mobj.cullFlags == 16 then (
 			Layers.AddTo nnode "Disabled"
-		)
-				
+		)				
 
 		nnode.name = mobj.name
 		
@@ -590,6 +584,8 @@ fn CreateObjects mobjects = (
 		
 		append mnodes nnode
 	)
+	
+	buffer
 )
 
 fn ImportNormals = (
@@ -668,9 +664,9 @@ fn Main = (
 			local m4ds = Read4ds f
 			
 			CreateMaterials m4ds.materials
-			CreateObjects m4ds.objects			
+			local buffer = CreateObjects m4ds.objects			
 			
-			CreateSkins()
+			CreateSkins buffer
 			
 			Layers.Hide #("Disabled")
 			Layers.HideLods #{1..9}
