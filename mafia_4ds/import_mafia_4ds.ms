@@ -285,11 +285,20 @@ fn MatrixToFloatArray mtr = (
 
 fn CreateBone mbone mobj = (	
 	--local nnode = dummy()
-	--nnode.boxsize = [0.1, 0.1, 0.1]
-	local nnode = bonesys.createBone [0,0,0] [0,0,0] [0,0,0]
-	nnode.showlinks = true
+	--local size = 0.0
+	--nnode.boxsize = [size, size, size]	
+	
+	local nnode = bonesys.createBone [0,0,0] [0,0,0] [0,0,0]	
 	nnode.width = 0.01
 	nnode.height = 0.01		
+	
+	--local nnode = box length:0.1 width:0.1 height:0.1
+	
+	--nnode.setBoneEnable true sliderTime
+	
+	nnode.setBoneEnable false sliderTime
+	
+	nnode.showlinks = true
 	
 	--format "  boneId: %\n" mbone.boneId	
 	
@@ -299,7 +308,7 @@ fn CreateBone mbone mobj = (
 	
 	--for i = 1 to 16 do gp.boneMatrix[i] = mbone.matrix[i]
 	
-	gp.boneMatrix = MatrixToFloatArray mbone.matrix
+	--gp.boneMatrix = MatrixToFloatArray mbone.matrix
 	
 	nnode
 )
@@ -459,6 +468,10 @@ fn CreateSkins buffer = (
 			)
 		)		
 	)
+	
+	for boneNode in boneNodes do (
+		boneNode.setBoneEnable true sliderTime
+	)
 )
 
 fn CreateObjects mobjects = (	
@@ -562,7 +575,7 @@ fn CreateObjects mobjects = (
 		)
 		else (
 			nnode.transform = mobj.GetMatrix()
-		)			
+		)				
 
 		custAttributes.add nnode MafParams_def baseObject:false
 		local gp = custAttributes.get nnode MafParams_def baseObject:false

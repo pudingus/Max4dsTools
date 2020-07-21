@@ -34,6 +34,6 @@ remap:#(#(#userParams), #(#strParams))
 		--bone
 		boneId type:#integer
 		linkedBoneId type:#integer
-		boneMatrix type:#floatTab tabsize:16
+		--boneMatrix type:#floatTab tabsize:16
 	)	
 )
