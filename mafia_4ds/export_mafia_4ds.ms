@@ -110,7 +110,11 @@ fn GetNodeType obj = (
 	)	
 	else if isKindOf obj Dummy then (
 		#dummy
-	)	
+	)
+	else if isKindOf obj TargetObject then (
+		#target
+	)		
+	else #unsupported
 )
 
 
@@ -382,17 +386,12 @@ fn ExtractSector mnode = (
 	sector
 )
 
-
-
 fn ExtractDummy mnode = (
 	local mdummy = TDummy()
 	mdummy.dmin = in coordsys local mnode.baseNode.min
 	mdummy.dmax = in coordsys local mnode.baseNode.max
 	mdummy
 )
-
-
-
 
 fn GetMafiaMatId mat matid = (
 	local mid = 0
@@ -409,9 +408,6 @@ fn GetMafiaMatId mat matid = (
 	mid
 )
 
-
-
-
 fn CompareWeights v1 v2 = (
 	if v1.boneid > v2.boneid then 1
 	else if v1.boneid < v2.boneid then -1
@@ -427,7 +423,6 @@ struct WeightedVertex (
 	weight,
 	vertid
 )
-
 
 fn ConvertMatrix mat3 = (
 	local row1 = #(mat3.row1.x, mat3.row1.z, mat3.row1.y, 0)
@@ -504,7 +499,7 @@ fn ExtractSkin mnode = (
 				grp.boneid = gp.linkedBoneId
 				
 				local mm = boneNode.transform
-				mm[4] = mm[4] - baseNode.transform.pos
+				mm[4] = mm[4] - baseNode.transform.pos    --thanks Duelist
 				
 				local mmi = inverse mm
 				
@@ -550,8 +545,6 @@ fn ExtractSkin mnode = (
 	
 	mskins
 )
-
-
 
 
 --returns array of MLod
@@ -626,15 +619,12 @@ fn CollectLodsCompat lodnodes = (
 	m_lods
 )
 
-
-
 fn CompareVerts mvert1 mvert2 = stricmp mvert1.key mvert2.key
 
 fn CompareVertsB mkey index mverts: = (
 	currentKey = mverts[index].key
 	stricmp mkey currentKey
 )
-
 
 fn CollectVerts lodmesh lodnode = (
 	local EN_getnormalid 
@@ -706,7 +696,6 @@ fn RemoveDuplicates verts_big_unsorted = (
 
 	verts_unique
 )
-
 
 fn CollectLods lodnodes = (
 
@@ -844,11 +833,10 @@ fn FloatArrayToMatrix floats = (
 	
 )
 
-
 fn ExtractBone mnode = (
 	mbone = TBone()
 	mbone.boneId = mnode.baseNode.boneId
-	local gp = custAttributes.get mnode.baseNode MafParams_def baseObject:false
+	--local gp = custAttributes.get mnode.baseNode MafParams_def baseObject:false
 	
 	
 	
@@ -866,6 +854,18 @@ fn ExtractBone mnode = (
 	--mbone.matrix = FloatArrayToMatrix gp.bonematrix
 
 	mbone
+)
+
+fn ExtractTarget mnode mobjSet = (
+	local mtarget = TTarget()
+	
+	local gp = custAttributes.get mnode.baseNode MafParams_def baseObject:false
+	
+	for linkedNode in gp.targetLinks do (
+		append mtarget.linkIds (mobjSet.GetIDByNode linkedNode)
+	)
+		
+	mtarget	
 )
 
 fn ExtractObject mnode mobjSet = (
@@ -908,6 +908,14 @@ fn ExtractObject mnode mobjSet = (
 		#bone: (
 			mobj.objectType = 10
 			mobj.definitions[1] = ExtractBone mnode
+		)
+		#target: (
+			mobj.objectType = 7
+			mobj.definitions[1] = ExtractTarget mnode mobjSet
+		)
+		default: (
+			mobj.objectType = 6
+			mobj.definitions[1] = ExtractDummy mnode
 		)
 	)	
 	
@@ -980,6 +988,7 @@ fn WriteObject f mobj = (
 		)
 		5: WriteSector f mobj.definitions[1]
 		6: WriteDummy f mobj.definitions[1]
+		7: WriteTarget f mobj.definitions[1]
 		10: WriteBone f mobj.definitions[1]
 	)	
 )

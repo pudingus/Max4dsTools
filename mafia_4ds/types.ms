@@ -759,3 +759,12 @@ fn WriteBone f mbone = (
 	
 	WriteLong f mbone.boneId
 )
+
+fn WriteTarget f mtarget = (
+	WriteShort f 0
+	WriteByte f mtarget.linkIds.count
+	
+	for linkId in mtarget.linkIds do (
+		WriteShort f linkId
+	)
+)

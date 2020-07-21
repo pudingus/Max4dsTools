@@ -254,9 +254,13 @@ fn CreateTarget mtarget mobj = (
 	--	lnode.rotation.controller.appendTarget nnode 50
 	--)
 	
-	for linkIds in mtarget.linkIds do (
-		
-	)
+	-- custAttributes.add nnode MafParams_def baseObject:false
+	-- local gp = custAttributes.get nnode MafParams_def baseObject:false
+	
+	-- for linkId in mtarget.linkIds do (
+	-- 	append gp.targetLinks mnodes[linkId]
+	-- )
+	
 	
 	hide nnode
 	
@@ -289,8 +293,8 @@ fn CreateBone mbone mobj = (
 	--nnode.boxsize = [size, size, size]	
 	
 	local nnode = bonesys.createBone [0,0,0] [0,0,0] [0,0,0]	
-	nnode.width = 0.01
-	nnode.height = 0.01		
+	nnode.width = 0.0
+	nnode.height = 0.0	
 	
 	--local nnode = box length:0.1 width:0.1 height:0.1
 	
@@ -399,7 +403,9 @@ struct TBuffer (
 	mskinsArrays = #(),
 	skinNodesArrays = #(),
 	boneNodes = #(),   --sorted in boneid order
-	bones_ids = #()
+	bones_ids = #(),
+	mtargets = #(),
+	targetNodes = #()
 )
 
 fn CreateSkins buffer = (
@@ -548,6 +554,9 @@ fn CreateObjects mobjects = (
 			7: (
 				local mtarget = mobj.definitions[1]
 				nnode = CreateTarget mtarget mobj
+				
+				append buffer.mtargets mtarget
+				append buffer.targetNodes nnode
 			)
 			10: (
 				local mbone = mobj.definitions[1]
@@ -599,6 +608,23 @@ fn CreateObjects mobjects = (
 	)
 	
 	buffer
+)
+
+fn LinkTargets buffer = (
+	for i = 1 to buffer.targetNodes.count do (
+		local mtarget = buffer.mtargets[i]
+		local targetNode = buffer.targetNodes[i]
+		
+		custAttributes.add targetNode MafParams_def baseObject:false
+		local gp = custAttributes.get targetNode MafParams_def baseObject:false
+		
+		for linkId in mtarget.linkIds do (
+			append gp.targetLinks mnodes[linkId]
+		)
+		
+		print gp.targetLinks
+		
+	)
 )
 
 fn ImportNormals = (
@@ -677,7 +703,9 @@ fn Main = (
 			local m4ds = Read4ds f
 			
 			CreateMaterials m4ds.materials
-			local buffer = CreateObjects m4ds.objects			
+			local buffer = CreateObjects m4ds.objects	
+			
+			LinkTargets buffer
 			
 			CreateSkins buffer
 			
