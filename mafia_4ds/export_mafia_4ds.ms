@@ -48,7 +48,8 @@ struct MVert (
 	key, --string
 	pos,	--Point3
 	normal,	--Point3
-	uv		--Point3 (Point2)
+	uv,		--Point3 (Point2)
+	wv
 )
 
 struct MFacegroup (
@@ -208,8 +209,9 @@ fn WriteMaterials f = (
 		)
 	)
 
-	--for mat in mafia_materials do print mat
-	--for matm in mat_map where matm != undefined do print matm	
+	for mat in mafia_materials do print mat
+	for matm in mat_map where matm != undefined do print matm	
+	--print mat_map
 	
 	local numMats = mafia_materials.count
 	WriteShort f numMats
@@ -412,8 +414,8 @@ fn CompareWeights v1 v2 = (
 	if v1.boneid > v2.boneid then 1
 	else if v1.boneid < v2.boneid then -1
 	else (
-		if v1.weight > v2.weight then 1
-		else if v1.weight < v2.weight then -1
+		if v1.weight < v2.weight then 1
+		else if v1.weight > v2.weight then -1
 		else 0
 	)
 )
@@ -433,18 +435,9 @@ fn ConvertMatrix mat3 = (
 	#(row1, row2, row3, row4)
 )
 
-fn ExtractSkin mnode = (
+fn ExtractWeights mnode = (
 	local baseNode = mnode.baseNode
-	
-	local mskins = #()
-	
 		
-	local mskin = TSkin()
-	mskin.numW0Verts = 0
-	local range = 0.2
-	mskin.dmin = [range, range, range]
-	mskin.dmax = [-range, -range, -range]	
-	
 	local bskin = GetModByClass baseNode Skin
 	
 	local weights = #()
@@ -469,6 +462,23 @@ fn ExtractSkin mnode = (
 		append weights wv
 	)
 	
+	weights
+)
+
+fn ExtractSkin mnode weights = (
+	local baseNode = mnode.baseNode
+	
+	local mskins = #()
+	
+	local mskin = TSkin()
+	mskin.numW0Verts = 0
+	local range = 0.2
+	mskin.dmin = [-range, -range, -range]
+	mskin.dmax = [range, range, range]	
+	
+	local bskin = GetModByClass baseNode Skin
+	
+	
 	--qsort weights CompareWeights
 	
 	local grp
@@ -484,14 +494,14 @@ fn ExtractSkin mnode = (
 				
 				local boneid = oldid + i + 1
 				
-				format "boneid:%, weight.boneid:%, i:%, oldid:%, oldid+i:%\n" boneid weight.boneid i oldid (oldid + i)
+				--format "boneid:%, weight.boneid:%, i:%, oldid:%, oldid+i:%\n" boneid weight.boneid i oldid (oldid + i)
 				
 				grp = TSkinVertexGroup()
 				grp.numW1Verts = 0
 				--grp.boneid = boneid - 1
 				local range = 0.2
-				grp.dmin = [range, range, range]
-				grp.dmax = [-range, -range, -range]		
+				grp.dmin = [-range, -range, -range]
+				grp.dmax = [range, range, range]		
 				
 				local boneNode = skinOps.GetBoneNode bskin (boneid)
 				
@@ -517,11 +527,11 @@ fn ExtractSkin mnode = (
 	append groups grp
 	
 	
-	format "numVgroups: %\n" groups.count
-	for grp in groups do (
-		format "numW1Verts:% numWeights:% " grp.numW1Verts grp.weights.count
-		format "%\n" grp
-	)
+	-- format "numVgroups: %\n" groups.count
+	-- for grp in groups do (
+	-- 	format "numW1Verts:% numWeights:% " grp.numW1Verts grp.weights.count
+	-- 	format "%\n" grp
+	-- )
 	
 	
 	
@@ -626,7 +636,7 @@ fn CompareVertsB mkey index mverts: = (
 	stricmp mkey currentKey
 )
 
-fn CollectVerts lodmesh lodnode = (
+fn CollectVerts lodmesh lodnode weights = (
 	local EN_getnormalid 
 	local EN_getnormal
 	if normmod != undefined then (
@@ -665,7 +675,7 @@ fn CollectVerts lodmesh lodnode = (
 			format "%%%%%%%%" pos.x pos.y pos.z normal.x normal.y normal.z uv.x uv.y to:strvert
 			strvert = strvert as string	
 
-			local m_vert = MVert pos:pos normal:normal uv:uv key:strvert	
+			local m_vert = MVert pos:pos normal:normal uv:uv key:strvert wv:weights[face[v]]
 
 			append verts_big_unsorted m_vert
 		)
@@ -697,7 +707,7 @@ fn RemoveDuplicates verts_big_unsorted = (
 	verts_unique
 )
 
-fn CollectLods lodnodes = (
+fn CollectLods lodnodes &weights = (
 
 	local m_lods = #()
 	local prevDist = 0.0
@@ -720,38 +730,82 @@ fn CollectLods lodnodes = (
 		local normMod
 		if MafiaTools.exportNormals.state == 2 then normMod = GetModByClass lodnode Edit_Normals
 
-		-----			
+		-----	
+		
+		
 
-		local verts_big_unsorted = CollectVerts lodmesh lodnode		
-		m_lod.verts = RemoveDuplicates verts_big_unsorted
+		local verts_big_unsorted = CollectVerts lodmesh lodnode weights
+		local verts_unique = RemoveDuplicates verts_big_unsorted
+		--m_lod.verts = 
 
-		local unique_ids = for i = 1 to m_lod.verts.count collect i
+		local unique_ids = for i = 1 to verts_unique.count collect i
 		local kkek = 1
+		
+		--format "verts unique % \n %\n" verts_unique.count verts_unique
+		
+		
+		--weights
+		local newWeights = #()
+		for i = 1 to verts_unique.count do (
+			local m_vert = verts_unique[i]		
+			local wv = m_vert.wv
+			
+			local newWV = WeightedVertex boneid:wv.boneid weight:wv.weight vertid:i
+			append newWeights newWV
+		)
+		--format "new Weioghts % \n %\n" newWeights.count newWeights
+		--break
+		
+		qsort newWeights CompareWeights
+		
+		--print newWeights
+		m_lod.verts = #()
+		
+		local nwMap = #()   --map old vertid to new vertid
+		for i = 1 to newWeights.count do (
+			local wv = newWeights[i]
+			nwMap[wv.vertId] = i
+			
+			append m_lod.verts verts_unique[wv.vertId]
+		)
+		--format "\n\n"
+		--format "nwMap count %\n%\n" nwMap.count nwMap
+		--format "newWeights.count %\n" newWeights.count
+		--format "m_lod.verts.count %\n" m_lod.verts.count
+		-----------
+		
+		-- connect new verts to faces
 		
 		for i = 1 to lodmesh.numfaces do (			
 			local matid = getFaceMatID lodmesh i
 			local m_matid = GetMafiaMatId (lodnode.mat) matid
+			--format "m_matid % \n" m_matid
 			local m_facegroup = m_lod.GetFacegroupFromMatID m_matid
 			local nface = #()
 	
 			for v = 1 to 3 do (
 				local strvert = verts_big_unsorted[kkek].key
-				local vert_id = bsearch strvert unique_ids CompareVertsB mverts:m_lod.verts
-				nface[v] = vert_id
+				local vert_id = bsearch strvert unique_ids CompareVertsB mverts:verts_unique
+				
+				nface[v] = nwMap[vert_id]
 				kkek += 1
 			)
 	
 			append m_facegroup.faces nface
-		)		
+		)
 		
-		--format "mverts: %, faces: %, facegroups: %\n" m_lod.verts.count lodmesh.numfaces m_lod.facegroups.count
+		--for wv in newWe
+		
+		--format "mverts: %, faces: %, facegroups: %\n" verts_unique.count lodmesh.numfaces m_lod.facegroups.count
 
 		append m_lods m_lod		
+		
+		weights = newWeights
 	)
 	m_lods	
 )
 
-fn ExtractMesh mnode = (
+fn ExtractMesh mnode &weights = (
 	local mmesh = TMesh()	
 
 	local instances
@@ -774,7 +828,7 @@ fn ExtractMesh mnode = (
 			m_lods = CollectLodsCompat lodnodes
 		)
 		else (
-			m_lods = CollectLods lodnodes
+			m_lods = CollectLods lodnodes &weights
 		)
 		mmesh.lods = m_lods
 	)
@@ -836,13 +890,6 @@ fn FloatArrayToMatrix floats = (
 fn ExtractBone mnode = (
 	mbone = TBone()
 	mbone.boneId = mnode.baseNode.boneId
-	--local gp = custAttributes.get mnode.baseNode MafParams_def baseObject:false
-	
-	
-	
-	--mbone.matrix = gp.bonematrix
-	
-	--mbone.matrix = ConvertMatrix mnode.baseNode.transform
 	
 	mbone.matrix = #( 
 		#(1,0,0,0), 
@@ -851,8 +898,6 @@ fn ExtractBone mnode = (
 		#(0,0,0,1)
 	)
 	
-	--mbone.matrix = FloatArrayToMatrix gp.bonematrix
-
 	mbone
 )
 
@@ -887,8 +932,11 @@ fn ExtractObject mnode mobjSet = (
 		#singlemesh: (
 			mobj.objectType = 1
 			mobj.visualType = 2
-			mobj.definitions[1] = ExtractMesh mnode				
-			mobj.definitions[2] = ExtractSkin mnode				
+			local weights = ExtractWeights mnode
+			local mmesh = ExtractMesh mnode	&weights
+			local mskin = ExtractSkin mnode	weights
+			mobj.definitions[1] = mmesh	
+			mobj.definitions[2] = mskin			
 		)
 		#billboard: (
 			mobj.objectType = 1

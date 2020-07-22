@@ -93,7 +93,7 @@ global MafParamEditor
 
         spinner cullFlags "Culling flags:  " range:[0,255,0]  type:#integer align:#left fieldwidth:50 tooltip:"9=normal, 125=sector, \n61=wall, 29=in portal, \n16=disabled, 17=disabled"
         label paramsLabel "String params:" align:#left
-        edittext strParams "" align:#left width:130    
+        edittext strParams "" align:#left width:140 height:30
 
         on renderFlags changed val do (
             gp.renderFlags = val
