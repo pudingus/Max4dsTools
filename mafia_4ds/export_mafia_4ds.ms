@@ -390,123 +390,124 @@ fn ConvertMatrix mat3 = (
 )
 
 fn ExtractWeights mnode = (
-	local baseNode = mnode.baseNode
-		
-	local bskin = GetModByClass baseNode Skin
 	
-	local weights = #()
+	local lodnodes = copy mnode.lods #noMap
+	insertItem mnode.baseNode lodnodes 1
 	
-	local numverts = skinOps.GetNumberVertices bskin
-	for i = 1 to numverts do (
-				
-		local count = skinOps.GetVertexWeightCount bskin i 
+	local lodWeights = #()
+	
+	for lodnode in lodnodes do (
+		local baseNode = mnode.baseNode
+			
+		local bskin = GetModByClass baseNode Skin
 		
-		local weight = 0.0
-		if count > 0 then (
-			weight = skinOps.GetVertexWeight bskin i 1
+		local weights = #()
+		
+		local numverts = skinOps.GetNumberVertices bskin
+		for i = 1 to numverts do (
+					
+			local count = skinOps.GetVertexWeightCount bskin i 
+			
+			local weight = 0.0
+			local boneid = 9999
+			if count > 0 then (
+				weight = skinOps.GetVertexWeight bskin i 1
+				boneid = skinOps.GetVertexWeightBoneID bskin i 1
+			)		
+			
+			wv = WeightedVertex()
+			wv.boneid = boneid
+			wv.weight = weight
+			wv.vertid = i
+			
+			append weights wv
 		)
 		
-		local boneid = skinOps.GetVertexWeightBoneID bskin i 1
-		
-		wv = WeightedVertex()
-		wv.boneid = boneid
-		wv.weight = weight
-		wv.vertid = i
-		
-		append weights wv
+		append lodWeights weights
 	)
 	
-	weights
+	lodWeights
 )
 
-fn ExtractSkin mnode weights = (
-	local baseNode = mnode.baseNode
-	
+fn ExtractSkin mnode lodWeights = (
+	local lodnodes = copy mnode.lods #noMap
+	insertItem mnode.baseNode lodnodes 1
+		
 	local mskins = #()
 	
-	local mskin = TSkin()
-	mskin.numW0Verts = 0
-	local range = 0.2
-	mskin.dmin = [-range, -range, -range]
-	mskin.dmax = [range, range, range]	
-	
-	local bskin = GetModByClass baseNode Skin
-	
-	
-	--qsort weights CompareWeights
-	
-	local grp
-	
-	local oldid = 0
-	local groups = #()
-	for weight in weights do (
-		if oldid != weight.boneid then (
-			local jump = weight.boneid - oldid
-			
-			for i = 0 to jump-1 do (				
-				if grp != undefined then append groups grp
-				
-				local boneid = oldid + i + 1
-				
-				--format "boneid:%, weight.boneid:%, i:%, oldid:%, oldid+i:%\n" boneid weight.boneid i oldid (oldid + i)
-				
-				grp = TSkinVertexGroup()
-				grp.numW1Verts = 0
-				--grp.boneid = boneid - 1
-				local range = 0.2
-				grp.dmin = [-range, -range, -range]
-				grp.dmax = [range, range, range]		
-				
-				local boneNode = skinOps.GetBoneNode bskin (boneid)
-				
-				local gp = custAttributes.get boneNode MafParams_def baseObject:false
-				grp.boneid = gp.linkedBoneId
-				
-				local mm = boneNode.transform
-				mm[4] = mm[4] - baseNode.transform.pos    --thanks Duelist
-				
-				local mmi = inverse mm
-				
-				grp.matrix = ConvertMatrix mmi
-			)	
-		)
+	for l = 1 to lodnodes.count do (	
+		local lodnode = lodnodes[l]
+		local weights = lodWeights[l]
 		
-		if weight.weight == 1.0 then grp.numW1Verts += 1
-		else (
-			append grp.weights weight.weight
-		)
+		local mskin = TSkin()
+		mskin.numW0Verts = 0
+		local range = 0.2
+		mskin.dmin = [-range, -range, -range]
+		mskin.dmax = [range, range, range]	
 		
-		oldid = weight.boneid
-	)
-	append groups grp
-	
-	
-	-- format "numVgroups: %\n" groups.count
-	-- for grp in groups do (
-	-- 	format "numW1Verts:% numWeights:% " grp.numW1Verts grp.weights.count
-	-- 	format "%\n" grp
-	-- )
-	
-	
-	
-	mskin.vgroups = groups
-	
-	
-	
-	append mskins mskin
-	
-	------struct------
-	-- boneid = 1
-	-- weight = 0.5
-	
-	------struct------
-	-- boneid = 2
-	-- weight = 0.5
-	
-	------struct------
-	-- boneid = 1
-	-- weight = 1.0	
-	
+		local bskin = GetModByClass lodnode Skin
+		
+		local grp
+		
+		local oldid = 0
+		local groups = #()
+		for weight in weights do (
+			if weight.boneid == 9999 then (
+				mskin.numW0Verts += 1
+			)
+			else (				
+				if oldid != weight.boneid then (
+					local jump = weight.boneid - oldid
+					
+					for i = 0 to jump-1 do (				
+						if grp != undefined then append groups grp
+						
+						local boneid = oldid + i + 1
+						
+						--format "boneid:%, weight.boneid:%, i:%, oldid:%, oldid+i:%\n" boneid weight.boneid i oldid (oldid + i)
+						
+						grp = TSkinVertexGroup()
+						grp.numW1Verts = 0
+						--grp.boneid = boneid - 1
+						local range = 0.2
+						grp.dmin = [-range, -range, -range]
+						grp.dmax = [range, range, range]		
+						
+						local boneNode = skinOps.GetBoneNode bskin (boneid)
+						
+						local gp = custAttributes.get boneNode MafParams_def baseObject:false
+						grp.boneid = gp.linkedBoneId
+						
+						local mm = boneNode.transform
+						mm[4] = mm[4] - lodnode.transform.pos    --thanks Duelist
+						
+						local mmi = inverse mm
+						
+						grp.matrix = ConvertMatrix mmi
+					)	
+				)
+				
+				if weight.weight == 1.0 then grp.numW1Verts += 1
+				else (
+					append grp.weights weight.weight
+				)
+				
+				oldid = weight.boneid
+			)
+		)
+		append groups grp
+		mskin.vgroups = groups		
+		
+		
+		-- format "numVgroups: %\n" groups.count
+		-- for grp in groups do (
+		-- 	format "numW1Verts:% numWeights:% " grp.numW1Verts grp.weights.count
+		-- 	format "%\n" grp
+		-- )
+		
+		
+		append mskins mskin		
+	)	
 	mskins
 )
 
@@ -525,7 +526,7 @@ vertId  idOfDuplicatedVertex
 
 */
 
-fn SplitVertices mesh faceVertNormals = (
+fn SplitVertices mesh faceVertNormals weights = (
 	local numverts = mesh.numverts
 	local normals = #()   -- min. count = count of vertices, normals for duplicated verts are appended to the end
 	local uvs = #()  	  -- =||=
@@ -569,7 +570,16 @@ fn SplitVertices mesh faceVertNormals = (
 				if foundId == -1 then (   
 					--split
 					append extraVerts vertId					
-					local newVertId = numverts + extraVerts.count					
+					local newVertId = numverts + extraVerts.count		
+					
+					if weights != undefined then (
+						local wv = WeightedVertex()
+						wv.boneid = weights[vertId].boneid
+						wv.weight = weights[vertId].weight
+						wv.vertId = newVertId
+						
+						append weights wv
+					)	
 					
 					if splitVerts[vertid] == undefined then splitVerts[vertid] = #()
 					append splitVerts[vertid] newVertId
@@ -613,16 +623,16 @@ fn SplitVertices mesh faceVertNormals = (
 	)
 	
 	--probably not needed:
-	buildTVFaces mesh
-	for i = 1 to mesh.numfaces do (
-		setTVFace mesh i (getFace mesh i)
-	)	
+	-- buildTVFaces mesh
+	-- for i = 1 to mesh.numfaces do (
+	-- 	setTVFace mesh i (getFace mesh i)
+	-- )	
 	--
 	
-	#(mesh, normals)
+	#(mesh, normals, weights)
 )
 
-fn ExtractMesh mnode mnodeSet = (
+fn ExtractMesh mnode mnodeSet &lodWeights = (
 	local mmesh = TMesh()	
 
 	local instances
@@ -640,7 +650,11 @@ fn ExtractMesh mnode mnodeSet = (
 		
 		local prevDist = 0.0
 		
-		for lodnode in lodnodes do (
+		for l = 1 to lodnodes.count do (
+			local lodnode = lodnodes[l]	
+			local weights
+			if lodweights != undefined then weights = lodWeights[l]
+		
 			local mlod = TLod()			
 			local lodMesh = copy lodnode.mesh			
 			local gp = custAttributes.get lodnode MafParams_def baseObject:false	
@@ -674,20 +688,22 @@ fn ExtractMesh mnode mnodeSet = (
 				modpanel.setcurrentobject normMod node:lodnode
 
 				for i = 1 to lodmesh.numfaces do (
+					local rnormals = #()
 					for v = 1 to 3 do (
 						local normId = normMod.getnormalid i v
-						local rnormals = normMod.getnormal normId
-						append faceVertNormals 
+						rnormals[v] = normMod.getnormal normId						
 					)
+					append faceVertNormals rnormals
 				)
 			)
 			
 			
 			local normals = #()
 			if split then (	
-				local spl = SplitVertices lodmesh faceVertNormals
+				local spl = SplitVertices lodmesh faceVertNormals weights
 				lodmesh = spl[1]				
 				normals = spl[2]
+				weights = spl[3]
 			)			
 			else (
 				for i = 1 to lodmesh.numfaces do (
@@ -699,6 +715,18 @@ fn ExtractMesh mnode mnodeSet = (
 					)
 				)
 			)
+			
+			if weights != undefined then (				
+				qsort weights CompareWeights
+				
+				vertOrder = #()
+				for wv in weights do (
+					append vertOrder wv.vertId
+				)
+				
+				mlod.vertOrder = vertOrder
+			)			
+			
 			
 			mlod.mesh = lodmesh
 			mlod.normals = normals
@@ -787,21 +815,22 @@ fn ExtractObjects mnodeSet = (
 			#mesh: (
 				mobj.objectType = 1
 				mobj.visualType = 0
-				mobj.definitions[1] = ExtractMesh mnode mnodeSet				
+				mobj.definitions[1] = ExtractMesh mnode mnodeSet undefined			
 			)
 			#singlemesh: (
 				mobj.objectType = 1
 				mobj.visualType = 2
-				local weights = ExtractWeights mnode
-				local mmesh = ExtractMesh mnode	&weights
-				local mskin = ExtractSkin mnode	weights
+				local lodWeights = ExtractWeights mnode
+				local mmesh = ExtractMesh mnode	mnodeSet &lodWeights								
+				local mskins = ExtractSkin mnode lodWeights
+				
 				mobj.definitions[1] = mmesh	
-				mobj.definitions[2] = mskin			
+				mobj.definitions[2] = mskins			
 			)
 			#billboard: (
 				mobj.objectType = 1
 				mobj.visualType = 4
-				mobj.definitions[1] = ExtractMesh mnode mnodeSet
+				mobj.definitions[1] = ExtractMesh mnode mnodeSet undefined
 				mobj.definitions[2] = ExtractBillboard mnode			
 			)
 			#sector: (

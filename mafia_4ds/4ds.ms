@@ -63,7 +63,8 @@ struct TLod (
 	mesh,
 	normals = #(),	--array of point3, count equals to count of vertices in mesh
 	matIds = #(),   --array of int, count = count of faces in mesh
-	facegroups = #()
+	facegroups = #(),
+	vertOrder
 )
 
 struct TSkin (
@@ -775,20 +776,52 @@ fn WriteMesh f mmesh = (
 			WriteFloat f lod.distance
 			WriteShort f lod.mesh.numverts
 			
-			for i = 1 to lod.mesh.numverts do (
-				WritePoint3 f (getVert lod.mesh i)
-				WritePoint3 f lod.normals[i]
-				WriteUV f (getTVert lod.mesh i)
-			)
-			
-			WriteByte f lod.facegroups.count
-			for facegroup in lod.facegroups do (
-				WriteShort f facegroup.faceIds.count
-				for faceId in facegroup.faceIds do (
-					WriteFace f (getFace lod.mesh faceId)					
+			if lod.vertOrder == undefined then (
+				for i = 1 to lod.mesh.numverts do (					
+					WritePoint3 f (getVert lod.mesh i)
+					WritePoint3 f lod.normals[i]
+					WriteUV f (getTVert lod.mesh i)
 				)
-				WriteShort f (facegroup.matId - 1)
+				
+				WriteByte f lod.facegroups.count
+				for facegroup in lod.facegroups do (
+					WriteShort f facegroup.faceIds.count
+					for faceId in facegroup.faceIds do (						
+						WriteFace f (getFace lod.mesh faceId)					
+					)
+					WriteShort f (facegroup.matId - 1)
+				)
 			)
+			else (				
+				for i = 1 to lod.mesh.numverts do (
+					local corrVertId = lod.vertOrder[i]
+					
+					WritePoint3 f (getVert lod.mesh corrVertId)
+					WritePoint3 f lod.normals[corrVertId]
+					WriteUV f (getTVert lod.mesh corrVertId)
+				)
+				
+				local rev = #()
+				for i = 1 to lod.vertOrder.count do (
+					local vertId = lod.vertOrder[i]
+					rev[vertId] = i
+				)
+				
+				WriteByte f lod.facegroups.count
+				for facegroup in lod.facegroups do (
+					WriteShort f facegroup.faceIds.count
+					for faceId in facegroup.faceIds do (
+						local vertIds = getFace lod.mesh faceId
+						
+						for v = 1 to 3 do (
+							local vertId = vertIds[v]
+							vertIds[v] = rev[vertId]
+						)
+						WriteFace f vertIds					
+					)
+					WriteShort f (facegroup.matId - 1)
+				)
+			)			
 			
 		)
 	)

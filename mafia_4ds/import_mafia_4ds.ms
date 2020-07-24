@@ -568,7 +568,7 @@ fn CreateObjects mobjects = (
 				buffer.boneNodes[mbone.boneId+1] = nnode					
 				
 				
-				format "% | objId: % | boneid: %\n" mobj.name i mbone.boneid
+				--format "% | objId: % | boneid: %\n" mobj.name i mbone.boneid
 			)
 		)
 		
