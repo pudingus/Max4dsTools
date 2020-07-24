@@ -53,11 +53,17 @@ struct TMesh (
 	lods = #()
 )
 
+struct TFacegroup (
+	faceIds = #(),
+	matId
+)
+
 struct TLod (
 	distance,
 	mesh,
 	normals = #(),	--array of point3, count equals to count of vertices in mesh
-	matIds = #() --array of int, count = count of faces in mesh
+	matIds = #(),   --array of int, count = count of faces in mesh
+	facegroups = #()
 )
 
 struct TSkin (
@@ -673,6 +679,33 @@ fn WriteHeader f = (
 	WriteLong f 29382754	--timestamp part 2
 )
 
+fn WriteMesh f mmesh = (
+	WriteShort f mmesh.instanceId
+	
+	if mmesh.instanceId == 0 then (
+		WriteByte f mmesh.lods.count
+		for lod in mmesh.lods do (
+			WriteFloat f lod.distance
+			WriteShort f lod.mesh.numverts
+			
+			for i = 1 to lod.mesh.numverts do (
+				WritePoint3 f (getVert lod.mesh i)
+				WritePoint3 f lod.normals[i]
+				WriteUV f (getTVert lod.mesh i)
+			)
+			
+			WriteByte f lod.facegroups.count
+			for facegroup in lod.facegroups do (
+				WriteShort f facegroup.faceIds.count
+				for faceId in facegroup.faceIds do (
+					WriteFace f (getFace lod.mesh faceId)					
+				)
+				WriteShort f (facegroup.matId - 1)
+			)
+			
+		)
+	)
+)
 
 
 fn WriteSector f sector = (

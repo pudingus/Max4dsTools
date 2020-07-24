@@ -44,34 +44,19 @@ struct TObjectSet (
 	)	
 )
 
-struct MVert (
-	key, --string
-	pos,	--Point3
-	normal,	--Point3
-	uv,		--Point3 (Point2)
-	wv
-)
-
-struct MFacegroup (
-	faces = #(),    -- array of 3-element array
-	matid	  -- short int
-)
-
-struct MLod (
-	verts = #(),  --array of MVert
+struct TFacegroupSet (
 	facegroups = #(),   --array of MFacegroup
-	facegroup_ids = #(),
-	loddist,
+	facegroup_ids = #(),   --get facegroup id from matid
 
-	fn GetFacegroupFromMatID matid = (
+	fn GetByMatId matid = (
 		matid = matid + 1
 		local grp_id = facegroup_ids[matid]	
 
 		if grp_id == undefined then (
-			local grp = MFacegroup matid:matid
+			local grp = TFacegroup matid:matid
 			append facegroups grp
-			facegroup_ids[matid] = facegroups.count
 			grp_id = facegroups.count
+			facegroup_ids[matid] = grp_id
 		)
 		facegroups[grp_id]
 	)
@@ -117,9 +102,6 @@ fn GetNodeType obj = (
 	)		
 	else #unsupported
 )
-
-
-
 
 
 local mafia_materials = #()
@@ -556,256 +538,119 @@ fn ExtractSkin mnode weights = (
 	mskins
 )
 
+fn close_enough_p3 v1 v2 prec  = (
+	(close_enough v1.x v2.x prec) and (close_enough v1.y v2.y prec)	and (close_enough v1.z v2.z prec)
+)
 
---returns array of MLod
-fn CollectLodsCompat lodnodes = (	
-	local m_lods = #()
-	local prevDist = 0.0
+/*
+splitVerts
 
-	for lodnode in lodnodes do (
-		local lodmesh = copy lodnode.mesh
-		local m_lod = MLod()
-		local gp = custAttributes.get lodnode MafParams_def baseObject:false
+vertId  idOfDuplicatedVertex
+  1  =  #(1087, 512, 121, ...)		
+  2
+  3
+  4
+
+*/
+
+fn SplitVertices mesh faceVertNormals = (
+	local numverts = mesh.numverts
+	local normals = #()   -- min. count = count of vertices, normals for duplicated verts are appended to the end
+	local uvs = #()  	  -- =||=
+	normals[numverts] = undefined
+	uvs[numverts] = undefined
+	
+	local splitVerts = #()		
+	local extraVerts = #()	
+	local fixFaces = #()
+	
+	for i = 1 to mesh.numfaces do (
+		local vertIds = getFace mesh i				
+		local rnormals = faceVertNormals[i]
 		
-		if gp != undefined then (
-			m_lod.loddist = gp.lodDist
-		)
-		else (
-			if lodnode == lodnodes[lodnodes.count] then m_lod.loddist = 0.0
-			else m_lod.loddist = prevDist + 100.0
-		)		
-		prevDist = m_lod.loddist
-
-		local normMod
-		if MafiaTools.exportNormals.state == 2 then normMod = GetModByClass lodnode Edit_Normals
-		-----
-
-		local normals = #()
-
-		if normMod != undefined then (
-			max modify mode
-			modpanel.setcurrentobject normMod node:lodnode
-
-			local EN_getnormalid = normMod.getnormalid
-			local EN_getvertexid = normMod.getvertexid
-			local EN_getnormal = normMod.getnormal
-
-			for j = 1 to normMod.getnumfaces() do (
-				for k in 1 to 3 do (
-					local n = EN_getnormalid j k
-					local v = EN_getvertexid j k
-					normals[v] = EN_getnormal n
-				)
-			)
-		)
-		for i = 1 to lodmesh.numVerts do (
-			local vert = (in coordsys local getVert lodmesh i) + lodnode.objectOffsetPos
-			local tvert = [0,0,0]
+		local newVertIds = copy vertIds
+		
+		local tface = getTVFace mesh i
+		
+		for v = 1 to 3 do (
+			local vertId = vertIds[v] as integer
+			local normal = rnormals[v]		
+			local uv = getTVert mesh (tface[v] as integer)
 			
-			if meshop.getMapsupport lodmesh 1 then (
-				tvert = getTVert lodmesh i
-			)			
-			local normal
-			
-			if normMod != undefined then (
-				normal = normals[i]
+			if normals[vertId] == undefined and uvs[vertId] == undefined then (
+				normals[vertId] = normal
+				uvs[vertId] = uv
 			)
 			else (
-				normal = getNormal lodmesh i
-			)
-			local m_vert = MVert pos:vert normal:normal uv:tvert
-			append m_lod.verts m_vert
+				local dupedVerts = #(vertId)
+				if splitVerts[vertid] != undefined then dupedVerts += splitVerts[vertId]				
+				local foundId = -1
+				for dupVertId in dupedVerts while foundId == -1 do (
+					
+					if close_enough_p3 normals[dupVertId] normal 6 then (					
+						if close_enough_p3 uvs[dupVertId] uv 6 then (							
+							foundId = dupVertId
+						)
+					)
+				)
+								
+				if foundId == -1 then (   
+					--split
+					append extraVerts vertId					
+					local newVertId = numverts + extraVerts.count					
+					
+					if splitVerts[vertid] == undefined then splitVerts[vertid] = #()
+					append splitVerts[vertid] newVertId
+					
+					append normals normal
+					append uvs uv
+					
+					newVertIds[v] = newVertId															
+				)				
+				else if foundId != vertId then   (
+					--just repoint face
+					newVertIds[v] = foundId
+				)
+			)				
 		)
-		for i = 1 to lodmesh.numfaces do (
-			local face = getFace lodmesh i
-			local matid = getFaceMatID lodmesh i
-			local m_matid = GetMafiaMatId (lodnode.mat) matid
-			local m_facegroup = m_lod.GetFacegroupFromMatID m_matid
-			append m_facegroup.faces face
-		)
-		append m_lods m_lod
-	)
-
-	m_lods
-)
-
-fn CompareVerts mvert1 mvert2 = stricmp mvert1.key mvert2.key
-
-fn CompareVertsB mkey index mverts: = (
-	currentKey = mverts[index].key
-	stricmp mkey currentKey
-)
-
-fn CollectVerts lodmesh lodnode weights = (
-	local EN_getnormalid 
-	local EN_getnormal
-	if normmod != undefined then (
-		max modify mode
-		modpanel.setcurrentobject normmod node:lodnode
 		
-		EN_getnormalid = normmod.getnormalid
-		EN_getnormal =  normmod.getnormal
+		if newVertIds != vertIds then (
+			append fixFaces #(i, newVertIds)
+		)
+	)
+	
+	--format "%\n" fixFaces
+	
+	setNumVerts mesh (numVerts + extraVerts.count) true
+	
+	for i = 1 to extraVerts.count do (
+		local orgVertId = extraVerts[i]
+		local newVertId = numVerts + i   --numOrgVerts
+		
+		local vert = getVert mesh orgVertId
+		setVert mesh newVertId vert
+	)
+	
+	for fixFace in fixFaces do (
+		setFace mesh fixFace[1] fixFace[2]
 	)	
-
-	local verts_big_unsorted = #()
-
-	for i = 1 to lodmesh.numfaces do (
-		local face = getFace lodmesh i
-		local tface 		
-		if meshop.getMapsupport lodmesh 1 then (
-			tface = meshop.getMapFace lodmesh 1 i   
-		)
-		
-		local rnormals = meshop.getFaceRNormals lodmesh i
-
-		for v = 1 to 3 do (						
-			local pos = (in coordsys local getVert lodmesh (face[v] as integer)) + lodnode.objectOffsetPos
-			local uv = [0,0,0]
-			if tface != undefined then (
-				uv = getTVert lodmesh (tface[v] as integer)
-			)
-			local normal
-			if normmod != undefined then (
-				local n = EN_getnormalid i v node:lodnode
-				normal = EN_getnormal n node:lodnode
-			)
-			else normal = rnormals[v]				
-
-			local strvert = stringstream ""
-			format "%%%%%%%%" pos.x pos.y pos.z normal.x normal.y normal.z uv.x uv.y to:strvert
-			strvert = strvert as string	
-
-			local m_vert = MVert pos:pos normal:normal uv:uv key:strvert wv:weights[face[v]]
-
-			append verts_big_unsorted m_vert
-		)
-	)
-
-	verts_big_unsorted
-)
-
-fn RemoveDuplicates verts_big_unsorted = (
-	local verts_big_sorted = copy verts_big_unsorted #noMap
-
-	qsort verts_big_sorted CompareVerts
-
-	local usedIds = #{}
-	local big_ids = for i = 1 to verts_big_sorted.count collect i
-	for m_vert in verts_big_sorted do (
-		local index = bsearch m_vert.key big_ids CompareVertsB mverts:verts_big_sorted
-		usedIds[index] = true
-	)
-	usedIds = usedIds as array
-
-	local verts_unique = #()
-
-	for id in usedIds do (
-		local m_vert = verts_big_sorted[id]
-		append verts_unique m_vert
-	)
-
-	verts_unique
-)
-
-fn CollectLods lodnodes &weights = (
-
-	local m_lods = #()
-	local prevDist = 0.0
-
-	for lodnode in lodnodes do (
-		local lodmesh = copy lodnode.mesh
-		local m_lod = MLod()
-		local gp = custAttributes.get lodnode MafParams_def baseObject:false
-		
-		if gp != undefined then (
-			m_lod.loddist = gp.lodDist
-		)
-		else (
-			if lodnode == lodnodes[lodnodes.count] then m_lod.loddist = 0.0
-			else m_lod.loddist = prevDist + 100.0
-		)
-		
-		prevDist = m_lod.loddist	
-
-		local normMod
-		if MafiaTools.exportNormals.state == 2 then normMod = GetModByClass lodnode Edit_Normals
-
-		-----	
-		
-		
-
-		local verts_big_unsorted = CollectVerts lodmesh lodnode weights
-		local verts_unique = RemoveDuplicates verts_big_unsorted
-		--m_lod.verts = 
-
-		local unique_ids = for i = 1 to verts_unique.count collect i
-		local kkek = 1
-		
-		--format "verts unique % \n %\n" verts_unique.count verts_unique
-		
-		
-		--weights
-		local newWeights = #()
-		for i = 1 to verts_unique.count do (
-			local m_vert = verts_unique[i]		
-			local wv = m_vert.wv
-			
-			local newWV = WeightedVertex boneid:wv.boneid weight:wv.weight vertid:i
-			append newWeights newWV
-		)
-		--format "new Weioghts % \n %\n" newWeights.count newWeights
-		--break
-		
-		qsort newWeights CompareWeights
-		
-		--print newWeights
-		m_lod.verts = #()
-		
-		local nwMap = #()   --map old vertid to new vertid
-		for i = 1 to newWeights.count do (
-			local wv = newWeights[i]
-			nwMap[wv.vertId] = i
-			
-			append m_lod.verts verts_unique[wv.vertId]
-		)
-		--format "\n\n"
-		--format "nwMap count %\n%\n" nwMap.count nwMap
-		--format "newWeights.count %\n" newWeights.count
-		--format "m_lod.verts.count %\n" m_lod.verts.count
-		-----------
-		
-		-- connect new verts to faces
-		
-		for i = 1 to lodmesh.numfaces do (			
-			local matid = getFaceMatID lodmesh i
-			local m_matid = GetMafiaMatId (lodnode.mat) matid
-			--format "m_matid % \n" m_matid
-			local m_facegroup = m_lod.GetFacegroupFromMatID m_matid
-			local nface = #()
 	
-			for v = 1 to 3 do (
-				local strvert = verts_big_unsorted[kkek].key
-				local vert_id = bsearch strvert unique_ids CompareVertsB mverts:verts_unique
-				
-				nface[v] = nwMap[vert_id]
-				kkek += 1
-			)
-	
-			append m_facegroup.faces nface
-		)
-		
-		--for wv in newWe
-		
-		--format "mverts: %, faces: %, facegroups: %\n" verts_unique.count lodmesh.numfaces m_lod.facegroups.count
-
-		append m_lods m_lod		
-		
-		weights = newWeights
+	setNumTVerts mesh uvs.count
+	for i = 1 to uvs.count do (
+		setTVert mesh i uvs[i]
 	)
-	m_lods	
+	
+	--probably not needed:
+	buildTVFaces mesh
+	for i = 1 to mesh.numfaces do (
+		setTVFace mesh i (getFace mesh i)
+	)	
+	--
+	
+	#(mesh, normals)
 )
 
-fn ExtractMesh mnode &weights = (
+fn ExtractMesh mnode = (
 	local mmesh = TMesh()	
 
 	local instances
@@ -818,51 +663,92 @@ fn ExtractMesh mnode &weights = (
 	else mmesh.instanceId = 0
 
 	if mmesh.instanceId == 0 then ( --is master instance
-		local m_lods
-		local gp = custAttributes.get mnode.baseNode MafParams_def baseObject:false
-		
 		local lodnodes = copy mnode.lods #noMap
 		insertItem mnode.baseNode lodnodes 1
 		
-		if (gp != undefined) and (gp.dontOptimize) then (
-			m_lods = CollectLodsCompat lodnodes
-		)
-		else (
-			m_lods = CollectLods lodnodes &weights
-		)
-		mmesh.lods = m_lods
-	)
-	
-	mmesh
-)
-
-fn WriteMesh f mmesh = (
-	WriteShort f mmesh.instanceId
+		local prevDist = 0.0
 		
-	if mmesh.instanceId == 0 then (
-		WriteByte f mmesh.lods.count	
+		for lodnode in lodnodes do (
+			local mlod = TLod()			
+			local lodMesh = copy lodnode.mesh			
+			local gp = custAttributes.get lodnode MafParams_def baseObject:false	
 			
-		for m_lod in mmesh.lods do (
-			WriteFloat f m_lod.loddist			
-			WriteShort f m_lod.verts.count
-			
-			for m_vert in m_lod.verts do (
-				WritePoint3 f m_vert.pos
-				WritePoint3 f m_vert.normal
-				WriteUV f m_vert.uv
+			if gp != undefined then (
+				mlod.distance = gp.lodDist
 			)
-			WriteByte f m_lod.facegroups.count
+			else (
+				if lodnode == lodnodes[lodnodes.count] then mlod.distance = 0.0
+				else mlod.distance = prevDist + 100.0
+			)
 			
-			for m_facegroup in m_lod.facegroups do (
-				WriteShort f m_facegroup.faces.count
+			prevDist = mlod.distance
+			
+			local split = true
+			if gp != undefined then split = not gp.dontOptimize
+			
+			local normMod
+			if MafiaTools.exportNormals.state == 2 then normMod = GetModByClass lodnode Edit_Normals
+			
+			local faceVertNormals = #()
+			
+			if normMod == undefined then (
+				for i = 1 to lodmesh.numfaces do (										
+					local rnormals = meshop.getFaceRNormals lodmesh i
+					append faceVertNormals rnormals
+				)
+			)
+			else (
+				max modify mode
+				modpanel.setcurrentobject normMod node:lodnode
+
+				for i = 1 to lodmesh.numfaces do (
+					for v = 1 to 3 do (
+						local normId = normMod.getnormalid i v
+						local rnormals = normMod.getnormal normId
+						append faceVertNormals 
+					)
+				)
+			)
+			
+			
+			local normals = #()
+			if split then (	
+				local spl = SplitVertices lodmesh faceVertNormals
+				lodmesh = spl[1]				
+				normals = spl[2]
+			)			
+			else (
+				for i = 1 to lodmesh.numfaces do (
+					local vertIds = getFace lodmesh i
+					local rnormals = faceVertNormals[i]
+					for v = 1 to 3 do (
+						local vertId = vertIds[v]
+						normals[vertId] = rnormals[v]
+					)
+				)
+			)
+			
+			mlod.mesh = lodmesh
+			mlod.normals = normals
+			
+			local fcgrpSet = TFacegroupSet()
+			
+			for i = 1 to lodmesh.numfaces do (
+				local matid = getFaceMatID lodmesh i
+				local mafMatId = GetMafiaMatId lodnode.mat matid
 				
-				for face in m_facegroup.faces do (
-					WriteFace f face
-				)				
-				WriteShort f (m_facegroup.matid - 1)
+				local facegroup = fcgrpSet.GetByMatId mafMatId
+				append facegroup.faceIds i
+				
+				--append mlod.matIds mafMatId
 			)
+			
+			mlod.facegroups = fcgrpSet.facegroups
+						
+			append mmesh.lods mlod
 		)
-	)
+	)	
+	mmesh
 )
 
 fn ExtractBillboard mnode = (
