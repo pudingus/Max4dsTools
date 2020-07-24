@@ -1,7 +1,7 @@
 (
 	
 include "util.ms"
-include "types.ms"
+include "4ds.ms"
 
 local debug = false
 
@@ -13,24 +13,24 @@ struct TNode (
 	morphs = #()
 )
 
-struct TObjectSet (
-	mobjects = #(), 		--list of objects as they are about to be exported
-	mobject_ids = #(),		--key = node handle, value = id in mobjects
+struct TNodeSet (
+	mnodes = #(), 		--list of objects as they are about to be exported
+	mnode_ids = #(),		--key = node handle, value = id in mnodes
 
 	fn GetIdFromHandle handle = (    --Get Mafia object id from node handle
-		mobject_ids[handle]
+		mnode_ids[handle]
 	),
 
 	fn GetByNode obj = (           --Get MObject from node
 		local handle = obj.inode.handle
 		local mid = GetIdFromHandle handle
-		mobjects[mid]
+		mnodes[mid]
 	),
 	
 	fn GetIdByNode obj = (           --Get MObject ID from node
 		if obj != undefined then (
 			local handle = obj.inode.handle		
-			mobject_ids[handle]
+			mnode_ids[handle]
 		)
 		else (
 			0
@@ -39,8 +39,8 @@ struct TObjectSet (
 
 	fn Add mobj = (          --Add MObject to collection
 		local handle = mobj.baseNode.inode.handle				
-		append mobjects mobj
-		mobject_ids[handle] = mobjects.count
+		append mnodes mobj
+		mnode_ids[handle] = mnodes.count
 	)	
 )
 
@@ -174,7 +174,7 @@ fn AddToMafiaMaterials mat = (
 	)
 )
 
-fn WriteMaterials f = (
+fn ExtractMaterials = (
 	for mat in sceneMaterials do (
 		if isKindOf mat MultiMaterial then (
 			for submat in mat.materialList where submat != undefined do (
@@ -191,18 +191,17 @@ fn WriteMaterials f = (
 		)
 	)
 
-	for mat in mafia_materials do print mat
-	for matm in mat_map where matm != undefined do print matm	
+	--for mat in mafia_materials do print mat
+	--for matm in mat_map where matm != undefined do print matm	
 	--print mat_map
 	
-	local numMats = mafia_materials.count
-	WriteShort f numMats
+	--local numMats = mafia_materials.count
+	--WriteShort f numMats
+	
+	local mmaterials = #()
 	
 	for mat in mafia_materials do (
-
-		local flags = 0
-		flags += (bit.set 0 1 true)
-
+		
 		if classof mat == Standard then (			
 			mat = ConvertStandardMaterial mat
 		)
@@ -211,6 +210,11 @@ fn WriteMaterials f = (
 		)
 		
 		if classof mat == MafMat4 then	(
+			local mmat = TMaterial()
+
+			local flags = 0
+			flags += (bit.set 0 1 true)
+		
 			if mat.envMapEnable and (mat.envMap != undefined) then (
 				flags += (bit.set 0 9 mat.envOverlay)
 				flags += (bit.set 0 10 mat.envMultiply)
@@ -235,56 +239,40 @@ fn WriteMaterials f = (
 			flags += (bit.set 0 31 mat.alphaMapEnable)
 			flags += (bit.set 0 32 mat.additiveMixing)   --
 
-			WriteLong f flags
+			mmat.flags = flags
 		
-			WriteColor f mat.ambient
-			WriteColor f mat.diffuse
-			WriteColor f mat.emission
+			mmat.ambient = mat.ambient
+			mmat.diffuse = mat.diffuse
+			mmat.emission = mat.emission
 			
-			WriteFloat f (mat.opacity / 100.0)
-		
-			--env map
-			if mat.envMapEnable then (
-				WriteFloat f (mat.envMapAmount / 100.0)
-
-				if (mat.envMap != undefined) and (classof mat.envMap == Bitmaptexture) then (
-					local filename = filenameFromPath mat.envMap.filename
-					WriteText f filename
-				)
-				else WriteByte f 0
+			mmat.opacity = mat.opacity / 100.0			
+			
+			mmat.envMapAmount = mat.envMapAmount / 100.0
+			
+			if (mat.envMap != undefined) and (classof mat.envMap == Bitmaptexture) then (
+				mmat.envMapName = filenameFromPath mat.envMap.filename
 			)
-		
-			--diffuse map
-			if (mat.diffuseMapEnable) and (mat.diffuseMap != undefined) and (classof mat.diffuseMap == Bitmaptexture) then (	
-				
-				local filename = filenameFromPath mat.diffuseMap.filename
-				WriteText f filename
-				
-				if (mat.alphaMapEnable) and (filename.count > 0) then (
-					--alpha map
-					if (mat.alphaMap != undefined) and (classof mat.alphaMap == Bitmaptexture) then (
-						local filename = filenameFromPath mat.alphaMap.filename
-						WriteText f filename
-					)
-					else WriteByte f 0   
-				)														
+			
+			if (mat.diffuseMap != undefined) and (classof mat.diffuseMap == Bitmaptexture) then (
+				mmat.diffMapName = filenameFromPath mat.diffuseMap.filename
 			)
-			else WriteByte f 0
-		
-			if mat.animatedDiffuse then (
-				WriteByte f mat.animFrames
-				WriteByte f 0
-				WriteLong f 0
-				WriteLong f mat.animPeriod
-				WriteLong f 0
-				WriteLong f 0
-			)
+			
+			if (mat.alphaMap != undefined) and (classof mat.alphaMap == Bitmaptexture) then (
+				mmat.alphaMapName = filenameFromPath mat.alphaMap.filename
+			)	
+			
+			mmat.animFrames = mat.animFrames
+			mmat.animPeriod = mat.animPeriod
+			
+			
+			append mmaterials mmat
 		)			
-	)		
+	)	
+	mmaterials	
 )
 
-fn CollectObjects = (
-	local mobjSet = TObjectSet()
+fn CollectNodes = (
+	local mnodeSet = TNodeSet()
 
 	for obj in objects do (	
 		local mnode = TNode()
@@ -293,51 +281,35 @@ fn CollectObjects = (
 		case nodeType of (
 			#portal: (
 				if obj.parent != undefined then (
-					local parent_mobj = mobjSet.GetByNode obj.parent
+					local parent_mobj = mnodeSet.GetByNode obj.parent
 					append parent_mobj.portals obj
 				)
 			)
 			#lod: (
 				if obj.parent != undefined then (
-					local parent_mobj = mobjSet.GetByNode obj.parent
+					local parent_mobj = mnodeSet.GetByNode obj.parent
 					append parent_mobj.lods obj
 				) 
 			)
 			#morph: (
 				if obj.parent != undefined then (
-					local parent_mobj = mobjSet.GetByNode obj.parent
+					local parent_mobj = mnodeSet.GetByNode obj.parent
 					append parent_mobj.morphs obj
 				)
 			)	
 			default: (
 				mnode.baseNode = obj
-				mobjSet.Add mnode
+				mnodeSet.Add mnode
 			)		
 		)		
 	)
 	
-	for mnode in mobjSet.mobjects do (
+	for mnode in mnodeSet.mnodes do (
 		qsort mnode.lods CompareNames
 		qsort mnode.portals CompareNames
-	)	
+	)		
 
-	
-	-- if debug then (
-	-- 	local id = 0
-	-- 	for mobj in mobjSet.mobjects do (
-	-- 		format "\n%: % ot:% vt:%" id mobj.baseNode.name mobj.objectType mobj.visualType
-	-- 		for lodd in mobj.lods do (
-	-- 			format "\n  %" lodd.name 
-	-- 		)
-	-- 		for prtl in mobj.portals do (
-	-- 			format "\n  %" prtl.name 
-	-- 		)
-	-- 		id = id + 1
-	-- 	)
-	-- )	
-
-	mobjSet
-	--mobjects
+	mnodeSet
 )
 
 fn ExtractSector mnode = (	
@@ -650,7 +622,7 @@ fn SplitVertices mesh faceVertNormals = (
 	#(mesh, normals)
 )
 
-fn ExtractMesh mnode = (
+fn ExtractMesh mnode mnodeSet = (
 	local mmesh = TMesh()	
 
 	local instances
@@ -658,7 +630,7 @@ fn ExtractMesh mnode = (
 	local masterInstance = instances[count]	
 	
 	if masterInstance != mnode.baseNode then (  --search for instance id
-		mmesh.instanceId = mobjSet.GetIDByNode masterInstance
+		mmesh.instanceId = mnodeSet.GetIDByNode masterInstance
 	)
 	else mmesh.instanceId = 0
 
@@ -787,157 +759,114 @@ fn ExtractBone mnode = (
 	mbone
 )
 
-fn ExtractTarget mnode mobjSet = (
+fn ExtractTarget mnode mnodeSet = (
 	local mtarget = TTarget()
 	
 	local gp = custAttributes.get mnode.baseNode MafParams_def baseObject:false
 	
 	for linkedNode in gp.targetLinks do (
-		append mtarget.linkIds (mobjSet.GetIDByNode linkedNode)
+		append mtarget.linkIds (mnodeSet.GetIDByNode linkedNode)
 	)
 		
 	mtarget	
 )
 
-fn ExtractObject mnode mobjSet = (
-	local mobj = MObject()
-		
+fn ExtractObjects mnodeSet = (	
+	local mobjects = #()
 
-	local nnode = mnode.baseNode
-	local nodeType = GetNodeType nnode	
-	
-	mobj.cullFlags = 9
-	mobj.renderFlags2 = 42
-	
-	case nodeType of (
-		#mesh: (
-			mobj.objectType = 1
-			mobj.visualType = 0
-			mobj.definitions[1] = ExtractMesh mnode				
-		)
-		#singlemesh: (
-			mobj.objectType = 1
-			mobj.visualType = 2
-			local weights = ExtractWeights mnode
-			local mmesh = ExtractMesh mnode	&weights
-			local mskin = ExtractSkin mnode	weights
-			mobj.definitions[1] = mmesh	
-			mobj.definitions[2] = mskin			
-		)
-		#billboard: (
-			mobj.objectType = 1
-			mobj.visualType = 4
-			mobj.definitions[1] = ExtractMesh mnode
-			mobj.definitions[2] = ExtractBillboard mnode			
-		)
-		#sector: (
-			mobj.objectType = 5
-			mobj.cullFlags = 125
-			mobj.definitions[1] = ExtractSector mnode
-		)
-		#dummy: (
-			mobj.objectType = 6
-			mobj.definitions[1] = ExtractDummy mnode
-		)
-		#bone: (
-			mobj.objectType = 10
-			mobj.definitions[1] = ExtractBone mnode
-		)
-		#target: (
-			mobj.objectType = 7
-			mobj.definitions[1] = ExtractTarget mnode mobjSet
-		)
-		default: (
-			mobj.objectType = 6
-			mobj.definitions[1] = ExtractDummy mnode
-		)
-	)	
-	
-	local gp = custAttributes.get nnode MafParams_def baseObject:false
-	if gp != undefined then (
-		mobj.cullFlags = gp.cullFlags
-		mobj.renderFlags = gp.renderFlags
-		mobj.renderFlags2 = gp.renderFlags2
-		mobj.strParams = gp.strParams
-	)
-	
-	mobj.name = mnode.baseNode.name	
-	mobj.parentId = mobjSet.GetIDByNode mnode.baseNode.parent	
-	
-	if mobj.objectType == 5 then (
-		mobj.offset = [0,0,0]
-		mobj.scl = [1,1,1]
-		mobj.rot = [0,0,0,1]
-	)
-	else (
-		if (nnode.parent != undefined) and (GetNodeType nnode.parent == #sector) then (
-			in coordsys world
-			(
-				mobj.offset = mnode.baseNode.pos
-				mobj.scl = mnode.baseNode.scale
-				mobj.rot = mnode.baseNode.rotation
+	for mnode in mnodeSet.mnodes do (	
+		local mobj = MObject()	
+
+		local baseNode = mnode.baseNode
+		local nodeType = GetNodeType baseNode	
+		
+		mobj.cullFlags = 9
+		mobj.renderFlags2 = 42
+		
+		case nodeType of (
+			#mesh: (
+				mobj.objectType = 1
+				mobj.visualType = 0
+				mobj.definitions[1] = ExtractMesh mnode mnodeSet				
 			)
+			#singlemesh: (
+				mobj.objectType = 1
+				mobj.visualType = 2
+				local weights = ExtractWeights mnode
+				local mmesh = ExtractMesh mnode	&weights
+				local mskin = ExtractSkin mnode	weights
+				mobj.definitions[1] = mmesh	
+				mobj.definitions[2] = mskin			
+			)
+			#billboard: (
+				mobj.objectType = 1
+				mobj.visualType = 4
+				mobj.definitions[1] = ExtractMesh mnode mnodeSet
+				mobj.definitions[2] = ExtractBillboard mnode			
+			)
+			#sector: (
+				mobj.objectType = 5
+				mobj.cullFlags = 125
+				mobj.definitions[1] = ExtractSector mnode
+			)
+			#dummy: (
+				mobj.objectType = 6
+				mobj.definitions[1] = ExtractDummy mnode
+			)
+			#bone: (
+				mobj.objectType = 10
+				mobj.definitions[1] = ExtractBone mnode
+			)
+			#target: (
+				mobj.objectType = 7
+				mobj.definitions[1] = ExtractTarget mnode mnodeSet
+			)
+			default: (
+				mobj.objectType = 6
+				mobj.definitions[1] = ExtractDummy mnode
+			)
+		)	
+		
+		local gp = custAttributes.get baseNode MafParams_def baseObject:false
+		if gp != undefined then (
+			mobj.cullFlags = gp.cullFlags
+			mobj.renderFlags = gp.renderFlags
+			mobj.renderFlags2 = gp.renderFlags2
+			mobj.strParams = gp.strParams
+		)
+		
+		mobj.name = mnode.baseNode.name	
+		mobj.parentId = mnodeSet.GetIDByNode mnode.baseNode.parent	
+		
+		if mobj.objectType == 5 then (
+			mobj.offset = [0,0,0]
+			mobj.scl = [1,1,1]
+			mobj.rot = [0,0,0,1]
 		)
 		else (
-			in coordsys parent
-			(
-				mobj.offset = mnode.baseNode.pos
-				mobj.scl = mnode.baseNode.scale
-				mobj.rot = mnode.baseNode.rotation
+			if (baseNode.parent != undefined) and (GetNodeType baseNode.parent == #sector) then (
+				in coordsys world
+				(
+					mobj.offset = mnode.baseNode.pos
+					mobj.scl = mnode.baseNode.scale
+					mobj.rot = mnode.baseNode.rotation
+				)
+			)
+			else (
+				in coordsys parent
+				(
+					mobj.offset = mnode.baseNode.pos
+					mobj.scl = mnode.baseNode.scale
+					mobj.rot = mnode.baseNode.rotation
+				)
 			)
 		)
-	)
-	
-	mobj	
-)
-
-fn WriteObject f mobj = (
-	WriteByte f mobj.objectType
-	
-	if mobj.objectType == 1 then (
-		WriteByte f mobj.visualType
-		WriteByte f mobj.renderFlags
-		WriteByte f mobj.renderFlags2
-	)
-	
-	WriteShort f mobj.parentId	
-	WritePoint3 f mobj.offset
-	WritePoint3 f mobj.scl
-	WriteQuat f mobj.rot
-	WriteByte f mobj.cullFlags
-	WriteText f mobj.name
-	WriteText f mobj.strParams
-	
-	case mobj.objectType of (
-		1: case mobj.visualType of (
-			0: WriteMesh f mobj.definitions[1]
-			2: (
-				WriteMesh f mobj.definitions[1]
-				WriteSkin f mobj.definitions[2]
-			) 
-			4: (
-				WriteMesh f mobj.definitions[1]
-				WriteBillboard f mobj.definitions[2]
-			) 
-		)
-		5: WriteSector f mobj.definitions[1]
-		6: WriteDummy f mobj.definitions[1]
-		7: WriteTarget f mobj.definitions[1]
-		10: WriteBone f mobj.definitions[1]
+		
+		append mobjects mobj
 	)	
+	mobjects	
 )
 
-fn WriteObjects f = (
-	local mobjSet = CollectObjects()
-	local mnodes = mobjSet.mobjects
-
-	WriteShort f mnodes.count
-
-	for mnode in mnodes do (	
-		local mobj = ExtractObject mnode mobjSet
-		WriteObject f mobj
-	)
-)
 
 ------------------------
 ---------MAIN-----------
@@ -962,10 +891,15 @@ fn Main = (
 		local used_start = (heapsize - heapfree) / 1024.0
 
 		f = fopen file "wb"    
-		WriteHeader f
-		WriteMaterials f
-		WriteObjects f
-		WriteByte f 0  --use 5ds animation
+		
+		
+		
+		local m4ds = T4ds()
+		m4ds.materials = ExtractMaterials()	
+		local mnodeSet = CollectNodes()
+		local mobjects = ExtractObjects mnodeSet
+		m4ds.objects = mobjects			
+		Write4ds f m4ds		
 		fclose f
 	
 		local end = timeStamp()	

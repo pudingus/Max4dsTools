@@ -163,7 +163,6 @@ ReadDummy
 ReadSector
 ReadTarget
 ReadBone
-ReadHeader
 
 fn ReadText f = (
 	local len = ReadByte f #unsigned
@@ -618,25 +617,34 @@ fn ReadBone f = (
 	mbone
 )
 
-
-
 --------------------------------------------------------------
+Write4ds
+WriteHeader
+WriteMaterial
+WriteObject
+WriteMesh
+WriteSkin
+WriteBillboard
+WriteSector
+WriteDummy
+WriteTarget
+WriteBone
 
 
 fn WriteText f txt = (
-	if txt == undefined then (
-		WriteByte f 0 #unsigned
+	local count = 0
+	if txt != undefined then count = txt.count	
+	
+	if count > 255 then (
+		count = 255
+		messageBox ("String '" + txt + "' is over the maximum of 255 characters!") icon:#warning
 	)
-	else (
-		local count = txt.count
-		if count > 255 then (
-			count = 255
-			messageBox ("String '" + txt + "' is over the maximum of 255 characters!") icon:#warning
-		)
-		WriteByte f count #unsigned
-		for i = 1 to count do
-			WriteByte f (bit.charasint txt[i])
+	WriteByte f count #unsigned
+	for i = 1 to count do (
+		WriteByte f (bit.charasint txt[i])
 	)
+		
+	count	
 )
 
 fn WriteColor f clr = (
@@ -672,11 +680,90 @@ fn WriteUV f uv = (
 	WriteFloat f (1 - uv.y)
 )
 
+fn Write4ds f m4ds = (
+	WriteHeader f
+	
+	WriteShort f m4ds.materials.count
+	for mmat in m4ds.materials do (
+		WriteMaterial f mmat		
+	)
+	
+	WriteShort f m4ds.objects.count
+	for mobj in m4ds.objects do (
+		WriteObject f mobj
+	)
+	
+	WriteByte f false
+)
+
 fn WriteHeader f = (
     WriteLong f 5456948 	-- 4DS
 	WriteShort f 29			--format version
 	WriteLong f 343586816	--timestamp
 	WriteLong f 29382754	--timestamp part 2
+)
+
+fn WriteMaterial f mmat = (
+	WriteLong f mmat.flags
+	WriteColor f mmat.ambient
+	WriteColor f mmat.diffuse
+	WriteColor f mmat.emission
+	WriteFloat f mmat.opacity
+	
+	if bit.get mmat.flags 20 then ( 	-- env map
+		WriteFloat f mmat.envMapAmount
+		WriteText f mmat.envMapName
+	)
+	local count = WriteText f mmat.diffMapName
+	
+	if count > 0 and bit.get mmat.flags 31 then (   -- alpha map
+		WriteText f alphaMapName
+	)
+	
+	if bit.get mmat.flags 27 then (		-- animated
+		WriteLong f mmat.animFrames
+		WriteShort f 0
+		WriteLong f mmat.animPeriod
+		WriteLong f 0
+		WriteLong f 0
+	)
+	
+)
+
+fn WriteObject f mobj = (
+	WriteByte f mobj.objectType
+	
+	if mobj.objectType == 1 then (
+		WriteByte f mobj.visualType
+		WriteByte f mobj.renderFlags
+		WriteByte f mobj.renderFlags2
+	)
+	
+	WriteShort f mobj.parentId	
+	WritePoint3 f mobj.offset
+	WritePoint3 f mobj.scl
+	WriteQuat f mobj.rot
+	WriteByte f mobj.cullFlags
+	WriteText f mobj.name
+	WriteText f mobj.strParams
+	
+	case mobj.objectType of (
+		1: case mobj.visualType of (
+			0: WriteMesh f mobj.definitions[1]
+			2: (
+				WriteMesh f mobj.definitions[1]
+				WriteSkin f mobj.definitions[2]
+			) 
+			4: (
+				WriteMesh f mobj.definitions[1]
+				WriteBillboard f mobj.definitions[2]
+			) 
+		)
+		5: WriteSector f mobj.definitions[1]
+		6: WriteDummy f mobj.definitions[1]
+		7: WriteTarget f mobj.definitions[1]
+		10: WriteBone f mobj.definitions[1]
+	)	
 )
 
 fn WriteMesh f mmesh = (
@@ -707,6 +794,36 @@ fn WriteMesh f mmesh = (
 	)
 )
 
+
+fn WriteSkin f mskins = (
+	for mskin in mskins do (
+		WriteByte f mskin.vgroups.count
+		WriteLong f mskin.numW0Verts
+		WritePoint3 f mskin.dmin
+		WritePoint3 f mskin.dmax
+		
+		for grp in mskin.vgroups do (
+			-- WriteFloat f 1; WriteFloat f 0; WriteFloat f 0; WriteFloat f 0
+			-- WriteFloat f 0; WriteFloat f 1; WriteFloat f 0; WriteFloat f 0
+			-- WriteFloat f 0; WriteFloat f 0; WriteFloat f 1; WriteFloat f 0
+			-- WriteFloat f 0; WriteFloat f 0; WriteFloat f 0; WriteFloat f 1
+			WriteMatrix4 f grp.matrix
+			
+			WriteLong f grp.numW1Verts
+			WriteLong f grp.weights.count
+			WriteLong f grp.boneId
+			WritePoint3 f grp.dmin
+			WritePoint3 f grp.dmax
+			
+			for weight in grp.weights do WriteFloat f weight
+		)
+	)
+)
+
+fn WriteBillboard f mbillboard = (
+	WriteByte f mbillboard.rotAxis
+	WriteLong f mbillboard.rotMode
+)
 
 fn WriteSector f sector = (
 	WriteLong f 2049    --unknown
@@ -750,35 +867,13 @@ fn WriteDummy f mdummy = (
 	WritePoint3 f mdummy.dmax
 )
 
-fn WriteSkin f mskins = (
-	for mskin in mskins do (
-		WriteByte f mskin.vgroups.count
-		WriteLong f mskin.numW0Verts
-		WritePoint3 f mskin.dmin
-		WritePoint3 f mskin.dmax
-		
-		for grp in mskin.vgroups do (
-			-- WriteFloat f 1; WriteFloat f 0; WriteFloat f 0; WriteFloat f 0
-			-- WriteFloat f 0; WriteFloat f 1; WriteFloat f 0; WriteFloat f 0
-			-- WriteFloat f 0; WriteFloat f 0; WriteFloat f 1; WriteFloat f 0
-			-- WriteFloat f 0; WriteFloat f 0; WriteFloat f 0; WriteFloat f 1
-			WriteMatrix4 f grp.matrix
-			
-			WriteLong f grp.numW1Verts
-			WriteLong f grp.weights.count
-			WriteLong f grp.boneId
-			WritePoint3 f grp.dmin
-			WritePoint3 f grp.dmax
-			
-			for weight in grp.weights do WriteFloat f weight
-		)
+fn WriteTarget f mtarget = (
+	WriteShort f 0
+	WriteByte f mtarget.linkIds.count
+	
+	for linkId in mtarget.linkIds do (
+		WriteShort f linkId
 	)
-)
-
-
-fn WriteBillboard f mbillboard = (
-	WriteByte f mbillboard.rotAxis
-	WriteLong f mbillboard.rotMode
 )
 
 fn WriteBone f mbone = (
@@ -791,13 +886,4 @@ fn WriteBone f mbone = (
 	WriteMatrix4 f mbone.matrix
 	
 	WriteLong f mbone.boneId
-)
-
-fn WriteTarget f mtarget = (
-	WriteShort f 0
-	WriteByte f mtarget.linkIds.count
-	
-	for linkId in mtarget.linkIds do (
-		WriteShort f linkId
-	)
 )
