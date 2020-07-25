@@ -17,3 +17,12 @@ fn IsGeometry obj = (
 fn containsItem array value = (
 	(findItem array value) > 0
 )
+
+fn PrintArray arr = (
+	local ss = stringstream ""
+	format "count: %\n" arr.count to:ss
+	for item in arr do (
+		format "%\n" item to:ss
+	)
+	format (ss as string)
+)

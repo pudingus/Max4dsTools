@@ -34,7 +34,6 @@ remap:#(#(#userParams), #(#strParams))
 		--bone
 		boneId type:#integer
 		linkedBoneId type:#integer
-		--boneMatrix type:#floatTab tabsize:16
 		
 		--target
 		targetLinks type:#nodeTab tabSizeVariable:true

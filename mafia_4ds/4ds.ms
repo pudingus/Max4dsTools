@@ -217,21 +217,32 @@ fn ReadUV f = (
 	[x, 1-y, 0]
 )
 
-fn ReadMatrix4 f = (
+fn ReadMatrix f = (
 	local mtr = #()
 	for m = 1 to 4 do (	
 		mtr[m] = #()				
 		for n = 1 to 4 do mtr[m][n] = ReadFloat f
 	)	
-	mtr
+	
+	local row1 = [mtr[1][1], mtr[1][3], mtr[1][2]]
+	local row2 = [mtr[3][1], mtr[3][3], mtr[3][2]]
+	local row3 = [mtr[2][1], mtr[2][3], mtr[2][2]]
+	local row4 = [mtr[4][1], mtr[4][3], mtr[4][2]]
+	
+	matrix3 row1 row2 row3 row4
 )
 
-fn WriteMatrix4 f mtr = (
-	for m = 1 to 4 do (				
-		for n = 1 to 4 do WriteFloat f mtr[m][n]
+fn WriteMatrix f mat3 = (
+	local rows = #()
+	append rows #(mat3.row1.x, mat3.row1.z, mat3.row1.y, 0)  
+	append rows #(mat3.row3.x, mat3.row3.z, mat3.row3.y, 0) -- thanks Duelist
+	append rows #(mat3.row2.x, mat3.row2.z, mat3.row2.y, 0)
+	append rows #(mat3.row4.x, mat3.row4.z, mat3.row4.y, 1)	
+	
+	for row in rows do (
+		for n = 1 to 4 do WriteFloat f row[n]
 	)	
 )
-
 
 fn Read4ds f = (
 	local m4ds = T4ds()
@@ -418,7 +429,7 @@ fn ReadSkin f numlods = (
 	
 		for i = 0 to numGroups-1 do (
 			local vgroup = TSkinVertexGroup()			
-			vgroup.matrix = ReadMatrix4 f			
+			vgroup.matrix = ReadMatrix f			
 			
 			vgroup.numW1Verts = ReadLong f #unsigned
 			local numWeights = ReadLong f #unsigned
@@ -611,9 +622,7 @@ fn ReadTarget f = (
 
 fn ReadBone f = (
 	local mbone = TBone()	
-	mbone.matrix = ReadMatrix4 f	
-	--for i = 1 to 16 do append mbone.matrix (ReadFloat f)
-	
+	mbone.matrix = ReadMatrix f		
 	mbone.boneId = ReadLong f #unsigned
 	mbone
 )
@@ -779,7 +788,9 @@ fn WriteMesh f mmesh = (
 			if lod.vertOrder == undefined then (
 				for i = 1 to lod.mesh.numverts do (					
 					WritePoint3 f (getVert lod.mesh i)
-					WritePoint3 f lod.normals[i]
+					local normal = lod.normals[i]
+					if normal == undefined then normal = [0,0,0]
+					WritePoint3 f normal
 					WriteUV f (getTVert lod.mesh i)
 				)
 				
@@ -792,12 +803,17 @@ fn WriteMesh f mmesh = (
 					WriteShort f (facegroup.matId - 1)
 				)
 			)
-			else (				
+			else (			
+				--PrintArray lod.vertOrder
+					
+				--PrintArray lod.normals
 				for i = 1 to lod.mesh.numverts do (
 					local corrVertId = lod.vertOrder[i]
 					
-					WritePoint3 f (getVert lod.mesh corrVertId)
-					WritePoint3 f lod.normals[corrVertId]
+					WritePoint3 f (getVert lod.mesh corrVertId)	
+					local normal = lod.normals[corrVertId]
+					if normal == undefined then normal = [0,0,0]
+					WritePoint3 f normal
 					WriteUV f (getTVert lod.mesh corrVertId)
 				)
 				
@@ -836,11 +852,7 @@ fn WriteSkin f mskins = (
 		WritePoint3 f mskin.dmax
 		
 		for grp in mskin.vgroups do (
-			-- WriteFloat f 1; WriteFloat f 0; WriteFloat f 0; WriteFloat f 0
-			-- WriteFloat f 0; WriteFloat f 1; WriteFloat f 0; WriteFloat f 0
-			-- WriteFloat f 0; WriteFloat f 0; WriteFloat f 1; WriteFloat f 0
-			-- WriteFloat f 0; WriteFloat f 0; WriteFloat f 0; WriteFloat f 1
-			WriteMatrix4 f grp.matrix
+			WriteMatrix f grp.matrix
 			
 			WriteLong f grp.numW1Verts
 			WriteLong f grp.weights.count
@@ -909,14 +921,26 @@ fn WriteTarget f mtarget = (
 	)
 )
 
-fn WriteBone f mbone = (
-	-- WriteFloat f 1; WriteFloat f 0; WriteFloat f 0; WriteFloat f 0
-	-- WriteFloat f 0; WriteFloat f 1; WriteFloat f 0; WriteFloat f 0
-	-- WriteFloat f 0; WriteFloat f 0; WriteFloat f 1; WriteFloat f 0
-	-- WriteFloat f 0; WriteFloat f 0; WriteFloat f 0; WriteFloat f 1
-	--for i = 1 to 16 do WriteFloat f mbone.matrix[i]
-	
-	WriteMatrix4 f mbone.matrix
+fn WriteBone f mbone = (	
+	WriteMatrix f mbone.matrix
 	
 	WriteLong f mbone.boneId
+)
+
+fn mtypeof mobj = (
+	case mobj.objectType of (
+		1: case mobj.visualType of (
+			0: #mesh
+			2: #singlemesh
+			3: #singlemorph
+			4: #billboard
+			5: #morphedMesh
+			6: #glow
+			8: #mirror
+		)
+		5: #sector
+		6: #dummy
+		7: #target
+		10: #bone
+	)
 )

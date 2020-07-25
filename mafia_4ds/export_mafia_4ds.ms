@@ -380,15 +380,6 @@ struct WeightedVertex (
 	vertid
 )
 
-fn ConvertMatrix mat3 = (
-	local row1 = #(mat3.row1.x, mat3.row1.z, mat3.row1.y, 0)
-	local row2 = #(mat3.row3.x, mat3.row3.z, mat3.row3.y, 0)
-	local row3 = #(mat3.row2.x, mat3.row2.z, mat3.row2.y, 0)
-	local row4 = #(mat3.row4.x, mat3.row4.z, mat3.row4.y, 1)	
-	
-	#(row1, row2, row3, row4)
-)
-
 fn ExtractWeights mnode = (
 	
 	local lodnodes = copy mnode.lods #noMap
@@ -478,12 +469,9 @@ fn ExtractSkin mnode lodWeights = (
 						local gp = custAttributes.get boneNode MafParams_def baseObject:false
 						grp.boneid = gp.linkedBoneId
 						
-						local mm = boneNode.transform
-						mm[4] = mm[4] - lodnode.transform.pos    --thanks Duelist
+						local mm = boneNode.transform * (inverse lodnode.transform)
 						
-						local mmi = inverse mm
-						
-						grp.matrix = ConvertMatrix mmi
+						grp.matrix = inverse mm
 					)	
 				)
 				
@@ -496,15 +484,7 @@ fn ExtractSkin mnode lodWeights = (
 			)
 		)
 		append groups grp
-		mskin.vgroups = groups		
-		
-		
-		-- format "numVgroups: %\n" groups.count
-		-- for grp in groups do (
-		-- 	format "numW1Verts:% numWeights:% " grp.numW1Verts grp.weights.count
-		-- 	format "%\n" grp
-		-- )
-		
+		mskin.vgroups = groups				
 		
 		append mskins mskin		
 	)	
@@ -529,9 +509,12 @@ vertId  idOfDuplicatedVertex
 fn SplitVertices mesh faceVertNormals weights = (
 	local numverts = mesh.numverts
 	local normals = #()   -- min. count = count of vertices, normals for duplicated verts are appended to the end
-	local uvs = #()  	  -- =||=
+	local uvs = #()		-- =||=
+		
 	normals[numverts] = undefined
 	uvs[numverts] = undefined
+	
+	local mapSupport = meshop.getMapSupport mesh 1	
 	
 	local splitVerts = #()		
 	local extraVerts = #()	
@@ -543,12 +526,18 @@ fn SplitVertices mesh faceVertNormals weights = (
 		
 		local newVertIds = copy vertIds
 		
-		local tface = getTVFace mesh i
+		local tface 
+		if mapSupport then (
+			tface = getTVFace mesh i		
+		)
 		
 		for v = 1 to 3 do (
 			local vertId = vertIds[v] as integer
-			local normal = rnormals[v]		
-			local uv = getTVert mesh (tface[v] as integer)
+			local normal = rnormals[v]	
+			local uv = [0,0,0]
+			if tface != undefined then (
+				uv = getTVert mesh (tface[v] as integer)
+			)			
 			
 			if normals[vertId] == undefined and uvs[vertId] == undefined then (
 				normals[vertId] = normal
@@ -589,7 +578,7 @@ fn SplitVertices mesh faceVertNormals weights = (
 					
 					newVertIds[v] = newVertId															
 				)				
-				else if foundId != vertId then   (
+				else if foundId != vertId then (
 					--just repoint face
 					newVertIds[v] = foundId
 				)
@@ -617,19 +606,23 @@ fn SplitVertices mesh faceVertNormals weights = (
 		setFace mesh fixFace[1] fixFace[2]
 	)	
 	
-	setNumTVerts mesh uvs.count
-	for i = 1 to uvs.count do (
-		setTVert mesh i uvs[i]
-	)
+	-- format "(split) uvs count % \n" uvs.count
+	-- setNumTVerts mesh uvs.count
+	-- for i = 1 to uvs.count do (
+	-- 	local uv = uvs[i]
+	-- 	if uv == undefined then uv = [0,0,0]
+		
+	-- 	setTVert mesh i uv
+	-- )
 	
 	--probably not needed:
-	-- buildTVFaces mesh
-	-- for i = 1 to mesh.numfaces do (
-	-- 	setTVFace mesh i (getFace mesh i)
-	-- )	
-	--
+-- 	 buildTVFaces mesh
+-- 	 for i = 1 to mesh.numfaces do (
+-- 	 	setTVFace mesh i (getFace mesh i)
+-- 	 )	
 	
-	#(mesh, normals, weights)
+	
+	#(mesh, normals, weights, uvs)
 )
 
 fn ExtractMesh mnode mnodeSet &lodWeights = (
@@ -699,11 +692,13 @@ fn ExtractMesh mnode mnodeSet &lodWeights = (
 			
 			
 			local normals = #()
+			local uvs = #()
 			if split then (	
 				local spl = SplitVertices lodmesh faceVertNormals weights
 				lodmesh = spl[1]				
 				normals = spl[2]
 				weights = spl[3]
+				uvs = spl[4]
 			)			
 			else (
 				for i = 1 to lodmesh.numfaces do (
@@ -714,12 +709,34 @@ fn ExtractMesh mnode mnodeSet &lodWeights = (
 						normals[vertId] = rnormals[v]
 					)
 				)
+				
+				uvs[lodmesh.numverts] = undefined
+				if meshop.getMapSupport lodmesh 1 then (					
+					for i = 1 to lodmesh.numfaces do (
+						local tface = getTVFace lodmesh i
+						local face = getFace lodmesh i
+						
+						for v = 1 to 3 do (
+							uvs[face[v]] = gettvert lodmesh tface[v]
+						)
+					)
+				)				
 			)
+			
+			format "uvs count % \n" uvs.count
+			setNumTVerts lodmesh uvs.count
+			for i = 1 to uvs.count do (
+				local uv = uvs[i]
+				if uv == undefined then uv = [0,0,0]
+				
+				setTVert lodmesh i uv
+			)
+			
 			
 			if weights != undefined then (				
 				qsort weights CompareWeights
 				
-				vertOrder = #()
+				local vertOrder = #()
 				for wv in weights do (
 					append vertOrder wv.vertId
 				)
@@ -740,6 +757,8 @@ fn ExtractMesh mnode mnodeSet &lodWeights = (
 				local facegroup = fcgrpSet.GetByMatId mafMatId
 				append facegroup.faceIds i
 				
+				
+				
 				--append mlod.matIds mafMatId
 			)
 			
@@ -759,30 +778,11 @@ fn ExtractBillboard mnode = (
 	mbillboard
 )
 
-fn FloatArrayToMatrix floats = (
-	local i = 1
-	local mtr = #()
-	for m = 1 to 4 do (
-		mtr[m] = #()
-		for n = 1 to 4 do (
-			mtr[m][n] = floats[i]
-			i += 1
-		)
-	)
-	mtr
-	
-)
-
 fn ExtractBone mnode = (
 	mbone = TBone()
 	mbone.boneId = mnode.baseNode.boneId
 	
-	mbone.matrix = #( 
-		#(1,0,0,0), 
-		#(0,1,0,0),
-		#(0,0,1,0),
-		#(0,0,0,1)
-	)
+	mbone.matrix = matrix3 1
 	
 	mbone
 )
@@ -919,7 +919,6 @@ fn Main = (
 
 		local used_start = (heapsize - heapfree) / 1024.0
 
-		f = fopen file "wb"    
 		
 		
 		
@@ -927,7 +926,9 @@ fn Main = (
 		m4ds.materials = ExtractMaterials()	
 		local mnodeSet = CollectNodes()
 		local mobjects = ExtractObjects mnodeSet
-		m4ds.objects = mobjects			
+		m4ds.objects = mobjects	
+				
+		local f = fopen file "wb"    
 		Write4ds f m4ds		
 		fclose f
 	

@@ -421,6 +421,8 @@ fn CreateSkins buffer = (
 			local mskin = mskins[q]
 		
 			local oskin = Skin()	
+			oskin.bone_Limit = 2
+			oskin.showNoEnvelopes = true
 			addModifier nnode oskin				
 			max modify mode			
 			select nnode
@@ -632,8 +634,10 @@ fn ImportNormals = (
 	select n_mesh_array
 
 	local norm = Edit_Normals()
-	norm.displayLength = 0.5
+	norm.displayLength = 0.1
+	norm.SelLevel = #object
 	modpanel.addmodtoselection norm
+	
 
 	--print (n_mesh_array.count as string)
 	--print (n_normal_array.count as string)
@@ -698,9 +702,9 @@ fn Main = (
 		with redraw off (
 			mnodes = #()
 
-			f = fopen file "rb"
-			
+			local f = fopen file "rb"			
 			local m4ds = Read4ds f
+			fclose f
 			
 			CreateMaterials m4ds.materials
 			local buffer = CreateObjects m4ds.objects	
@@ -716,7 +720,7 @@ fn Main = (
 				ImportNormals()			
 			)
 
-			fclose f			
+						
 		)	
 
 		local end = timeStamp()		
