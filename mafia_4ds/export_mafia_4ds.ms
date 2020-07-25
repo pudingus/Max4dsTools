@@ -66,42 +66,7 @@ struct TFacegroupSet (
 fn CompareNames obj1 obj2 = stricmp obj1.name obj2.name
 
 
-fn GetNodeType obj = (
-	local gp = custAttributes.get obj MafParams_def baseObject:false
-	if IsGeometry obj then (
-		if matchPattern obj.name pattern:"$portal*" then (
-			#portal
-		)		
-		else if matchPattern obj.name pattern:"$lod*" then (
-			#lod
-		)
-		else if matchPattern obj.name pattern:"sector*" then (					
-			#sector
-		)		
-		else if matchPattern obj.name pattern:"$morph*" then (					
-			#morph
-		)		
-		else if (gp != undefined) and (stricmp gp.objectType "billboard" == 0) then (					
-			#billboard
-		)
-		else if isKindOf obj BoneGeometry then (
-			#bone
-		)
-		else if GetModByClass obj Skin != undefined then (
-			#singlemesh
-		)
-		else (
-			#mesh
-		)				
-	)	
-	else if isKindOf obj Dummy then (
-		#dummy
-	)
-	else if isKindOf obj TargetObject then (
-		#target
-	)		
-	else #unsupported
-)
+
 
 
 local mafia_materials = #()
@@ -149,18 +114,18 @@ fn ConvertPhysicalMaterial mat = (
 	
 	cm.opacity = (1.0 - mat.transparency) * 100
 	
-	local glossiness = 0.0
-	if mat.roughness_inv then (
-		glossiness = mat.roughness		
-	)
-	else (
-		glossiness = 1.0 - mat.roughness	
-	)
+	-- local glossiness = 0.0
+	-- if mat.roughness_inv then (
+	-- 	glossiness = mat.roughness		
+	-- )
+	-- else (
+	-- 	glossiness = 1.0 - mat.roughness	
+	-- )
 	
-	if glossiness >= 0.05 then (
-		cm.envMapAmount = glossiness * 100
-		cm.envMap = bitmaptexture filename:"env2.bmp"
-	)
+	-- if glossiness >= 0.05 then (
+	-- 	cm.envMapAmount = glossiness * 100
+	-- 	cm.envMap = bitmaptexture filename:"env2.bmp"
+	-- )
 	
 	cm
 )
@@ -387,10 +352,8 @@ fn ExtractWeights mnode = (
 	
 	local lodWeights = #()
 	
-	for lodnode in lodnodes do (
-		local baseNode = mnode.baseNode
-			
-		local bskin = GetModByClass baseNode Skin
+	for lodnode in lodnodes do (			
+		local bskin = GetModByClass lodnode Skin
 		
 		local weights = #()
 		
@@ -464,7 +427,7 @@ fn ExtractSkin mnode lodWeights = (
 						grp.dmin = [-range, -range, -range]
 						grp.dmax = [range, range, range]		
 						
-						local boneNode = skinOps.GetBoneNode bskin (boneid)
+						local boneNode = skinOps.GetBoneNode bskin boneid
 						
 						local gp = custAttributes.get boneNode MafParams_def baseObject:false
 						grp.boneid = gp.linkedBoneId

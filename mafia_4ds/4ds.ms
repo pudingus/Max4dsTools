@@ -232,18 +232,6 @@ fn ReadMatrix f = (
 	matrix3 row1 row2 row3 row4
 )
 
-fn WriteMatrix f mat3 = (
-	local rows = #()
-	append rows #(mat3.row1.x, mat3.row1.z, mat3.row1.y, 0)  
-	append rows #(mat3.row3.x, mat3.row3.z, mat3.row3.y, 0) -- thanks Duelist
-	append rows #(mat3.row2.x, mat3.row2.z, mat3.row2.y, 0)
-	append rows #(mat3.row4.x, mat3.row4.z, mat3.row4.y, 1)	
-	
-	for row in rows do (
-		for n = 1 to 4 do WriteFloat f row[n]
-	)	
-)
-
 fn Read4ds f = (
 	local m4ds = T4ds()
 	m4ds.header = ReadHeader f
@@ -288,9 +276,9 @@ fn ReadMaterial f = (
 	)
 	
 	if bit.get mmat.flags 27 then (
-		mat.animFrames = ReadLong f #unsigned
+		mmat.animFrames = ReadLong f #unsigned
 		ReadShort f #unsigned
-		mat.animPeriod = ReadLong f #unsigned
+		mmat.animPeriod = ReadLong f #unsigned
 		ReadLong f #unsigned
 		ReadLong f #unsigned
 	)
@@ -690,6 +678,18 @@ fn WriteUV f uv = (
 	WriteFloat f (1 - uv.y)
 )
 
+fn WriteMatrix f mat3 = (
+	local rows = #()
+	append rows #(mat3.row1.x, mat3.row1.z, mat3.row1.y, 0)  
+	append rows #(mat3.row3.x, mat3.row3.z, mat3.row3.y, 0) -- thanks Duelist
+	append rows #(mat3.row2.x, mat3.row2.z, mat3.row2.y, 0)
+	append rows #(mat3.row4.x, mat3.row4.z, mat3.row4.y, 1)	
+	
+	for row in rows do (
+		for n = 1 to 4 do WriteFloat f row[n]
+	)	
+)
+
 fn Write4ds f m4ds = (
 	WriteHeader f
 	
@@ -727,7 +727,7 @@ fn WriteMaterial f mmat = (
 	local count = WriteText f mmat.diffMapName
 	
 	if count > 0 and bit.get mmat.flags 31 then (   -- alpha map
-		WriteText f alphaMapName
+		WriteText f mmat.alphaMapName
 	)
 	
 	if bit.get mmat.flags 27 then (		-- animated

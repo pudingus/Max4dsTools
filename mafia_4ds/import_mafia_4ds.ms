@@ -234,10 +234,10 @@ fn CreateSector msector mobj = (
 
 -- returns Node
 fn CreateTarget mtarget mobj = (
-	--local nnode = dummy()
-	--nnode.boxsize = [0.1, 0.1, 0.1]
+	local nnode = dummy()
+	nnode.boxsize = [0.1, 0.1, 0.1]
 	
-	local nnode = TargetObject()
+	--local nnode = TargetObject()
 	-- local nnode = point()
 	-- nnode.size = 0.1
 	-- nnode.constantscreensize = false
@@ -709,7 +709,7 @@ fn Main = (
 			CreateMaterials m4ds.materials
 			local buffer = CreateObjects m4ds.objects	
 			
-			LinkTargets buffer
+			--LinkTargets buffer
 			
 			CreateSkins buffer
 			

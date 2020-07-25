@@ -29,7 +29,7 @@ global MafParamEditor
         button addParams "Add" align:#left pos:[10,25] tooltip:"Add parameters"
         button removeParams "Remove" align:#left pos:[50,25] tooltip:"Remove parameters"
         label objectTypeLabel "Object type:" across:2 offset:[0,3] align:#left
-        dropdownlist objectType "" align:#left width:80	
+        dropdownlist objectType "" align:#left width:80	 items:#("Dummy")
 
         on objectType selected i do (
             
@@ -71,6 +71,7 @@ global MafParamEditor
                     custAttributes.delete obj MafParams_def baseObject:false
 
                     DisabledMode()
+                    MafParamEditor.addParams.enabled = true
                 )
             )
         )
@@ -254,6 +255,15 @@ global MafParamEditor
             ObjectRoll.texProj.enabled = false
             ObjectRoll.noFog.enabled = false
         )
+        else if stricmp strsel "bone" == 0 then (
+            for c in ObjectRoll.controls do c.enabled = true  
+            ObjectRoll.renderFlags.enabled = false
+            ObjectRoll.renderFlags2.enabled = false
+            ObjectRoll.depthBias.enabled = false
+            ObjectRoll.shadowed.enabled = false
+            ObjectRoll.texProj.enabled = false
+            ObjectRoll.noFog.enabled = false
+        )
         -- else if stricmp strsel "glow" == 0 then (
         --     for c in ObjectRoll.controls do c.enabled = true  
             
@@ -355,7 +365,7 @@ global MafParamEditor
     )
 
     fn DisabledMode = (
-        MafParamEditor.addParams.enabled = true
+        --MafParamEditor.addParams.enabled = true
         MafParamEditor.removeParams.enabled = false
 
         MafParamEditor.objectTypeLabel.enabled = false 
@@ -405,27 +415,43 @@ global MafParamEditor
             MafParamEditor.objectName.text = obj.name
             --MafParamEditor.objectName.tooltip = obj.name
 
-            if IsGeometry obj then (
-                if matchPattern obj.name pattern:"sector*" then (
+            local nodeType = GetNodeType obj
+            case nodeType of (
+                #sector: (
                     MafParamEditor.objectType.items = #("Sector")
                 )
-                else if matchPattern obj.name pattern:"$portal*" then(
+                #portal: (
                     MafParamEditor.objectType.items = #("Portal")
                 )
-                else if matchPattern obj.name pattern:"$lod*" then(
+                #lod: (
                     MafParamEditor.objectType.items = #("Lod")
-                )                
-                else (
+                )
+                #mesh: (
                     MafParamEditor.objectType.items = #("Mesh", "Billboard")
-                ) 
+                )
+                #singlemesh: (
+                    MafParamEditor.objectType.items = #("Mesh")
+                )
+                #dummy: (
+                    MafParamEditor.objectType.items = #("Dummy")
+                )
+                #morph: (
+                    DisabledMode()        
+                    MafParamEditor.addParams.enabled = false
+                   -- MafParamEditor.objectType.items = #("")
+                )
+                #bone: (
+                    MafParamEditor.objectType.items = #("Bone")
+                )
+                default: (
+                    MafParamEditor.objectType.items = #("Dummy")
+                )
             )
-            else if isKindOf obj helper then (
-                MafParamEditor.objectType.items = #("Dummy")
-            )     
+              
             
             gp = custAttributes.get obj MafParams_def baseObject:false
 
-            if gp != undefined then (    
+            if gp != undefined and nodeType != #morph then (    
                 local items = MafParamEditor.objectType.items   
                 --format "gp.objectType: %\n" gp.objectType
                 if findItem items gp.objectType == 0 then gp.objectType = items[1]                
@@ -449,7 +475,10 @@ global MafParamEditor
                 
             )
             else (  --no custom attributes
-                DisabledMode()
+                if nodeType != #morph then (
+                    DisabledMode()
+                    MafParamEditor.addParams.enabled = true
+                )                
             )
         )       
 
