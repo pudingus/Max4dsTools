@@ -637,7 +637,8 @@ fn WriteText f txt = (
 	
 	if count > 255 then (
 		count = 255
-		messageBox ("String '" + txt + "' is over the maximum of 255 characters!") icon:#warning
+		--messageBox ("String '" + txt + "' is over the maximum of 255 characters!") icon:#warning
+		format "String '%' is over the maximum of 255 characters!\n" txt
 	)
 	WriteByte f count #unsigned
 	for i = 1 to count do (
