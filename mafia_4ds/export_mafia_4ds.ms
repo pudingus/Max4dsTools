@@ -236,6 +236,9 @@ fn ExtractMaterials = (
 	mmaterials	
 )
 
+local boneArray = #()
+local boneHandleIds = #()
+
 fn CollectNodes = (
 	local mnodeSet = TNodeSet()
 
@@ -266,7 +269,15 @@ fn CollectNodes = (
 				mnode.baseNode = obj
 				mnodeSet.Add mnode
 			)		
-		)		
+		)
+		
+		--format "obj:%  type:% \n" obj.name nodeType
+		
+		if nodeType == #bone then (
+			append boneArray obj
+			local handle = obj.inode.handle
+			boneHandleIds[handle] = boneArray.count
+		)
 	)
 	
 	for mnode in mnodeSet.mnodes do (
@@ -366,16 +377,20 @@ fn ExtractWeights mnode = (
 			local boneid = 9999
 			if count > 0 then (
 				weight = skinOps.GetVertexWeight bskin i 1
-				boneid = skinOps.GetVertexWeightBoneID bskin i 1
+				boneid = skinOps.GetVertexWeightBoneID bskin i 1			
+				
+				local boneNode = skinOps.GetBoneNode bskin boneid
+				local handle = boneNode.inode.handle
+				boneid = boneHandleIds[handle]
 			)		
 			
 			wv = WeightedVertex()
 			wv.boneid = boneid
 			wv.weight = weight
-			wv.vertid = i
+			wv.vertid = i			
 			
 			append weights wv
-		)
+		)		
 		
 		append lodWeights weights
 	)
@@ -399,54 +414,57 @@ fn ExtractSkin mnode lodWeights = (
 		mskin.dmin = [-range, -range, -range]
 		mskin.dmax = [range, range, range]	
 		
-		local bskin = GetModByClass lodnode Skin
+		local bskin = GetModByClass lodnode Skin		
 		
-		local grp
+		local groups = #()		
 		
-		local oldid = 0
-		local groups = #()
+		for boneNode in boneArray do (
+			local grp = TSkinVertexGroup()
+			grp.numW1Verts = 0
+			
+			local range = 0.2
+			grp.dmin = [-range, -range, -range]
+			grp.dmax = [range, range, range]	
+			grp.boneid = 0 
+			
+			local mm = boneNode.transform * (inverse lodnode.transform)						
+			grp.matrix = inverse mm
+			
+			append groups grp
+		)
+		
 		for weight in weights do (
-			if weight.boneid == 9999 then (
+			if weight.boneid == 9999 then (   --this is at the end
 				mskin.numW0Verts += 1
 			)
-			else (				
-				if oldid != weight.boneid then (
-					local jump = weight.boneid - oldid
-					
-					for i = 0 to jump-1 do (				
-						if grp != undefined then append groups grp
-						
-						local boneid = oldid + i + 1
-						
-						--format "boneid:%, weight.boneid:%, i:%, oldid:%, oldid+i:%\n" boneid weight.boneid i oldid (oldid + i)
-						
-						grp = TSkinVertexGroup()
-						grp.numW1Verts = 0
-						--grp.boneid = boneid - 1
-						local range = 0.2
-						grp.dmin = [-range, -range, -range]
-						grp.dmax = [range, range, range]		
-						
-						local boneNode = skinOps.GetBoneNode bskin boneid
-						
-						local gp = custAttributes.get boneNode MafParams_def baseObject:false
-						grp.boneid = gp.linkedBoneId
-						
-						local mm = boneNode.transform * (inverse lodnode.transform)
-						
-						grp.matrix = inverse mm
-					)	
-				)
+			else (
+				local id = weight.boneid				
+				local grp = groups[id]
 				
 				if weight.weight == 1.0 then grp.numW1Verts += 1
 				else (
 					append grp.weights weight.weight
 				)
-				
-				oldid = weight.boneid
 			)
 		)
-		append groups grp
+		
+		for i = 1 to groups.count do (
+			local grp = groups[i]
+			local boneId = i
+			local boneNode = boneArray[boneId]			
+			
+			if (grp.numW1Verts > 0) or (grp.weights.count > 0) then (
+								
+				if boneNode.parent != undefined then (
+					local parentHandle = boneNode.parent.inode.handle
+					local parId = boneHandleIds[parentHandle]
+					if parId != undefined then (
+						grp.boneid = parId
+					)
+				)
+			)
+		)		
+		
 		mskin.vgroups = groups				
 		
 		append mskins mskin		
@@ -686,7 +704,7 @@ fn ExtractMesh mnode mnodeSet &lodWeights = (
 				)				
 			)
 			
-			format "uvs count % \n" uvs.count
+			--format "uvs count % \n" uvs.count
 			setNumTVerts lodmesh uvs.count
 			for i = 1 to uvs.count do (
 				local uv = uvs[i]
@@ -743,7 +761,9 @@ fn ExtractBillboard mnode = (
 
 fn ExtractBone mnode = (
 	mbone = TBone()
-	mbone.boneId = mnode.baseNode.boneId
+	--mbone.boneId = mnode.baseNode.boneId
+	local handle = mnode.baseNode.inode.handle
+	mbone.boneId = boneHandleIds[handle] - 1
 	
 	mbone.matrix = matrix3 1
 	

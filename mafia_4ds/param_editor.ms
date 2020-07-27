@@ -429,6 +429,9 @@ global MafParamEditor
                 #mesh: (
                     MafParamEditor.objectType.items = #("Mesh", "Billboard")
                 )
+                #billboard: (
+                    MafParamEditor.objectType.items = #("Mesh", "Billboard")
+                )
                 #singlemesh: (
                     MafParamEditor.objectType.items = #("Mesh")
                 )
@@ -502,7 +505,7 @@ global MafParamEditor
         )    
     )
     else (
-        floater = newRolloutFloater title 190 460
+        floater = newRolloutFloater title 190 470
     )
 
 	if floater.open then (

@@ -28,8 +28,13 @@ fn PrintArray arr = (
 )
 
 fn GetNodeType obj = (
-	local gp = custAttributes.get obj MafParams_def baseObject:false
-	if IsGeometry obj then (
+	
+	if (isKindOf obj BoneGeometry) or (obj.boneEnable) then (
+		#bone
+	)
+	else if IsGeometry obj then (
+		local gp = custAttributes.get obj MafParams_def baseObject:false
+		
 		if matchPattern obj.name pattern:"$portal*" then (
 			#portal
 		)		
@@ -44,9 +49,6 @@ fn GetNodeType obj = (
 		)		
 		else if (gp != undefined) and (stricmp gp.objectType "billboard" == 0) then (					
 			#billboard
-		)
-		else if isKindOf obj BoneGeometry then (
-			#bone
 		)
 		else if GetModByClass obj Skin != undefined then (
 			#singlemesh

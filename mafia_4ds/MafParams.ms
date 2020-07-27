@@ -28,14 +28,9 @@ remap:#(#(#userParams), #(#strParams))
 
 		--Billboard
 		rotAxis type:#integer default:1
-		rotMode type:#integer default:1
-		
-		
-		--bone
-		boneId type:#integer
-		linkedBoneId type:#integer
+		rotMode type:#integer default:1		
 		
 		--target
-		targetLinks type:#nodeTab tabSizeVariable:true
+		--targetLinks type:#nodeTab tabSizeVariable:true
 	)	
 )

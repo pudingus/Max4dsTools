@@ -37,6 +37,7 @@ fn CreateMesh mmesh mobj = (
 				if lodId > 0 then (  --todo: move to CreateObjects
 					lodNode.name = "$lod" + (lodId as string) + "__" + mobj.name
 					lodNode.parent = nodes[1]
+					hide lodNode
 				)
 
 				if mmesh.lods.count > 1 then Layers.AddTo lodNode ("Lod"+(lodId as string))
@@ -237,7 +238,8 @@ fn CreateTarget mtarget mobj = (
 	local nnode = dummy()
 	nnode.boxsize = [0.1, 0.1, 0.1]
 	
-	--local nnode = TargetObject()
+	-- local nnode = TargetObject()
+	
 	-- local nnode = point()
 	-- nnode.size = 0.1
 	-- nnode.constantscreensize = false
@@ -245,46 +247,10 @@ fn CreateTarget mtarget mobj = (
 	-- nnode.centermarker = true
 	-- nnode.cross = false
 	-- nnode.wirecolor = color 28 122 210
-	
-	--for linkId in mtarget.linkIds do (
-	--	local lnode = mnodes[linkId]
-	--	lnode.rotation.controller = LookAt_Constraint()
-	--	lnode.rotation.controller.relative = true
-	--	lnode.rotation.controller.viewline_length_abs = false
-	--	lnode.rotation.controller.appendTarget nnode 50
-	--)
-	
-	-- custAttributes.add nnode MafParams_def baseObject:false
-	-- local gp = custAttributes.get nnode MafParams_def baseObject:false
-	
-	-- for linkId in mtarget.linkIds do (
-	-- 	append gp.targetLinks mnodes[linkId]
-	-- )
-	
-	
+
 	hide nnode
 	
 	nnode
-)
-
-
-fn ConvertMatrix mtr = (
-	local row = #()
-	for m = 1 to 4 do (
-		row[m] = [mtr[m][1], mtr[m][2], mtr[m][3]]
-	)	
-
-	matrix3 row[1] row[2] row[3] row[4]
-)
-
-fn MatrixToFloatArray mtr = (
-	local floats = #()
-	for m = 1 to 4 do (
-		for n = 1 to 4 do (
-			append floats mtr[m][n]
-		)
-	)
-	floats
 )
 
 fn CreateBone mbone mobj = (	
@@ -292,31 +258,19 @@ fn CreateBone mbone mobj = (
 	--local size = 0.0
 	--nnode.boxsize = [size, size, size]	
 	
+	--local nnode = box length:0.1 width:0.1 height:0.1	
+	
 	local nnode = bonesys.createBone [0,0,0] [0,0,0] [0,0,0]	
 	nnode.width = 0.0
-	nnode.height = 0.0	
+	nnode.height = 0.0		
 	
-	--local nnode = box length:0.1 width:0.1 height:0.1
-	
-	--nnode.setBoneEnable true sliderTime
-	
-	nnode.setBoneEnable false sliderTime
-	
+	nnode.setBoneEnable false sliderTime	
 	nnode.showlinks = true
 	
 	--format "  boneId: %\n" mbone.boneId	
-	
-	custAttributes.add nnode MafParams_def baseObject:false
-	local gp = custAttributes.get nnode MafParams_def baseObject:false
-	gp.boneId = mbone.boneid
-	
-	--for i = 1 to 16 do gp.boneMatrix[i] = mbone.matrix[i]
-	
-	--gp.boneMatrix = MatrixToFloatArray mbone.matrix
-	
+			
 	nnode
 )
-
 
 
 fn CreateMaterials mmats = (
@@ -414,7 +368,7 @@ fn CreateSkins buffer = (
 
 	for s = 1 to buffer.mskinsArrays.count do (
 		local mskins = buffer.mskinsArrays[s]
-		local nodes = buffer.skinNodesArrays[s]		
+		local nodes = buffer.skinNodesArrays[s]				
 		
 		for q = 1 to nodes.count do (			
 			local nnode = nodes[q]
@@ -426,8 +380,6 @@ fn CreateSkins buffer = (
 			addModifier nnode oskin				
 			max modify mode			
 			select nnode
-									
-			local vertId = 1			
 			
 			for i = 1 to boneNodes.count do (
 				skinOps.AddBone oskin boneNodes[i] 1
@@ -443,12 +395,12 @@ fn CreateSkins buffer = (
 				skinOps.unNormalizeVertex oskin i true
 			)
 			
-			local boneid1 = 1
-			for bn in mskin.vgroups do (		
-				local boneid2 = bn.boneId + 1
-				
-				local gp = custAttributes.get boneNodes[boneid1] MafParams_def baseObject:false
-				gp.linkedBoneId = bn.boneId
+			local vertId = 1
+			
+			for i = 1 to mskin.vgroups.count do (
+				local grp = mskin.vgroups[i]	
+				local boneid1 = i	
+				local boneid2 = grp.boneId + 1				
 				
 				local parnode = boneNodes[boneid1].parent
 				local parid
@@ -456,14 +408,14 @@ fn CreateSkins buffer = (
 					parid = bones_ids[parnode.inode.handle]
 				)				
 				
-				for j = 1 to bn.numW1Verts do (
+				for j = 1 to grp.numW1Verts do (
 					local weight = 1.0
 					skinOps.SetVertexWeights oskin vertId boneid1 weight				
 					
 					vertId += 1
 				)
 				
-				for weight in bn.weights do (								
+				for weight in grp.weights do (								
 					skinOps.SetVertexWeights oskin vertId boneid1 weight
 					
 					if parid != undefined then (
@@ -472,7 +424,6 @@ fn CreateSkins buffer = (
 							
 					vertId += 1
 				)
-				boneid1 += 1
 			)
 		)		
 	)
@@ -624,8 +575,15 @@ fn LinkTargets buffer = (
 			append gp.targetLinks mnodes[linkId]
 		)
 		
-		print gp.targetLinks
+		--for linkId in mtarget.linkIds do (
+		--	local lnode = mnodes[linkId]
+		--	lnode.rotation.controller = LookAt_Constraint()
+		--	lnode.rotation.controller.relative = true
+		--	lnode.rotation.controller.viewline_length_abs = false
+		--	lnode.rotation.controller.appendTarget nnode 50
+		--)		
 		
+		print gp.targetLinks		
 	)
 )
 
@@ -685,10 +643,6 @@ fn Main = (
 	(
 		--delete $*
 		--gc()
-
-		if MafiaTools.editName.text == "" then (
-			MafiaTools.editName.text = getFilenameFile file			
-		)
 		
 		filename = getFilenameFile file
 
@@ -698,45 +652,51 @@ fn Main = (
 		gc light:true
 
 		local used_start = (heapsize - heapfree) / 1024.0
+		
+		mnodes = #()
 
-		with redraw off (
-			mnodes = #()
+		local f = fopen file "rb"			
+		local m4ds = Read4ds f
+		fclose f
 
-			local f = fopen file "rb"			
-			local m4ds = Read4ds f
-			fclose f
-			
-			CreateMaterials m4ds.materials
-			local buffer = CreateObjects m4ds.objects	
-			
-			--LinkTargets buffer
-			
-			CreateSkins buffer
-			
-			Layers.Hide #("Disabled")
-			Layers.HideLods #{1..9}
+		if m4ds == undefined then (
+			messageBox "This file cannot be imported. Unknown version or format." icon:#critical
+		)
+		else (	
+			if MafiaTools.editName.text == "" then (
+				MafiaTools.editName.text = filename		
+			)				
+			with redraw off (			
+				CreateMaterials m4ds.materials
+				local buffer = CreateObjects m4ds.objects	
+				
+				--LinkTargets buffer
+				
+				CreateSkins buffer
+				
+				Layers.Hide #("Disabled")
+				--Layers.HideLods #{1..9}
 
-			if MafiaTools.importNormals.checked == true then (
-				ImportNormals()			
-			)
+				if MafiaTools.importNormals.checked == true then (
+					ImportNormals()			
+				)							
+			)	
 
-						
-		)	
+			local end = timeStamp()		
+			if end < start then end += 86400000 --timing over midnight
+			local dur = (end - start) / 1000.0		
 
-		local end = timeStamp()		
-		if end < start then end += 86400000 --timing over midnight
-		local dur = (end - start) / 1000.0		
+			CompleteRedraw()
 
-		CompleteRedraw()
+			local used_end = (heapsize - heapfree) / 1024.0
+			format "memory used ~ % KiB\n" (used_end - used_start)
 
-		local used_end = (heapsize - heapfree) / 1024.0
-		format "memory used ~ % KiB\n" (used_end - used_start)
+			gc light:true
 
-		gc light:true
-
-		local message = "Importing took " + (dur as string) + " seconds\n"
-		format message
-		messageBox message
+			local message = "Importing took " + (dur as string) + " seconds\n"
+			format message
+			messageBox message
+		)		
 	)
 )
 

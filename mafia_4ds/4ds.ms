@@ -232,29 +232,35 @@ fn ReadMatrix f = (
 	matrix3 row1 row2 row3 row4
 )
 
-fn Read4ds f = (
-	local m4ds = T4ds()
-	m4ds.header = ReadHeader f
+fn Read4ds f = (	
+	local header = ReadHeader f
 	
-	local numMats = ReadShort f #unsigned
-	for i = 1 to numMats do (
-		append m4ds.materials (ReadMaterial f)
-	)
-	
-	local numObjects = ReadShort f #unsigned
-	for i = 1 to numObjects do (
-		append m4ds.objects (ReadObject f)
-	)
+	if header != undefined and (header.version == 29 or header.version == 27) then (
+		local m4ds = T4ds()
+		m4ds.header = header		
+		local numMats = ReadShort f #unsigned
+		for i = 1 to numMats do (
+			append m4ds.materials (ReadMaterial f)
+		)
+		
+		local numObjects = ReadShort f #unsigned
+		for i = 1 to numObjects do (
+			append m4ds.objects (ReadObject f)
+		)
+	) 
 	
 	m4ds
 )
 
-fn ReadHeader f = (
-	local mheader = THeader()
-	mheader.fourcc = ReadLong f #unsigned
-	mheader.version = ReadShort f #unsigned
-	if mheader.version != 29 then MessageBox "Unknown 4DS version - importing might not work correctly"
-	mheader.timestamp = ReadLongLong f
+fn ReadHeader f = (	
+	local mheader
+	local fourcc = ReadLong f #unsigned
+	if fourcc == 5456948 then (  --is 4ds		
+		mheader = THeader()
+		mheader.fourcc = fourcc
+		mheader.version = ReadShort f #unsigned	
+		mheader.timestamp = ReadLongLong f	
+	)
 	
 	mheader
 )
@@ -376,12 +382,6 @@ fn ReadMesh f = (
 						setFace tr (offset+j) face
 					)					
 					local matId = ReadShort f #unsigned
-					-- if matId == 0 then (
-					-- 	matId = godmat.numsubs
-					-- )
-					-- for j = 1 to numFaces do (
-					-- 	setFaceMatID tr (offset+j) matId
-					-- )
 					
 					for j = 1 to numFaces do (
 						append mlod.matIds matId
@@ -392,7 +392,9 @@ fn ReadMesh f = (
 				buildTVFaces tr
 				for i = 1 to tr.numfaces do (
 					setTVFace tr i (getFace tr i)
-				)				
+					for v = 1 to 3 do setEdgeVis tr i v true
+				)	
+				
 				mlod.mesh = tr				
 				append mmesh.lods mlod
 			)			

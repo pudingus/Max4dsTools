@@ -30,4 +30,4 @@ fn PostSave = (
 	)	
 )
 
-format "Mafia 4DS Tools % loaded\n" MafiaTools.version.caption
+format "Mafia 4ds Import/Export plugin % loaded\n" MafiaTools.version.caption

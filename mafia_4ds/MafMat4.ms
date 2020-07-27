@@ -1,5 +1,5 @@
 plugin material MafMat4
-name:"4DS Material v4"
+name:"4ds Material v4"
 classID:#(0x61cbf531, 0x2197994)
 extends:Standard
 replaceUI:true
