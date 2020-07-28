@@ -236,7 +236,8 @@ fn ExtractMaterials = (
 	mmaterials	
 )
 
-local boneArray = #()
+local boneNodes = #()
+local boneNodeNames = #()
 local boneHandleIds = #()
 
 fn CollectNodes = (
@@ -274,9 +275,10 @@ fn CollectNodes = (
 		--format "obj:%  type:% \n" obj.name nodeType
 		
 		if nodeType == #bone then (
-			append boneArray obj
+			append boneNodes obj
+			append boneNodeNames obj.name
 			local handle = obj.inode.handle
-			boneHandleIds[handle] = boneArray.count
+			boneHandleIds[handle] = boneNodes.count
 		)
 	)
 	
@@ -363,11 +365,21 @@ fn ExtractWeights mnode = (
 	
 	local lodWeights = #()
 	
-	for lodnode in lodnodes do (			
+	for lodnode in lodnodes do (	
 		local bskin = GetModByClass lodnode Skin
 		
-		local weights = #()
+		max modify mode
+		modPanel.setCurrentObject bskin 		
 		
+		local skinBoneIds = #()
+		local numbones = skinOps.GetNumberBones bskin
+		for i = 1 to numbones do (
+			local boneName = skinOps.GetBoneName bskin i 0
+			local globBoneId = findItem boneNodeNames boneName
+			skinBoneIds[i] = globBoneId
+		)
+		
+		local weights = #()		
 		local numverts = skinOps.GetNumberVertices bskin
 		for i = 1 to numverts do (
 					
@@ -377,11 +389,16 @@ fn ExtractWeights mnode = (
 			local boneid = 9999
 			if count > 0 then (
 				weight = skinOps.GetVertexWeight bskin i 1
-				boneid = skinOps.GetVertexWeightBoneID bskin i 1			
+				local id = skinOps.GetVertexWeightBoneID bskin i 1			
 				
-				local boneNode = skinOps.GetBoneNode bskin boneid
-				local handle = boneNode.inode.handle
-				boneid = boneHandleIds[handle]
+				boneid = skinBoneIds[id]
+							
+				
+				-- local boneNode = skinOps.GetBoneNode bskin boneid
+				-- local handle = boneNode.inode.handle
+				-- boneid = boneHandleIds[handle]
+				
+				
 			)		
 			
 			wv = WeightedVertex()
@@ -414,11 +431,9 @@ fn ExtractSkin mnode lodWeights = (
 		mskin.dmin = [-range, -range, -range]
 		mskin.dmax = [range, range, range]	
 		
-		local bskin = GetModByClass lodnode Skin		
-		
 		local groups = #()		
 		
-		for boneNode in boneArray do (
+		for boneNode in boneNodes do (
 			local grp = TSkinVertexGroup()
 			grp.numW1Verts = 0
 			
@@ -451,7 +466,7 @@ fn ExtractSkin mnode lodWeights = (
 		for i = 1 to groups.count do (
 			local grp = groups[i]
 			local boneId = i
-			local boneNode = boneArray[boneId]			
+			local boneNode = boneNodes[boneId]			
 			
 			if (grp.numW1Verts > 0) or (grp.weights.count > 0) then (
 								

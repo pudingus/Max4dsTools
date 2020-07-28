@@ -670,6 +670,10 @@ fn Main = (
 				CreateMaterials m4ds.materials
 				local buffer = CreateObjects m4ds.objects	
 				
+				if MafiaTools.importNormals.checked == true then (
+					ImportNormals()			
+				)
+				
 				--LinkTargets buffer
 				
 				CreateSkins buffer
@@ -677,9 +681,7 @@ fn Main = (
 				Layers.Hide #("Disabled")
 				--Layers.HideLods #{1..9}
 
-				if MafiaTools.importNormals.checked == true then (
-					ImportNormals()			
-				)							
+											
 			)	
 
 			local end = timeStamp()		

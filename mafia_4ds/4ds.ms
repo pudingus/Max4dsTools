@@ -706,7 +706,7 @@ fn Write4ds f m4ds = (
 		WriteObject f mobj
 	)
 	
-	WriteByte f false
+	WriteByte f 0
 )
 
 fn WriteHeader f = (
