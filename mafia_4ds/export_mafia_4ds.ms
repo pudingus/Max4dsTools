@@ -388,10 +388,54 @@ fn ExtractWeights mnode = (
 			local weight = 0.0
 			local boneid = 9999
 			if count > 0 then (
-				weight = skinOps.GetVertexWeight bskin i 1
-				local id = skinOps.GetVertexWeightBoneID bskin i 1			
 				
-				boneid = skinBoneIds[id]
+				if count == 1 then (
+					weight = skinOps.GetVertexWeight bskin i 1
+					local id = skinOps.GetVertexWeightBoneID bskin i 1			
+					
+					boneid = skinBoneIds[id]
+				)
+				else (
+					
+					local id1 = skinOps.GetVertexWeightBoneID bskin i 1	
+					local id2 = skinOps.GetVertexWeightBoneID bskin i 2
+					
+					local globBoneId1 = skinBoneIds[id1]
+					local globBoneId2 = skinBoneIds[id2]
+					
+					local boneNode1 = boneNodes[globBoneId1]
+					local boneNode2 = boneNodes[globBoneId2]					
+					
+					local useId
+					
+					if boneNode1.parent == boneNode2 then (
+						useId = 1
+					)
+					else if boneNode2.parent == boneNode1 then (
+						useId = 2
+					)
+					
+					
+					if useId == undefined then (
+						local weight1 = skinOps.GetVertexWeight bskin i 1
+						local weight2 = skinOps.GetVertexWeight bskin i 2
+						
+						if weight1 > weight2 then (
+							weight = weight1	
+							boneid = globBoneId1						
+						)
+						else (
+							weight = weight2	
+							boneid = globBoneId2
+						)
+					)
+					else (
+						weight = skinOps.GetVertexWeight bskin i useId
+						if useId == 1 then boneId = globBoneId1
+						else boneId = globBoneId2
+					)
+				)
+
 							
 				
 				-- local boneNode = skinOps.GetBoneNode bskin boneid
