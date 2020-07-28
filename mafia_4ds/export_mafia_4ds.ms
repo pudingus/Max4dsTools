@@ -239,6 +239,7 @@ fn ExtractMaterials = (
 local boneNodes = #()
 local boneNodeNames = #()
 local boneHandleIds = #()
+local parentBoneIds = #()
 
 fn CollectNodes = (
 	local mnodeSet = TNodeSet()
@@ -279,6 +280,15 @@ fn CollectNodes = (
 			append boneNodeNames obj.name
 			local handle = obj.inode.handle
 			boneHandleIds[handle] = boneNodes.count
+			
+			local parentId
+			if obj.parent != undefined then (
+				local parentHandle = obj.parent.inode.handle				
+				parentId = boneHandleIds[parentHandle]
+			)
+			if parentId == undefined then parentId = 0
+			
+			append parentBoneIds parentId
 		)
 	)
 	
@@ -401,21 +411,23 @@ fn ExtractWeights mnode = (
 					local id2 = skinOps.GetVertexWeightBoneID bskin i 2
 					
 					local globBoneId1 = skinBoneIds[id1]
-					local globBoneId2 = skinBoneIds[id2]
-					
-					local boneNode1 = boneNodes[globBoneId1]
-					local boneNode2 = boneNodes[globBoneId2]					
+					local globBoneId2 = skinBoneIds[id2]		
 					
 					local useId
 					
-					if boneNode1.parent == boneNode2 then (
+					if parentBoneIds[globBoneId1] == globBoneId2 then (
 						useId = 1
 					)
-					else if boneNode2.parent == boneNode1 then (
+					else if parentBoneIds[globBoneId2] == globBoneId1 then (
 						useId = 2
 					)
-					
-					
+					else if parentBoneIds[globBoneId1] == 0 and parentBoneIds[globBoneId2] != 0 then (
+						useId = 2
+					)
+					else if parentBoneIds[globBoneId2] == 0 and parentBoneIds[globBoneId1] != 0 then (
+						useId = 1
+					)
+										
 					if useId == undefined then (
 						local weight1 = skinOps.GetVertexWeight bskin i 1
 						local weight2 = skinOps.GetVertexWeight bskin i 2
@@ -434,15 +446,11 @@ fn ExtractWeights mnode = (
 						if useId == 1 then boneId = globBoneId1
 						else boneId = globBoneId2
 					)
-				)
-
-							
+				)		
 				
 				-- local boneNode = skinOps.GetBoneNode bskin boneid
 				-- local handle = boneNode.inode.handle
-				-- boneid = boneHandleIds[handle]
-				
-				
+				-- boneid = boneHandleIds[handle]				
 			)		
 			
 			wv = WeightedVertex()
@@ -508,19 +516,10 @@ fn ExtractSkin mnode lodWeights = (
 		)
 		
 		for i = 1 to groups.count do (
-			local grp = groups[i]
-			local boneId = i
-			local boneNode = boneNodes[boneId]			
+			local grp = groups[i]			
 			
-			if (grp.numW1Verts > 0) or (grp.weights.count > 0) then (
-								
-				if boneNode.parent != undefined then (
-					local parentHandle = boneNode.parent.inode.handle
-					local parId = boneHandleIds[parentHandle]
-					if parId != undefined then (
-						grp.boneid = parId
-					)
-				)
+			if (grp.numW1Verts > 0) or (grp.weights.count > 0) then (				
+				grp.boneid = parentBoneIds[i]
 			)
 		)		
 		
