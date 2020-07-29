@@ -357,14 +357,12 @@ struct TBuffer (
 	mskinsArrays = #(),
 	skinNodesArrays = #(),
 	boneNodes = #(),   --sorted in boneid order
-	bones_ids = #(),
 	mtargets = #(),
 	targetNodes = #()
 )
 
 fn CreateSkins buffer = (
 	local boneNodes = buffer.boneNodes
-	local bones_ids = buffer.bones_ids
 
 	for s = 1 to buffer.mskinsArrays.count do (
 		local mskins = buffer.mskinsArrays[s]
@@ -391,22 +389,12 @@ fn CreateSkins buffer = (
 				)
 			)
 			
-			for i = 1 to nnode.numverts do (
-				skinOps.unNormalizeVertex oskin i true
-			)
-			
 			local vertId = 1
 			
 			for i = 1 to mskin.vgroups.count do (
 				local grp = mskin.vgroups[i]	
-				local boneid1 = i	
-				local boneid2 = grp.boneId + 1				
-				
-				local parnode = boneNodes[boneid1].parent
-				local parid
-				if parnode != undefined then (
-					parid = bones_ids[parnode.inode.handle]
-				)				
+				local boneid1 = i
+				local boneid2 = grp.boneId
 				
 				for j = 1 to grp.numW1Verts do (
 					local weight = 1.0
@@ -415,11 +403,12 @@ fn CreateSkins buffer = (
 					vertId += 1
 				)
 				
-				for weight in grp.weights do (								
+				for weight in grp.weights do (		
+					if boneid2 == 0 then skinOps.unNormalizeVertex oskin vertId true						
 					skinOps.SetVertexWeights oskin vertId boneid1 weight
 					
-					if parid != undefined then (
-						skinOps.SetVertexWeights oskin vertId parid (1.0 - weight)
+					if boneid2 != 0 then (
+						skinOps.SetVertexWeights oskin vertId boneid2 (1.0 - weight)
 					)
 							
 					vertId += 1
@@ -514,12 +503,9 @@ fn CreateObjects mobjects = (
 			10: (
 				local mbone = mobj.definitions[1]
 				nnode = CreateBone mbone mobj				
-				Layers.AddTo nnode "Bones"	
+				Layers.AddTo nnode "Bones"
 				
-				buffer.bones_ids[nnode.inode.handle] = mbone.boneId+1
-				
-				buffer.boneNodes[mbone.boneId+1] = nnode					
-				
+				buffer.boneNodes[mbone.boneId+1] = nnode
 				
 				--format "% | objId: % | boneid: %\n" mobj.name i mbone.boneid
 			)

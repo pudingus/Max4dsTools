@@ -368,6 +368,13 @@ struct WeightedVertex (
 	vertid
 )
 
+fn isNodeDescendantOf node node2 = (
+	while node.parent != undefined and node.parent != node2 do (
+		node = node.parent
+	)
+	node.parent == node2 
+)
+
 fn ExtractWeights mnode = (
 	
 	local lodnodes = copy mnode.lods #noMap
@@ -405,52 +412,40 @@ fn ExtractWeights mnode = (
 					
 					boneid = skinBoneIds[id]
 				)
-				else (
-					
+				else (					
 					local id1 = skinOps.GetVertexWeightBoneID bskin i 1	
 					local id2 = skinOps.GetVertexWeightBoneID bskin i 2
 					
 					local globBoneId1 = skinBoneIds[id1]
-					local globBoneId2 = skinBoneIds[id2]		
+					local globBoneId2 = skinBoneIds[id2]	
 					
-					local useId
+					local boneNode1 = boneNodes[globBoneId1]
+					local boneNode2 = boneNodes[globBoneId2]					
 					
-					if parentBoneIds[globBoneId1] == globBoneId2 then (
+					local weight1 = skinOps.GetVertexWeight bskin i 1
+					local weight2 = skinOps.GetVertexWeight bskin i 2
+					
+					if isNodeDescendantOf boneNode1 boneNode2 then (
 						useId = 1
+						weight = weight1
+						boneid = globBoneId1
 					)
-					else if parentBoneIds[globBoneId2] == globBoneId1 then (
+					else if isNodeDescendantOf boneNode2 boneNode1 then (
 						useId = 2
-					)
-					else if parentBoneIds[globBoneId1] == 0 and parentBoneIds[globBoneId2] != 0 then (
-						useId = 2
-					)
-					else if parentBoneIds[globBoneId2] == 0 and parentBoneIds[globBoneId1] != 0 then (
-						useId = 1
-					)
-										
-					if useId == undefined then (
-						local weight1 = skinOps.GetVertexWeight bskin i 1
-						local weight2 = skinOps.GetVertexWeight bskin i 2
-						
-						if weight1 > weight2 then (
-							weight = weight1	
-							boneid = globBoneId1						
-						)
-						else (
-							weight = weight2	
-							boneid = globBoneId2
-						)
+						weight = weight2
+						boneid = globBoneId2
 					)
 					else (
-						weight = skinOps.GetVertexWeight bskin i useId
-						if useId == 1 then boneId = globBoneId1
-						else boneId = globBoneId2
+						if weight2 > weight1 then (
+							weight = weight2	
+							boneid = globBoneId2					
+						)
+						else (
+							weight = weight1
+							boneid = globBoneId1
+						)
 					)
-				)		
-				
-				-- local boneNode = skinOps.GetBoneNode bskin boneid
-				-- local handle = boneNode.inode.handle
-				-- boneid = boneHandleIds[handle]				
+				)					
 			)		
 			
 			wv = WeightedVertex()
