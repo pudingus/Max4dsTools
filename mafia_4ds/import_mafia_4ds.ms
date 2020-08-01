@@ -273,8 +273,11 @@ fn CreateBone mbone mobj = (
 )
 
 
-fn CreateMaterials mmats = (
+fn CreateMaterials mmats = (	
 	if mmats.count > 0 then (
+		pngio.ipngio.setType #gray8
+		pngio.ipngio.setInterlaced false
+		pngio.ipngio.setAlpha false
 		godmat = multimaterial numsubs:(mmats.count+1)
 		godmat[mmats.count+1] = undefined
 		godmat.name = filename + " Materials"	
@@ -314,32 +317,22 @@ fn CreateMaterials mmats = (
 			mat.ambient = mmat.ambient
 			mat.diffuse = mmat.diffuse
 			mat.emission = mmat.emission
-			mat.opacity = mmat.opacity*100
+			mat.opacity = mmat.opacity*100			
+			
 
 			if mat.envMapEnable then (
 				mat.envMapAmount = mmat.envMapAmount*100
-				local envMapName = mmat.envMapName
-				if envMapName != undefined then (
-					local envMap = bitmaptex()
-					envMap.filename = envMapName
-					mat.envMap = envMap
+				if mmat.envMapName != undefined then (
+					mat.envMap = bitmaptex filename:mmat.envMapName name:mmat.envMapName
 				)
 			)
+			
+			if mmat.diffMapName != undefined then (
+				mat.diffuseMap = bitmaptex filename:mmat.diffMapName name:mmat.diffMapName 
+				showTextureMap mat on				
 
-			local diffMapName = mmat.diffMapName
-			if diffMapName != undefined then (
-				local diffMap = bitmaptex()
-				diffMap.filename = diffMapName
-				mat.diffuseMap = diffMap
-				showTextureMap mat on
-
-				if mat.alphaMapEnable then (
-					local alphaMapName = mmat.alphaMapName
-					if alphaMapName != undefined then (
-						local alphaMap = bitmaptex()
-						alphaMap.filename = alphaMapName
-						mat.alphaMap = alphaMap
-					)
+				if mat.alphaMapEnable and (mmat.alphaMapName != undefined) then (					
+					mat.alphaMap = bitmaptex filename:mmat.alphaMapName	name:mmat.alphaMapName					
 				)
 			)						
 
@@ -353,20 +346,21 @@ fn CreateMaterials mmats = (
 	)
 )
 
-struct TBuffer (
-	mskinsArrays = #(),
-	skinNodesArrays = #(),
-	boneNodes = #(),   --sorted in boneid order
-	mtargets = #(),
-	targetNodes = #()
+struct TWorldBuffer (
+	skinBuffer = #(),   --array of TObjPair
+	targetBuffer = #(),  --array of TObjPair
+	boneNodes = #()   --array of nodes sorted in boneid order
 )
 
-fn CreateSkins buffer = (
-	local boneNodes = buffer.boneNodes
+struct TObjPair (
+	mdefs,   --mafia object definitions
+	nodes
+)
 
-	for s = 1 to buffer.mskinsArrays.count do (
-		local mskins = buffer.mskinsArrays[s]
-		local nodes = buffer.skinNodesArrays[s]				
+fn CreateSkins skinBuffer boneNodes  = (
+	for pair in skinBuffer do (
+		local mskins = pair.mdefs
+		local nodes = pair.nodes			
 		
 		for q = 1 to nodes.count do (			
 			local nnode = nodes[q]
@@ -423,7 +417,7 @@ fn CreateSkins buffer = (
 )
 
 fn CreateObjects mobjects = (	
-	local buffer = TBuffer()	
+	local buffer = TWorldBuffer()	
 	
 	for i = 1 to mobjects.count do (		
 		local mobj = mobjects[i]		
@@ -442,8 +436,7 @@ fn CreateObjects mobjects = (
 					local nodes = CreateMesh mmesh mobj
 					nnode = nodes[1]
 								
-					append buffer.mskinsArrays mskins
-					append buffer.skinNodesArrays nodes
+					append buffer.skinBuffer (TObjPair mdefs:mskins nodes:nodes)
 				)
 				3: (  --singlemorph
 					local mmesh = mobj.definitions[1]
@@ -452,8 +445,7 @@ fn CreateObjects mobjects = (
 					local nodes = CreateMesh mmesh mobj
 					nnode = nodes[1]
 					
-					append buffer.mskinsArrays mskins
-					append buffer.skinNodesArrays nodes					
+					append buffer.skinBuffer (TObjPair mdefs:mskins nodes:nodes)			
 					
 					CreateMorph mmorph mobj mmesh nnode
 				)
@@ -497,8 +489,7 @@ fn CreateObjects mobjects = (
 				local mtarget = mobj.definitions[1]
 				nnode = CreateTarget mtarget mobj
 				
-				append buffer.mtargets mtarget
-				append buffer.targetNodes nnode
+				append buffer.targetBuffer (TObjPair mdefs:mtarget nodes:nnode)
 			)
 			10: (
 				local mbone = mobj.definitions[1]
@@ -549,10 +540,10 @@ fn CreateObjects mobjects = (
 	buffer
 )
 
-fn LinkTargets buffer = (
-	for i = 1 to buffer.targetNodes.count do (
-		local mtarget = buffer.mtargets[i]
-		local targetNode = buffer.targetNodes[i]
+fn LinkTargets targetBuffer = (
+	for pair in targetBuffer do (
+		local mtarget = pair.mdefs
+		local targetNode = pair.nodes
 		
 		custAttributes.add targetNode MafParams_def baseObject:false
 		local gp = custAttributes.get targetNode MafParams_def baseObject:false
@@ -660,26 +651,25 @@ fn Main = (
 					ImportNormals()			
 				)
 				
-				--LinkTargets buffer
+				--LinkTargets buffer.targetBuffer
 				
-				CreateSkins buffer
+				CreateSkins buffer.skinBuffer buffer.boneNodes
 				
 				Layers.Hide #("Disabled")
-				--Layers.HideLods #{1..9}
-
-											
+				--Layers.HideLods #{1..9}											
 			)	
 
+			CompleteRedraw()
+			gc light:true
+			
 			local end = timeStamp()		
 			if end < start then end += 86400000 --timing over midnight
-			local dur = (end - start) / 1000.0		
-
-			CompleteRedraw()
+			local dur = (end - start) / 1000.0	
 
 			local used_end = (heapsize - heapfree) / 1024.0
 			format "memory used ~ % KiB\n" (used_end - used_start)
 
-			gc light:true
+			
 
 			local message = "Importing took " + (dur as string) + " seconds\n"
 			format message
