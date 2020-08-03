@@ -5,64 +5,58 @@ struct MafiaTools_Import4ds (
 	Layers = MafiaTools_Layers,
 	parser = MafiaTools_4dsParser,
 	-----------
-
-	mnodes,
+	
 	godmat,
 	filename,
 
 
-	n_mesh_array = #(),
-	n_normal_array = #(),
+	--n_mesh_array = #(),
+	--n_normal_array = #(),
 
 	--returns array of nodes
 	fn CreateMesh mmesh mobj = (
-		local nodes = #()
+		local nodes = #()		
 		
-		if mmesh.instanceId != 0 then (
-			nodes[1] = instance mnodes[mmesh.instanceId]
+		if mmesh.lods.count == 0 then (
+			nodes[1] = Editable_mesh()
 		)
 		else (
-			if mmesh.lods.count == 0 then (
-				nodes[1] = Editable_mesh()
-			)
-			else (
-				local lodId = 0
-				for mlod in mmesh.lods do (	
-					local lodNode = mesh mesh:mlod.mesh
-					lodNode.wirecolor = color 0 0 0
-					
-					for j = 1 to lodNode.numFaces do (
-						local matId = mlod.matIds[j]
-						if matId == 0 then matId = godmat.numsubs
-						setFaceMatID lodNode j matId
-					)				
-					
-					if lodId > 0 then (  --todo: move to CreateObjects
-						lodNode.name = "$lod" + (lodId as string) + "__" + mobj.name
-						lodNode.parent = nodes[1]
-						hide lodNode
-					)
-
-					if mmesh.lods.count > 1 then Layers.AddTo lodNode ("Lod"+(lodId as string))
-
-					custAttributes.add lodNode MafParams_def baseObject:false 
-					local gp = custAttributes.get lodNode mafParams_def baseObject:false
-
-					gp.objectType = "Lod"
-					gp.lodDist = mlod.distance
-					gp.dontOptimize = true
-
-					lodNode.material = godmat
-					
-					append nodes lodNode
-					
-					
-					append n_mesh_array lodNode
-					append n_normal_array mlod.normals
-					
-					lodId += 1
+			local lodId = 0
+			for mlod in mmesh.lods do (	
+				local lodNode = mesh mesh:mlod.mesh
+				lodNode.wirecolor = color 0 0 0
+				
+				for j = 1 to lodNode.numFaces do (
+					local matId = mlod.matIds[j]
+					if matId == 0 then matId = godmat.numsubs
+					setFaceMatID lodNode j matId
 				)				
-			)						
+				
+				if lodId > 0 then (  --todo: move to CreateObjects
+					lodNode.name = "$lod" + (lodId as string) + "__" + mobj.name
+					lodNode.parent = nodes[1]
+					hide lodNode
+				)
+
+				if mmesh.lods.count > 1 then Layers.AddTo lodNode ("Lod"+(lodId as string))
+
+				custAttributes.add lodNode MafParams_def baseObject:false 
+				local gp = custAttributes.get lodNode mafParams_def baseObject:false
+
+				gp.objectType = "Lod"
+				gp.lodDist = mlod.distance
+				gp.dontOptimize = true
+
+				lodNode.material = godmat
+				
+				append nodes lodNode
+				
+				
+				-- append n_mesh_array lodNode
+				-- append n_normal_array mlod.normals
+				
+				lodId += 1
+			)					
 		)
 		nodes
 	),
@@ -353,7 +347,9 @@ struct MafiaTools_Import4ds (
 		struct TWorldBuffer (
 			skinBuffer = #(),   --array of TObjPair
 			targetBuffer = #(),  --array of TObjPair
-			boneNodes = #()   --array of nodes sorted in boneid order
+			boneNodes = #(),   --array of nodes sorted in boneid order
+			normalNodes = #(),    --array of nodes for modifier normals
+			mafiaNodes = #()
 		)
 	),
 
@@ -435,7 +431,15 @@ struct MafiaTools_Import4ds (
 				1: case mobj.visualType of (
 					0: (  --standardmesh
 						local mmesh = mobj.definitions[1]
-						local nodes = CreateMesh mmesh mobj
+						
+						local nodes = #()
+						if mmesh.instanceId == 0 then (
+							nodes = CreateMesh mmesh mobj
+						)
+						else (
+							nodes[1] = instance buffer.mafiaNodes[mmesh.instanceId]							
+						)
+												
 						nnode = nodes[1]
 					)
 					2: (  --singlemesh
@@ -465,6 +469,9 @@ struct MafiaTools_Import4ds (
 						CreateBillboard mbillboard nnode
 						
 						Layers.AddTo nnode "Billboards"
+						
+						
+						--append buffer.normalNodes
 					)
 					5: ( --morph
 						local mmesh = mobj.definitions[1]
@@ -517,7 +524,7 @@ struct MafiaTools_Import4ds (
 			nnode.name = mobj.name
 			
 			if mobj.parentId > 0 then (
-				nnode.parent = mnodes[mobj.parentId]
+				nnode.parent = buffer.mafiaNodes[mobj.parentId]
 				nnode.transform = mobj.GetMatrix() * nnode.parent.transform					
 			)
 			else (
@@ -542,13 +549,13 @@ struct MafiaTools_Import4ds (
 			gp.cullFlags = mobj.cullFlags
 			if mobj.strParams != undefined then gp.strParams = mobj.strParams
 			
-			append mnodes nnode
+			append buffer.mafiaNodes nnode
 		)
 		
 		buffer
 	),
 
-	fn LinkTargets targetBuffer = (
+	fn LinkTargets targetBuffer mafiaNodes = (
 		for pair in targetBuffer do (
 			local mtarget = pair.mdefs
 			local targetNode = pair.nodes
@@ -557,11 +564,11 @@ struct MafiaTools_Import4ds (
 			local gp = custAttributes.get targetNode MafParams_def baseObject:false
 			
 			for linkId in mtarget.linkIds do (
-				append gp.targetLinks mnodes[linkId]
+				append gp.targetLinks mafiaNodes[linkId]
 			)
 			
 			--for linkId in mtarget.linkIds do (
-			--	local lnode = mnodes[linkId]
+			--	local lnode = mafiaNodes[linkId]
 			--	lnode.rotation.controller = LookAt_Constraint()
 			--	lnode.rotation.controller.relative = true
 			--	lnode.rotation.controller.viewline_length_abs = false
@@ -572,7 +579,7 @@ struct MafiaTools_Import4ds (
 		)
 	),
 
-	fn ImportNormals = (
+	fn ImportNormals normalNodes = (
 		max modify mode
 		select n_mesh_array
 
@@ -615,17 +622,19 @@ struct MafiaTools_Import4ds (
 
 		norm.RebuildNormals()
 		clearSelection()
-	),
-
-
+	),	
 
 	------------------------
 	---------MAIN-----------
 	------------------------
-	fn Import4ds file = (
+	fn Import4ds file modnormals:false = (
 		
 		--delete $*
 		--gc()
+		
+		if getCommandPanelTaskMode() == #modify then (
+			setCommandPanelTaskMode #create
+		)
 		
 		filename = getFilenameFile file
 
@@ -635,8 +644,6 @@ struct MafiaTools_Import4ds (
 		gc light:true
 
 		local used_start = (heapsize - heapfree) / 1024.0
-		
-		mnodes = #()
 
 		local f = fopen file "rb"			
 		local m4ds = parser.Read4ds f
@@ -652,6 +659,10 @@ struct MafiaTools_Import4ds (
 			with redraw off (			
 				CreateMaterials m4ds.materials
 				local buffer = CreateObjects m4ds.objects	
+				
+				if modnormals then (
+					ImportNormals
+				)
 				
 				-- if MafiaTools.importNormals.checked == true then (
 				-- 	ImportNormals()			

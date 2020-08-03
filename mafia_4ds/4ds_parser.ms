@@ -78,7 +78,7 @@ struct MafiaTools_4dsParser (
 		struct TLod (
 			distance,
 			mesh,
-			normals = #(),	--array of point3, count equals to count of vertices in mesh
+			--normals = #(),	--array of point3, count equals to count of vertices in mesh
 			matIds = #(),   --array of int, count = count of faces in mesh
 			facegroups = #(),
 			vertOrder
@@ -407,13 +407,17 @@ struct MafiaTools_4dsParser (
 					local tr = TriMesh()
 					setNumVerts tr numverts
 					setNumTVerts tr numverts
+					
+					meshop.setNumMaps tr 3 keep:true
 
 					for i = 1 to numVerts do (
 						local vert = ReadPoint3 f
 						local normal = ReadPoint3 f					
 						local uv = ReadUV f
 						
-						append mlod.normals normal
+						meshop.setMapVert tr 2 i normal
+						
+						--append mlod.normals normal
 						setVert tr i vert
 						setTVert tr i uv
 					)

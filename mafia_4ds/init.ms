@@ -8,10 +8,12 @@
 	filein "MafParams.ms"
 	filein "util.ms"
 	filein "layers.ms"
-	filein "4ds_parse.ms"
+	filein "4ds_parser.ms"
 	filein "4ds_import.ms"
 	filein "4ds_export.ms"
 	filein "ui_utility.ms"
+	
+	
 	
 	format "Mafia 4ds Import/Export plugin % loaded\n" MafiaTools_version
 )

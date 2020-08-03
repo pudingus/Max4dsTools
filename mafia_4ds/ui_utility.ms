@@ -1,4 +1,5 @@
---global MafiaTools
+
+if MafiaTools != undefined and MafiaTools.open then closeUtility MafiaTools
 utility MafiaTools "Mafia 4ds Import/Export"
 (
 	button       btnImportExport   "Import/Export..." align:#left

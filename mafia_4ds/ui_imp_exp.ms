@@ -5,7 +5,9 @@
         destroyed = true
     )
     
+    global MafiaTools_ImportPath
     global MafiaTools_ExportPath
+    global MafiaTools_ImpExpPos
     global ImpExp
     local imp = MafiaTools_Import4ds()
 	local exp = MafiaTools_Export4ds()
@@ -27,10 +29,13 @@
         
         on btnImport pressed do
         (		
-            local file = getOpenFileName types:"4DS models (*.4ds)|*.4ds|All files (*.*)|*.*" historyCategory:"4dsImport"
+            local prev_name = MafiaTools_ImportPath
+            if prev_name == undefined then prev_name = ""
+            local file = getOpenFileName types:"4DS models (*.4ds)|*.4ds|All files (*.*)|*.*" historyCategory:"4dsImport" filename:prev_name
             if file != undefined then (
                 --progressStart "4ds Importing"
                 imp.Import4ds file
+                MafiaTools_ImportPath = file
                 --progressEnd()
             )	
         )
@@ -63,16 +68,26 @@
         on ImpExp open do (
 			if MafiaTools_ExportPath != undefined then (				
 				editName.text = MafiaTools_ExportPath
-			)
+            )
+            
         )
         
         on ImpExp close do (
             MafiaTools_ExportPath = editName.text
+            MafiaTools_ImpExpPos = GetDialogPos ImpExp
         )
     )
     
     if not destroyed then (
-        CreateDialog ImpExp 220 300 style:#(#style_resizing, #style_titlebar, #style_border,#style_sysmenu)
+        local pos = MafiaTools_ImpExpPos
+        local style = #(#style_resizing, #style_titlebar, #style_border,#style_sysmenu) 
+        if pos != undefined then (
+            CreateDialog ImpExp 220 300 pos.x pos.y style:style         
+        )
+        else (
+            CreateDialog ImpExp 220 300 style:style         
+            
+        )
         
     )
 
