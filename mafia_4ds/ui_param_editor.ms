@@ -3,7 +3,9 @@ global OnSelectionChanged
 global floater
 global MafParamEditor
 (
-    include "util.ms"
+    --include "util.ms"
+    
+    local util = MafiaTools_Util
     
     local gp
     local EnabledMode
@@ -415,7 +417,7 @@ global MafParamEditor
             MafParamEditor.objectName.text = obj.name
             --MafParamEditor.objectName.tooltip = obj.name
 
-            local nodeType = GetNodeType obj
+            local nodeType = util.GetNodeType obj
             case nodeType of (
                 #sector: (
                     MafParamEditor.objectType.items = #("Sector")

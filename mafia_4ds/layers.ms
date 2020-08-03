@@ -1,4 +1,4 @@
-struct Layers (    
+struct MafiaTools_Layers (    
     fn GetLayer layerName = (
         local layer = LayerManager.getLayerFromName layerName
         if layer == undefined then (
@@ -27,5 +27,4 @@ struct Layers (
         )
     )
 )
-
-Layers = Layers()
+MafiaTools_Layers = MafiaTools_Layers()
