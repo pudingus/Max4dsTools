@@ -1007,6 +1007,7 @@ struct MafiaTools_Export4ds (
 		format "Exporting took % seconds\n" dur	
 		--messageBox ("Exporting took " + (dur as string) + " seconds")
 		
+		dur		
 	)
 )
 --MafiaTools_Export4ds = MafiaTools_Export4ds()

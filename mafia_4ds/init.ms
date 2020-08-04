@@ -6,6 +6,7 @@
 	
 	filein "MafMat4.ms"
 	filein "MafParams.ms"
+	filein "cached_normals.ms"
 	filein "util.ms"
 	filein "layers.ms"
 	filein "4ds_parser.ms"

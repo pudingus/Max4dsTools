@@ -52,6 +52,11 @@ struct MafiaTools_Import4ds (
 				append nodes lodNode
 				
 				
+				local cmod = CachedNormals()
+				cmod.normals = mlod.normals
+				addModifier lodnode cmod
+				
+				
 				-- append n_mesh_array lodNode
 				-- append n_normal_array mlod.normals
 				
@@ -661,7 +666,7 @@ struct MafiaTools_Import4ds (
 				local buffer = CreateObjects m4ds.objects	
 				
 				if modnormals then (
-					ImportNormals
+					ImportNormals buffer.normalNodes
 				)
 				
 				-- if MafiaTools.importNormals.checked == true then (
@@ -691,6 +696,8 @@ struct MafiaTools_Import4ds (
 			local message = "Importing took " + (dur as string) + " seconds\n"
 			format message
 			--messageBox message
+			
+			dur
 		)	
 		
 		
