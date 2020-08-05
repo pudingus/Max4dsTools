@@ -185,6 +185,32 @@ global MafParamEditor
         )
     )
     
+    rollout TargetRoll "Targeting nodes"
+    (
+        pickbutton add "Add" across:2
+        button remove "Remove"
+        listbox targetingNodes "" height:5
+        
+        on add picked val do (
+            append gp.targetLinks val
+            local items = targetingNodes.items
+            append items val.name
+            targetingNodes.items = items
+        )
+        
+        
+        on remove pressed do (
+            local selId = targetingNodes.selection
+            if selId != 0 then (
+                local items = targetingNodes.items
+                deleteItem items selId
+                deleteItem gp.targetLinks selId
+                targetingNodes.items = items
+            )
+        )
+        
+    )
+    
     -- rollout GlowRoll ""
     -- (        
     --     button add "Add" across:2
@@ -214,7 +240,7 @@ global MafParamEditor
         MafParamEditor.addParams.enabled = false
     )
 	
-	local rolls = #(LodRoll, PortalRoll, BillRoll)
+	local rolls = #(LodRoll, PortalRoll, BillRoll, TargetRoll)
 
     fn OpenSelection strsel = (
         
@@ -265,6 +291,17 @@ global MafParamEditor
             ObjectRoll.shadowed.enabled = false
             ObjectRoll.texProj.enabled = false
             ObjectRoll.noFog.enabled = false
+        )
+        else if stricmp strsel "target" == 0 then (
+            for c in ObjectRoll.controls do c.enabled = true  
+            ObjectRoll.renderFlags.enabled = false
+            ObjectRoll.renderFlags2.enabled = false
+            ObjectRoll.depthBias.enabled = false
+            ObjectRoll.shadowed.enabled = false
+            ObjectRoll.texProj.enabled = false
+            ObjectRoll.noFog.enabled = false
+            
+            rlts = #(TargetRoll)
         )
         -- else if stricmp strsel "glow" == 0 then (
         --     for c in ObjectRoll.controls do c.enabled = true  
@@ -337,7 +374,15 @@ global MafParamEditor
         if BillRoll.isDisplayed then (
             BillRoll.rotMode.state = gp.rotMode
             BillRoll.rotAxis.selection = gp.rotAxis
-        )       
+        )  
+        
+        if TargetRoll.isDisplayed then (
+            local items = #()
+            for obj in gp.targetLinks do (
+                append items obj.name
+            )
+            TargetRoll.targetingNodes.items = items
+        )
     ) 
 
     fn SetSelectionStr sel = (
@@ -361,6 +406,7 @@ global MafParamEditor
             for c in LodRoll.controls do c.visible = true
             for c in PortalRoll.controls do c.visible = true
             for c in BillRoll.controls do c.visible = true
+            for c in TargetRoll.controls do c.visible = true
 
             visible = true
         ) 
@@ -379,6 +425,7 @@ global MafParamEditor
         for c in LodRoll.controls do c.visible = false
         for c in PortalRoll.controls do c.visible = false
         for c in BillRoll.controls do c.visible = false
+        for c in TargetRoll.controls do c.visible = false
 
         visible = false
     )
@@ -438,7 +485,10 @@ global MafParamEditor
                     MafParamEditor.objectType.items = #("Mesh")
                 )
                 #dummy: (
-                    MafParamEditor.objectType.items = #("Dummy")
+                    MafParamEditor.objectType.items = #("Dummy", "Target")
+                )
+                #target: (
+                    MafParamEditor.objectType.items = #("Dummy", "Target")
                 )
                 #morph: (
                     DisabledMode()        

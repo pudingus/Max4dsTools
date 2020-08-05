@@ -29,13 +29,11 @@ struct MafiaTools_Util (
 	),
 
 	fn GetNodeType obj = (
-		
+		local gp = custAttributes.get obj MafParams_def baseObject:false
 		if (isKindOf obj BoneGeometry) or (obj.boneEnable) then (
 			#bone
 		)
 		else if IsGeometry obj then (
-			local gp = custAttributes.get obj MafParams_def baseObject:false
-			
 			if matchPattern obj.name pattern:"$portal*" then (
 				#portal
 			)		
@@ -58,12 +56,12 @@ struct MafiaTools_Util (
 				#mesh
 			)				
 		)	
+		else if (gp != undefined) and (stricmp gp.objectType "target" == 0) then (
+			#target
+		)
 		else if isKindOf obj Dummy then (
 			#dummy
-		)
-		else if isKindOf obj TargetObject then (
-			#target
-		)		
+		)				
 		else #unsupported
 	)
 )

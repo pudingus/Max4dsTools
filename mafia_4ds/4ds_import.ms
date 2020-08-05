@@ -7,6 +7,11 @@ struct MafiaTools_Import4ds (
 	-----------
 	
 	godmat,
+	
+	fn GetMafParams nnode = (
+		custAttributes.add nnode MafParams_def baseObject:false
+		custAttributes.get nnode MafParams_def baseObject:false	
+	),
 
 
 	--returns array of nodes
@@ -232,7 +237,9 @@ struct MafiaTools_Import4ds (
 		-- nnode.box = true
 		-- nnode.centermarker = true
 		-- nnode.cross = false
-		-- nnode.wirecolor = color 28 122 210
+		-- nnode.wirecolor = color 28 122 210	
+		
+		
 
 		hide nnode
 		
@@ -521,6 +528,7 @@ struct MafiaTools_Import4ds (
 					default: "Mesh"
 				)
 				5: "Sector"
+				7: "Target"
 				default: "Dummy"
 			)
 					
@@ -585,7 +593,7 @@ struct MafiaTools_Import4ds (
 				CreateMaterials m4ds.materials filename
 				local buffer = CreateObjects m4ds.objects	
 				
-				--LinkTargets buffer.targetBuffer
+				LinkTargets buffer.targetBuffer buffer.mafiaNodes
 				
 				CreateSkins buffer.skinBuffer buffer.boneNodes
 				

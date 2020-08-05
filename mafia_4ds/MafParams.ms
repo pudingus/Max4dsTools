@@ -31,6 +31,6 @@ remap:#(#(#userParams), #(#strParams))
 		rotMode type:#integer default:1		
 		
 		--target
-		--targetLinks type:#nodeTab tabSizeVariable:true
+		targetLinks type:#nodeTab tabSizeVariable:true
 	)	
 )
