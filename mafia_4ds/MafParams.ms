@@ -18,8 +18,6 @@ remap:#(#(#userParams), #(#strParams))
 
 		--LOD
 		lodDist type:#float default:0.0
-		dontOptimize type:#boolean default:false
-
 
 		--Portal
 		nearRange type:#float default:0.0

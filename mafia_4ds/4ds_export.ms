@@ -729,7 +729,6 @@ struct MafiaTools_Export4ds (
 				prevDist = mlod.distance
 				
 				local split = true
-				if gp != undefined then split = not gp.dontOptimize
 				
 				local normMod
 				

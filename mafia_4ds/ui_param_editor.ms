@@ -145,15 +145,9 @@ global MafParamEditor
     rollout LodRoll ""
     (
         spinner lodDist "LOD distance:" align:#left fieldwidth:50 range:[0,9999,10] scale:1
-        label exporterLabel "Exporter:" align:#left		
-        checkbox dontOptimize "Don't optimize vertices" align:#left
 
         on lodDist changed val do (
             gp.lodDist = val
-        )
-
-        on dontOptimize changed val do (
-            gp.dontOptimize = val
         )
     )
 
@@ -363,7 +357,6 @@ global MafParamEditor
 
         if LodRoll.isDisplayed then (
             LodRoll.lodDist.value = gp.lodDist
-            LodRoll.dontOptimize.checked = gp.dontOptimize
         )
 
         if PortalRoll.isDisplayed then (

@@ -46,7 +46,6 @@ struct MafiaTools_Import4ds (
 
 				gp.objectType = "Lod"
 				gp.lodDist = mlod.distance
-				gp.dontOptimize = true
 
 				lodNode.material = godmat
 				
