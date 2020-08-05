@@ -10,7 +10,36 @@
     global MafiaTools_ImpExpPos
     global ImpExp
     local imp = MafiaTools_Import4ds()
-	local exp = MafiaTools_Export4ds()
+    local exp = MafiaTools_Export4ds()
+    
+    fn StartImport del:false = (
+        local proceed = true
+        if del then (
+            --proceed = queryBox "This will delete all objects in the scene!\n Do you want to continue?" beep:false icon:#warning    
+            proceed = CheckForSave()         
+        )
+        
+        if proceed then (
+            local prev_name = MafiaTools_ImportPath
+            if prev_name == undefined then prev_name = ""
+            local file = getOpenFileName types:"4DS models (*.4ds)|*.4ds|All files (*.*)|*.*" historyCategory:"4dsImport" filename:prev_name
+            if file != undefined then (                
+                --progressStart ""
+                ImpExp.labelDone.text = "Importing..."
+                if del then (
+                    delete $*
+                    gc()
+                )
+                local dur = imp.Import4ds file
+                if del then max tool zoomextents
+
+                MafiaTools_ImportPath = file
+                ImpExp.labelDone.text = "Done in " + (dur as string) + " seconds"
+                ImpExp.clock.active = true  
+                --progressEnd()
+            )	
+        )        
+    )
 
     rollout ImpExp "4ds Import/Export" (
         group "Import" (
@@ -35,20 +64,12 @@
         
         label       labelDone         "" offset:[0,10]
         
-        on btnImport pressed do
-        (		
-            local prev_name = MafiaTools_ImportPath
-            if prev_name == undefined then prev_name = ""
-            local file = getOpenFileName types:"4DS models (*.4ds)|*.4ds|All files (*.*)|*.*" historyCategory:"4dsImport" filename:prev_name
-            if file != undefined then (
-                --progressStart ""
-                labelDone.text = "Importing..."
-                local dur = imp.Import4ds file
-                MafiaTools_ImportPath = file
-                labelDone.text = "Done in " + (dur as string) + " seconds"
-                clock.active = true  
-                --progressEnd()
-            )	
+        on btnImport pressed do (		
+            StartImport del:false
+        )
+        
+        on btnOpen pressed do (
+            StartImport del:true
         )
         
         on btnBrowse pressed do (

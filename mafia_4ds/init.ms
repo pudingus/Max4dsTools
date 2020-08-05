@@ -13,6 +13,7 @@
 	filein "4ds_import.ms"
 	filein "4ds_export.ms"
 	filein "ui_utility.ms"
+	filein "macros.ms"
 	
 	
 	

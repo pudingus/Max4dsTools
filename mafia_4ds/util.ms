@@ -1,24 +1,24 @@
-fn GetModByClass obj mclass = (    --to support versions prior 2013
-	local found = false	
-	local foundMod
-	for modd in obj.modifiers while not found do (
-		if classof modd == mclass then (
-			found = true
-			foundMod = modd
+struct MafiaTools_Util (	
+	fn GetModByClass obj mclass = (    --to support versions prior 2013
+		local found = false	
+		local foundMod
+		for modd in obj.modifiers while not found do (
+			if classof modd == mclass then (
+				found = true
+				foundMod = modd
+			)
 		)
-	)
-	foundMod
-)
+		foundMod
+	),
 
-fn IsGeometry obj = (
-	Superclassof obj == GeometryClass and ClassOf obj != TargetObject
-)
+	fn IsGeometry obj = (
+		Superclassof obj == GeometryClass and ClassOf obj != TargetObject
+	),
 
-fn containsItem array value = (
-	(findItem array value) > 0
-)
+	fn containsItem array value = (
+		(findItem array value) > 0
+	),
 
-struct MafiaTools_Util (		
 	fn PrintArray arr = (
 		local ss = stringstream ""
 		format "count: %\n" arr.count to:ss
@@ -27,8 +27,9 @@ struct MafiaTools_Util (
 		)
 		format (ss as string)
 	),
-	
-	fn GetNodeType obj = (		
+
+	fn GetNodeType obj = (
+		
 		if (isKindOf obj BoneGeometry) or (obj.boneEnable) then (
 			#bone
 		)

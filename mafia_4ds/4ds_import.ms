@@ -632,7 +632,7 @@ struct MafiaTools_Import4ds (
 	------------------------
 	---------MAIN-----------
 	------------------------
-	fn Import4ds file modnormals:false = (
+	fn Import4ds file = (
 		
 		--delete $*
 		--gc()
@@ -665,9 +665,7 @@ struct MafiaTools_Import4ds (
 				CreateMaterials m4ds.materials
 				local buffer = CreateObjects m4ds.objects	
 				
-				if modnormals then (
-					ImportNormals buffer.normalNodes
-				)
+
 				
 				-- if MafiaTools.importNormals.checked == true then (
 				-- 	ImportNormals()			
