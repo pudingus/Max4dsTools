@@ -7,11 +7,7 @@ struct MafiaTools_Import4ds (
 	-----------
 	
 	godmat,
-	filename,
 
-
-	--n_mesh_array = #(),
-	--n_normal_array = #(),
 
 	--returns array of nodes
 	fn CreateMesh mmesh mobj = (
@@ -54,6 +50,11 @@ struct MafiaTools_Import4ds (
 				
 				local cmod = CachedNormals()
 				cmod.normals = mlod.normals
+				
+				for i = 1 to lodnode.numfaces do (
+					append cmod.normalFaces (getFace lodnode i)
+				)
+				
 				addModifier lodnode cmod
 				
 				
@@ -138,9 +139,6 @@ struct MafiaTools_Import4ds (
 		WM3_SetCurrentMarker tmod 1		
 	),
 
-
-
-
 	fn CreateBillboard mbillboard nnode = (		
 		custAttributes.add nnode MafParams_def baseObject:false
 		local gp = custAttributes.get nnode MafParams_def baseObject:false
@@ -148,9 +146,6 @@ struct MafiaTools_Import4ds (
 		gp.rotAxis = mbillboard.rotAxis + 1
 		gp.rotMode = mbillboard.rotMode + 1
 	),
-
-
-
 
 	fn CreateGlow mglows mobj = (
 		-- local nnode = point()
@@ -169,16 +164,9 @@ struct MafiaTools_Import4ds (
 		nnode
 	),
 
-
-
-
-
 	fn CreateMirror mmirror mobj = (
 		nnode = mesh mesh:mmirror.mesh
 	),
-
-
-
 
 	fn CreateDummy mdummy mobj = (
 		local dmin = mdummy.dmin
@@ -190,7 +178,6 @@ struct MafiaTools_Import4ds (
 			
 		nnode
 	),
-
 
 	--returns array of nodes
 	fn CreateSector msector mobj = (
@@ -232,9 +219,6 @@ struct MafiaTools_Import4ds (
 		nodes
 	),
 
-
-
-
 	-- returns Node
 	fn CreateTarget mtarget mobj = (
 		local nnode = dummy()
@@ -255,27 +239,18 @@ struct MafiaTools_Import4ds (
 		nnode
 	),
 
-	fn CreateBone mbone mobj = (	
-		--local nnode = dummy()
-		--local size = 0.0
-		--nnode.boxsize = [size, size, size]	
-		
-		--local nnode = box length:0.1 width:0.1 height:0.1	
-		
+	fn CreateBone mbone mobj = (		
 		local nnode = bonesys.createBone [0,0,0] [0,0,0] [0,0,0]	
 		nnode.width = 0.0
-		nnode.height = 0.0		
-		
+		nnode.height = 0.0			
 		nnode.setBoneEnable false sliderTime	
 		nnode.showlinks = true
-		
-		--format "  boneId: %\n" mbone.boneId	
-				
+						
 		nnode
 	),
 
 
-	fn CreateMaterials mmats = (	
+	fn CreateMaterials mmats filename = (	
 		if mmats.count > 0 then (
 			pngio.ipngio.setType #gray8
 			pngio.ipngio.setInterlaced false
@@ -582,61 +557,9 @@ struct MafiaTools_Import4ds (
 			
 			print gp.targetLinks		
 		)
-	),
-
-	fn ImportNormals normalNodes = (
-		max modify mode
-		select n_mesh_array
-
-		local norm = Edit_Normals()
-		norm.displayLength = 0.1
-		norm.SelLevel = #object
-		modpanel.addmodtoselection norm
-		
-
-		--print (n_mesh_array.count as string)
-		--print (n_normal_array.count as string)
-
-		disableRefMsgs()  --makes a huge difference, 41 seconds with vs. 904 seconds without
-		for i = 1 to n_mesh_array.count do
-		(
-			--print (n_normal_array[i].count as string)
-			local p = n_mesh_array[i]
-
-			local pn = n_normal_array[i]
-			
-			for i = 1 to p.numverts do
-			(
-				local vert_sel = #{i} --define a bitArray specifying vertex 1
-				local normal_sel = #{} --define an empty bitArray to store the result
-				--call the method with the two bitArrays passed by-reference:
-				norm.ConvertVertexSelection &vert_sel &normal_sel node:p
-				n = (normal_sel as array)[1]
-				--norm.SetNormalExplicit n node:p
-				norm.setnormal n pn[i] node:p
-			)
-
-			local vert_sel = #{1..p.numverts}
-			local normal_sel = #{}
-			norm.ConvertVertexSelection &vert_sel &normal_sel node:p
-			norm.MakeExplicit selection:normal_sel node:p
-		)
-
-
-		enableRefMsgs()
-
-		norm.RebuildNormals()
-		clearSelection()
 	),	
 
-	------------------------
-	---------MAIN-----------
-	------------------------
-	fn Import4ds file = (
-		
-		--delete $*
-		--gc()
-		
+	fn Import4ds file = (		
 		if getCommandPanelTaskMode() == #modify then (
 			setCommandPanelTaskMode #create
 		)
@@ -657,19 +580,10 @@ struct MafiaTools_Import4ds (
 		if m4ds == undefined then (
 			messageBox "This file cannot be imported. Unknown version or format." icon:#critical			
 		)
-		else (	
-			-- if MafiaTools.editName.text == "" then (
-			-- 	MafiaTools.editName.text = filename		
-			-- )				
+		else (				
 			with redraw off (			
-				CreateMaterials m4ds.materials
+				CreateMaterials m4ds.materials filename
 				local buffer = CreateObjects m4ds.objects	
-				
-
-				
-				-- if MafiaTools.importNormals.checked == true then (
-				-- 	ImportNormals()			
-				--)
 				
 				--LinkTargets buffer.targetBuffer
 				
@@ -687,21 +601,14 @@ struct MafiaTools_Import4ds (
 			local dur = (end - start) / 1000.0	
 
 			local used_end = (heapsize - heapfree) / 1024.0
-			format "memory used ~ % KiB\n" (used_end - used_start)
-
-			
+			format "memory used ~ % KiB\n" (used_end - used_start)			
 
 			local message = "Importing took " + (dur as string) + " seconds\n"
 			format message
 			--messageBox message
 			
 			dur
-		)	
-		
-		
-		
+		)
 	)
-
-
 )
 --MafiaTools_Import4ds = MafiaTools_Import4ds()

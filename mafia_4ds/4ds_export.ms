@@ -27,6 +27,9 @@ struct MafiaTools_Export4ds (
 	TTarget = p.TTarget,
 	TBone = p.TBone,
 	---------------------
+	
+	useEditNormals,
+	useCachedNormals,
 
 	TNode = (
 		struct TNode (
@@ -729,17 +732,12 @@ struct MafiaTools_Export4ds (
 				if gp != undefined then split = not gp.dontOptimize
 				
 				local normMod
-				--if MafiaTools.exportNormals.state == 2 then normMod = util.GetModByClass lodnode Edit_Normals
 				
+				if useEditNormals then normMod = util.GetModByClass lodnode Edit_Normals						
+								
 				local faceVertNormals = #()
 				
-				if normMod == undefined then (
-					for i = 1 to lodmesh.numfaces do (										
-						local rnormals = meshop.getFaceRNormals lodmesh i
-						append faceVertNormals rnormals
-					)
-				)
-				else (
+				if normMod != undefined then (
 					max modify mode
 					modpanel.setcurrentobject normMod node:lodnode
 
@@ -752,6 +750,31 @@ struct MafiaTools_Export4ds (
 						append faceVertNormals rnormals
 					)
 				)
+				else (
+					local cmod
+					if useCachedNormals then cmod = util.GetModByClass lodnode CachedNormals
+					
+					if cmod != undefined then (
+						for i = 1 to lodmesh.numfaces do (
+							local nface = cmod.normalFaces[i]
+							local rnormals = #()
+							for v = 1 to 3 do (
+								local normalId = nface[v]
+								rnormals[v] = cmod.normals[normalId]
+							)	
+							append faceVertNormals rnormals						
+						)
+					)
+					else (
+						for i = 1 to lodmesh.numfaces do (										
+							local rnormals = meshop.getFaceRNormals lodmesh i
+							append faceVertNormals rnormals
+						)
+					)
+				)
+
+				
+			
 				
 				
 				local normals = #()
@@ -965,7 +988,7 @@ struct MafiaTools_Export4ds (
 	------------------------
 	---------MAIN-----------
 	------------------------
-	fn Export4ds file = (
+	fn Export4ds file cachedNorm editNorm  = (
 
 		--local scenename = getFilenameFile maxFileName
 		--local scenename = MafiaTools.editName.text
@@ -973,6 +996,9 @@ struct MafiaTools_Export4ds (
 		-- if MafiaTools.editName.text == "" then (
 		-- 	MafiaTools.editName.text = getFilenameFile file
 		-- )
+		
+		useCachedNormals = cachedNorm
+		useEditNormals = editNorm
 
 		format "exporting: %\n" file
 

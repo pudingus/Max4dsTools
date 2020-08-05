@@ -24,21 +24,29 @@ replaceUI:true version:1 invisible:true
 					addModifier $ norm before:(index-1)
 					modPanel.setCurrentObject norm
 					
-					disableRefMsgs()				
-						
-					for i = 1 to $.numverts do (						
-						local vertSel = #{i}
-						local normalSel = #{}
-						norm.ConvertVertexSelection &vertSel &normalSel
-						local normalId = (normalSel as array)[1]
-						
-						--local normal = meshop.getMapVert $ 2 i	
-						local normal = normals[i]
-						
-						norm.SetNormal normalId normal
-					)
+					disableRefMsgs()	
 					
-					norm.MakeExplicit selection:#{1..$.numverts}
+					local numfaces = amin #(normalFaces.count, $.numfaces)	
+					
+					print numfaces
+					print normals.count
+					
+					local numNormals = norm.getnumnormals()
+					norm.Break selection:#{1..numNormals}
+					
+					for i = 1 to numfaces do (
+						local nface = normalFaces[i]						
+						for v = 1 to 3 do (
+							local nvertId = nface[v] as integer
+							local normal = normals[nvertId]
+							norm.setNormalId i v nvertId
+							norm.SetNormalExplicit nvertId
+							--local normalId = norm.getNormalId i v
+							norm.setNormal nvertId normal
+							
+						)
+					)						
+
 			
 					enableRefMsgs()
 			

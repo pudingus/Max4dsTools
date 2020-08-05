@@ -9,8 +9,8 @@
     global MafiaTools_ExportPath
     global MafiaTools_ImpExpPos
     global ImpExp
-    local imp = MafiaTools_Import4ds()
-    local exp = MafiaTools_Export4ds()
+    --local imp = MafiaTools_Import4ds()
+    --local exp = MafiaTools_Export4ds()
     
     fn StartImport del:false = (
         local proceed = true
@@ -30,8 +30,9 @@
                     delete $*
                     gc()
                 )
+                local imp = MafiaTools_Import4ds()
                 local dur = imp.Import4ds file
-                if del then max tool zoomextents
+                --if del then max tool zoomextents
 
                 MafiaTools_ImportPath = file
                 ImpExp.labelDone.text = "Done in " + (dur as string) + " seconds"
@@ -52,8 +53,8 @@
         group "Export" (
             label       aa                "Normals:" align:#left
             --checkbox    en1               "Smoothing groups" checked:true enabled:false
-            checkbox    en2               "Cached normals"
-            checkbox    en3               "Edit Normals modifier"
+            checkbox    en2               "Cached normals" checked:true
+            checkbox    en3               "Edit Normals modifier" checked:true
             edittext    editName          align:#left offset:[0,10]  text:"" width:200
             button      btnBrowse         "Browse..." align:#left across:2
             
@@ -62,7 +63,7 @@
         )
         timer       clock   interval:5000 active:false
         
-        label       labelDone         "" offset:[0,10]
+        label       labelDone         "" offset:[0,10] 
         
         on btnImport pressed do (		
             StartImport del:false
@@ -85,7 +86,8 @@
             if doesDirectoryExist (getFilenamePath editName.text) then (
                 --progressStart ""                
                 labelDone.text = "Exporting..."  
-                local dur = exp.Export4ds editName.text      
+                local exp = MafiaTools_Export4ds()
+                local dur = exp.Export4ds editName.text en2.checked en3.checked   
                 labelDone.text = "Done in " + (dur as string) + " seconds"
                 clock.active = true  
                 --progressEnd()        
