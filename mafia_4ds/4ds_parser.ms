@@ -81,7 +81,8 @@ struct MafiaTools_4dsParser (
 			normals = #(),	--array of point3, count equals to count of vertices in mesh
 			matIds = #(),   --array of int, count = count of faces in mesh
 			facegroups = #(),
-			vertOrder
+			vertOrder,
+			otrans
 		)
 	),
 	
@@ -839,11 +840,14 @@ struct MafiaTools_4dsParser (
 				WriteShort f lod.mesh.numverts
 				
 				if lod.vertOrder == undefined then (
-					for i = 1 to lod.mesh.numverts do (					
-						WritePoint3 f (getVert lod.mesh i)
+					for i = 1 to lod.mesh.numverts do (	
+						local vert = getVert lod.mesh i		
+						local offsetVert = vert * lod.oTrans
+						WritePoint3 f offsetVert
 						local normal = lod.normals[i]
-						if normal == undefined then normal = [0,0,0]
-						WritePoint3 f normal
+						if normal == undefined then normal = [0,0,1]
+						local nnorm = normalize (normal * lod.oTrans.rotationpart)
+						WritePoint3 f nnorm
 						WriteUV f (getTVert lod.mesh i)
 					)
 					
@@ -856,14 +860,17 @@ struct MafiaTools_4dsParser (
 						WriteShort f (facegroup.matId - 1)
 					)
 				)
-				else (			
+				else (						
 					for i = 1 to lod.mesh.numverts do (
 						local corrVertId = lod.vertOrder[i]
 						
-						WritePoint3 f (getVert lod.mesh corrVertId)	
+						local vert = getVert lod.mesh corrVertId
+						local offsetVert = vert * lod.oTrans
+						WritePoint3 f offsetVert						
 						local normal = lod.normals[corrVertId]
-						if normal == undefined then normal = [0,0,0]
-						WritePoint3 f normal
+						if normal == undefined then normal = [0,0,1]
+						local nnorm = normalize (normal * lod.oTrans.rotationpart)
+						WritePoint3 f nnorm
 						WriteUV f (getTVert lod.mesh corrVertId)
 					)
 					

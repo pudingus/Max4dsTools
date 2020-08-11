@@ -29,7 +29,9 @@ struct MafiaTools_Import4ds (
 				
 				for j = 1 to lodNode.numFaces do (
 					local matId = mlod.matIds[j]
-					if matId == 0 then matId = godmat.numsubs
+					if godmat != undefined then (
+						if matId == 0 then matId = godmat.numsubs
+					)
 					setFaceMatID lodNode j matId
 				)				
 				

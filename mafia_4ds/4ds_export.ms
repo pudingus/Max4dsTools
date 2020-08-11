@@ -715,6 +715,7 @@ struct MafiaTools_Export4ds (
 				if lodweights != undefined then weights = lodWeights[l]
 			
 				local mlod = TLod()			
+				mlod.otrans = lodnode.objectTransform * inverse lodnode.transform
 				local lodMesh = copy lodnode.mesh			
 				local gp = custAttributes.get lodnode MafParams_def baseObject:false	
 				
@@ -959,6 +960,14 @@ struct MafiaTools_Export4ds (
 				mobj.scl = [1,1,1]
 				mobj.rot = [0,0,0,1]
 			)
+			-- else if mobj.objectType == 6 then (
+			-- 	in coordsys parent
+			-- 	(
+			-- 		mobj.offset = mnode.baseNode.center
+			-- 		mobj.scl = mnode.baseNode.scale
+			-- 		mobj.rot = mnode.baseNode.rotation
+			-- 	)
+			-- )
 			else (
 				if (baseNode.parent != undefined) and (util.GetNodeType baseNode.parent == #sector) then (
 					in coordsys world
@@ -983,19 +992,8 @@ struct MafiaTools_Export4ds (
 		mobjects	
 	),
 
-
-	------------------------
-	---------MAIN-----------
-	------------------------
 	fn Export4ds file cachedNorm editNorm  = (
-
-		--local scenename = getFilenameFile maxFileName
-		--local scenename = MafiaTools.editName.text
-		
-		-- if MafiaTools.editName.text == "" then (
-		-- 	MafiaTools.editName.text = getFilenameFile file
-		-- )
-		
+				
 		useCachedNormals = cachedNorm
 		useEditNormals = editNorm
 
@@ -1005,10 +1003,7 @@ struct MafiaTools_Export4ds (
 		
 		gc light:true
 
-		local used_start = (heapsize - heapfree) / 1024.0
-
-		
-		
+		local used_start = (heapsize - heapfree) / 1024.0	
 		
 		local m4ds = p.T4ds()
 		m4ds.materials = ExtractMaterials()	

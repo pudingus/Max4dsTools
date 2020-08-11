@@ -27,10 +27,7 @@ replaceUI:true version:1 invisible:true
 					disableRefMsgs()	
 					
 					local numfaces = amin #(normalFaces.count, $.numfaces)	
-					
-					print numfaces
-					print normals.count
-					
+				
 					local numNormals = norm.getnumnormals()
 					norm.Break selection:#{1..numNormals}
 					
@@ -40,16 +37,12 @@ replaceUI:true version:1 invisible:true
 							local nvertId = nface[v] as integer
 							local normal = normals[nvertId]
 							norm.setNormalId i v nvertId
-							norm.SetNormalExplicit nvertId
-							--local normalId = norm.getNormalId i v
-							norm.setNormal nvertId normal
-							
+							norm.setNormal nvertId normal							
 						)
-					)						
-
-			
-					enableRefMsgs()
-			
+					)			
+					numNormals = norm.getnumnormals()
+					norm.MakeExplicit selection:#{1..numNormals}			
+					enableRefMsgs()			
 					norm.RebuildNormals()
 					
 					deleteModifier $ this
