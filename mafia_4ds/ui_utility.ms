@@ -1,14 +1,12 @@
-
-if MafiaTools != undefined and MafiaTools.open then closeUtility MafiaTools
+try (closeUtility MafiaTools) catch()
 utility MafiaTools "Mafia 4ds Import/Export"
 (
 	button       btnImportExport   "Import/Export..." align:#left
 	button       btnParamEditor    "Parameter editor..." align:#left
-	--button       btnBitmapPaths   "Texture paths..." align:#left
-	button 		btnSettings "Settings..." align:#left
+	button 		 btnFindWeights    "Find distant weights..." align:#left
 
 	label        bout              "by pudingus" offset:[0,20]
-	label        version              "v0.5.0-preview"
+	label        version           "v0.5.0-preview"
 
 	on btnImportExport pressed do
 	(		
@@ -20,12 +18,8 @@ utility MafiaTools "Mafia 4ds Import/Export"
 		filein "ui_param_editor.ms"		
 	)
 	
-	-- on btnBitmapPaths pressed do
-	-- (		
-	-- 	configureBitmapPaths()		
-	-- )
-
-	
-	
+	on btnFindWeights pressed do (
+		filein "find_weights.ms"
+	)	
 )
 openUtility MafiaTools
