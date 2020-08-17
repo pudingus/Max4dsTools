@@ -12,15 +12,16 @@ replaceUI:true
     )
 	local savedSel = 1
 	
-    rollout GlowRoll "Parameters"
+    rollout GlowRoll "Glow Parameters"
     (        
-        button btnAdd "Add" across:2
-        button btnRemove "Remove"
+        button btnAdd "Add" across:2 align:#left width:50
+        button btnRemove "Remove" align:#right width:70
         listbox lbGlows ""
-        spinner spPosition "Position" type:#float      
-        materialButton mbMat "Material" 
         
-       
+		
+		imgTag imgMat "Material preview:" width:48 height:48 opacity:1.0 transparent:white align:#left across:2     
+		materialButton mbMat "Material" width:80 align:#right
+		spinner spPosition "Offset" type:#float align:#left range:[-900000,900000,0] width:70 pos:[70,205]
 		
 		on btnAdd pressed do (
 			local items = lbGlows.items
@@ -50,6 +51,8 @@ replaceUI:true
 			spPosition.value = positions[sel]
 			mbMat.material = materials[sel]
 			savedSel = sel
+			
+			imgMat.bitmap = materials[sel].diffuseMap.bitmap
 		)
 		
 		on spPosition changed val do (
@@ -80,6 +83,7 @@ replaceUI:true
 			
 			spPosition.value = positions[savedSel]
 			mbMat.material = materials[savedSel]
+			imgMat.bitmap = materials[savedSel].diffuseMap.bitmap
         )
     )
     tool create

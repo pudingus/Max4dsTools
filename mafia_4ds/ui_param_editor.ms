@@ -178,27 +178,6 @@ global MafParamEditor
             gp.rotAxis = i
         )
     )
-    
-    -- rollout GlowRoll ""
-    -- (        
-    --     button add "Add" across:2
-    --     button remove "Remove"
-    --     listbox glows ""
-    --     spinner position "Position" type:#float
-    --     --spinner matID "Material ID" type:#integer range:[0,65535,0]       
-    --     materialButton mat "Material" 
-        
-    --     on mat picked mtl do
-    --     (
-    --         print mtl
-    --         mat.caption = mtl.name
-    --     )
-    --     on mat rightclick mtl do
-    --     (
-    --         print mtl
-    --         mat.caption = mtl.name
-    --     )
-    -- )
 
     fn OnDeselected = (
         MafParamEditor.objectName.text = ""
@@ -269,11 +248,9 @@ global MafParamEditor
             ObjectRoll.texProj.enabled = false
             ObjectRoll.noFog.enabled = false
         )
-        -- else if stricmp strsel "glow" == 0 then (
-        --     for c in ObjectRoll.controls do c.enabled = true  
-            
-        --     rlts = #(GlowRoll)
-        -- )
+        else if stricmp strsel "glow" == 0 then (
+            for c in ObjectRoll.controls do c.enabled = true  
+        )
 
         local remove_rolls = #()
         local update_rolls = #()
@@ -444,6 +421,9 @@ global MafParamEditor
                 )
                 #target: (
                     MafParamEditor.objectType.items = #("Target")
+                )
+                #glow: (
+                    MafParamEditor.objectType.items = #("Glow")
                 )
                 #morph: (
                     DisabledMode()        

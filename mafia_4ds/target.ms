@@ -9,7 +9,7 @@ replaceUI:true
     (
 		nodes type:#nodeTab tabSizeVariable:true
     )
-    rollout TargetRoll "Parameters"
+    rollout TargetRoll "Target Parameters"
     (
         pickbutton pbAdd "Add" across:2
         button btnRemove "Remove"
