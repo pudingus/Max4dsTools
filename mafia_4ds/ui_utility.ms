@@ -19,7 +19,7 @@ utility MafiaTools "Mafia 4ds Import/Export"
 	)
 	
 	on btnFindWeights pressed do (
-		filein "find_weights.ms"
+		filein "ui_find_weights.ms"
 	)	
 )
 openUtility MafiaTools

@@ -10,6 +10,7 @@
 	filein "MafParams.ms"
 	filein "cached_normals.ms"
 	filein "target.ms"	
+	filein "glow.ms"
 	
 	--
 	filein "util.ms"
@@ -17,6 +18,7 @@
 	filein "4ds_parser.ms"
 	filein "4ds_import.ms"
 	filein "4ds_export.ms"
+	
 	filein "ui_utility.ms"	
 	
 	

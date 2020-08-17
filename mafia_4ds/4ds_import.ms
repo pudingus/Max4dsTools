@@ -63,10 +63,6 @@ struct MafiaTools_Import4ds (
 				
 				addModifier lodnode cmod
 				
-				
-				-- append n_mesh_array lodNode
-				-- append n_normal_array mlod.normals
-				
 				lodId += 1
 			)					
 		)
@@ -75,8 +71,8 @@ struct MafiaTools_Import4ds (
 
 
 	fn CreateMorph mmorph mobj mmesh nnode = (	
-		local inc = -0.4
-		local totalInc = inc	
+		--local inc = -0.4
+		--local totalInc = inc	
 		
 		local baseMesh = mmesh.lods[1].mesh	
 		local meshes = #()
@@ -121,12 +117,12 @@ struct MafiaTools_Import4ds (
 			
 			for targetMesh in sectMesh do (
 				local tnode = mesh mesh:targetMesh
-				tnode.material = godmat			
-				local name = stringstream ""
-				format "$morph %%" sectionName targetId to:name	
-				tnode.name = name as string			
-				tnode.transform = mobj.GetMatrix() * (transMatrix [totalInc, 0, 0])	
-				tnode.parent = nnode
+				--tnode.material = godmat			
+				--local name = stringstream ""
+				--format "$morph %%" sectionName targetId to:name	
+				--tnode.name = name as string			
+				--tnode.transform = mobj.GetMatrix() * (transMatrix [totalInc, 0, 0])	
+				--tnode.parent = nnode
 				
 				--hide tnode
 				
@@ -138,7 +134,7 @@ struct MafiaTools_Import4ds (
 				delete tnode
 							
 				targetId += 1			
-				totalInc += inc	
+				--totalInc += inc	
 			)
 			marker = (sectionId * 10 + 1)
 			sectionId += 1
@@ -155,19 +151,20 @@ struct MafiaTools_Import4ds (
 		gp.rotMode = mbillboard.rotMode + 1
 	),
 
-	fn CreateGlow mglows mobj = (
-		-- local nnode = point()
-		-- nnode.constantscreensize = true
-		-- nnode.box = true
-		-- nnode.centermarker = true
-		-- nnode.cross = false	
+	fn CreateGlow mglows mobj = (		
+		local nnode = M4dsGlow()
+		nnode.wirecolor = color 248 128 0
+		nnode.boxmode = true
+		nnode.renderable = false
 		
-		-- local nnode = box length:0.1 width:0.1 height:0.1	
-		-- nnode.wirecolor = color 248 128 0	
+		nnode.material = godmat		
 		
-		
-		local nnode = dummy()
-		nnode.boxsize = [0.2, 0.2, 0.2]
+		for glow in mglows do (
+			append nnode.positions glow.position
+			local matId = glow.materialId
+			local mat = godmat[matId]
+			append nnode.materials mat			
+		)
 		
 		nnode
 	),
@@ -230,7 +227,7 @@ struct MafiaTools_Import4ds (
 	-- returns Node
 	fn CreateTarget mtarget mobj = (
 		local nnode = M4dsTarget()
-		nnode.wirecolor = color 28 122 210	
+		nnode.wirecolor = color 28 122 210		
 		hide nnode
 		
 		nnode

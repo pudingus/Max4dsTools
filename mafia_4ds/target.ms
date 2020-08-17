@@ -46,6 +46,7 @@ replaceUI:true
     (
         on mousePoint click do
         (			
+            $.wirecolor = color 28 122 210	
             nodeTM.translation = gridPoint;#stop			
         )
     )
@@ -55,6 +56,7 @@ replaceUI:true
 		delegate.centermarker = true
 		delegate.axistripod  = false
 		delegate.cross = false
-		delegate.box = true
+        delegate.box = true
+        -- nnode.constantscreensize = true
     )
 )

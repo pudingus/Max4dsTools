@@ -33,6 +33,15 @@ struct MafiaTools_Util (
 		if (isKindOf obj BoneGeometry) or (obj.boneEnable) then (
 			#bone
 		)
+		else if isKindOf obj M4dsTarget then (
+			#target
+		)
+		else if isKindOf obj M4dsGlow then (
+			#glow
+		)
+		else if isKindOf obj Dummy then (
+			#dummy
+		)	
 		else if IsGeometry obj then (
 			if matchPattern obj.name pattern:"$portal*" then (
 				#portal
@@ -51,17 +60,11 @@ struct MafiaTools_Util (
 			)
 			else if GetModByClass obj Skin != undefined then (
 				#singlemesh
-			)
+			)			
 			else (
 				#mesh
 			)				
-		)	
-		else if isKindOf obj M4dsTarget then (
-			#target
-		)
-		else if isKindOf obj Dummy then (
-			#dummy
-		)				
+		)			
 		else #unsupported
 	)
 )

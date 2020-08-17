@@ -27,6 +27,6 @@ toolTip:"Find distant weights"
 autoUndoEnabled:false 
 (    
     on execute do (
-        filein (::MafiaTools_scriptsPath+"find_weights.ms")		
+        filein (::MafiaTools_scriptsPath+"ui_find_weights.ms")		
     )		
 )
