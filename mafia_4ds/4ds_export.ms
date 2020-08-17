@@ -877,10 +877,8 @@ struct MafiaTools_Export4ds (
 
 	fn ExtractTarget mnode mnodeSet = (
 		local mtarget = TTarget()
-		
-		local gp = custAttributes.get mnode.baseNode MafParams_def baseObject:false
-		
-		for linkedNode in gp.targetLinks do (
+				
+		for linkedNode in mnode.basenode.nodes do (
 			append mtarget.linkIds (mnodeSet.GetIDByNode linkedNode)
 		)
 			

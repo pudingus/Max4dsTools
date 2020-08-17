@@ -5,16 +5,20 @@
 	local set_heapsize = 64 * 1024 * 1024  --64 MiB
 	if heapsize < set_heapsize then heapsize = set_heapsize
 	
-	
+	--scriptedPlugins
 	filein "MafMat4.ms"
 	filein "MafParams.ms"
 	filein "cached_normals.ms"
+	filein "target.ms"	
+	
+	--
 	filein "util.ms"
 	filein "layers.ms"
 	filein "4ds_parser.ms"
 	filein "4ds_import.ms"
 	filein "4ds_export.ms"
 	filein "ui_utility.ms"	
+	
 	
 	
 	format "Mafia 4ds Import/Export plugin % loaded\n" MafiaTools_version

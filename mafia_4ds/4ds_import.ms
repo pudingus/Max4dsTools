@@ -128,12 +128,14 @@ struct MafiaTools_Import4ds (
 				tnode.transform = mobj.GetMatrix() * (transMatrix [totalInc, 0, 0])	
 				tnode.parent = nnode
 				
-				hide tnode
+				--hide tnode
 				
 				local finalId = (marker + targetId - 1)
 				
 				WM3_MC_BuildFromNode tmod finalId tnode				
-				WM3_MC_SetName tmod finalId (sectionName + " " + (targetId as string))			
+				WM3_MC_SetName tmod finalId (sectionName + " " + (targetId as string))	
+				
+				delete tnode
 							
 				targetId += 1			
 				totalInc += inc	
@@ -227,21 +229,8 @@ struct MafiaTools_Import4ds (
 
 	-- returns Node
 	fn CreateTarget mtarget mobj = (
-		local nnode = dummy()
-		nnode.boxsize = [0.1, 0.1, 0.1]
-		
-		-- local nnode = TargetObject()
-		
-		-- local nnode = point()
-		-- nnode.size = 0.1
-		-- nnode.constantscreensize = false
-		-- nnode.box = true
-		-- nnode.centermarker = true
-		-- nnode.cross = false
-		-- nnode.wirecolor = color 28 122 210	
-		
-		
-
+		local nnode = M4dsTarget()
+		nnode.wirecolor = color 28 122 210	
 		hide nnode
 		
 		nnode
@@ -549,22 +538,9 @@ struct MafiaTools_Import4ds (
 			local mtarget = pair.mdefs
 			local targetNode = pair.nodes
 			
-			custAttributes.add targetNode MafParams_def baseObject:false
-			local gp = custAttributes.get targetNode MafParams_def baseObject:false
-			
 			for linkId in mtarget.linkIds do (
-				append gp.targetLinks mafiaNodes[linkId]
+				append targetNode.nodes mafiaNodes[linkId]
 			)
-			
-			--for linkId in mtarget.linkIds do (
-			--	local lnode = mafiaNodes[linkId]
-			--	lnode.rotation.controller = LookAt_Constraint()
-			--	lnode.rotation.controller.relative = true
-			--	lnode.rotation.controller.viewline_length_abs = false
-			--	lnode.rotation.controller.appendTarget nnode 50
-			--)		
-			
-			print gp.targetLinks		
 		)
 	),	
 

@@ -56,7 +56,7 @@ struct MafiaTools_Util (
 				#mesh
 			)				
 		)	
-		else if (gp != undefined) and (stricmp gp.objectType "target" == 0) then (
+		else if isKindOf obj M4dsTarget then (
 			#target
 		)
 		else if isKindOf obj Dummy then (

@@ -11,7 +11,7 @@ autoUndoEnabled:false
 
 macroScript M4dsParamEditor
 category:"4dsTools"
-buttonText:"4ds Par.Ed."
+buttonText:"4ds Prm.Ed."
 toolTip:"4ds Parameter Editor"
 autoUndoEnabled:false 
 (    
