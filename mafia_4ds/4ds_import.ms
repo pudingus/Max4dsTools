@@ -27,13 +27,16 @@ struct MafiaTools_Import4ds (
 				local lodNode = mesh mesh:mlod.mesh
 				lodNode.wirecolor = color 0 0 0
 				
-				for j = 1 to lodNode.numFaces do (
-					local matId = mlod.matIds[j]
+				for fcgrp in mlod.facegroups do (
+					local matId = fcgrp.matId
 					if godmat != undefined then (
 						if matId == 0 then matId = godmat.numsubs
 					)
-					setFaceMatID lodNode j matId
-				)				
+					
+					for faceId in fcgrp.faceIds do (
+						setFaceMatID lodNode faceId matId
+					)
+				)			
 				
 				if lodId > 0 then (  --todo: move to CreateObjects
 					lodNode.name = "$lod" + (lodId as string) + "__" + mobj.name

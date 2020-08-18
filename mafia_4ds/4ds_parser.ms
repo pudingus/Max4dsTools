@@ -78,8 +78,7 @@ struct MafiaTools_4dsParser (
 		struct TLod (
 			distance,
 			mesh,
-			normals = #(),	--array of point3, count equals to count of vertices in mesh
-			matIds = #(),   --array of int, count = count of faces in mesh
+			normals = #(),	--array of point3, count = count of vertices in mesh
 			facegroups = #(),
 			vertOrder,
 			otrans
@@ -423,21 +422,23 @@ struct MafiaTools_4dsParser (
 					local numFacegroups = ReadByte f #unsigned
 
 					for i = 1 to numFacegroups do (
-						local numFaces = ReadShort f #unsigned				
-						local offset = getNumFaces tr
-						local num = offset + numFaces
-						setNumFaces tr num true			-- keep topology	
+						local fcgrp = TFacegroup()
+						
+						local grpNumFaces = ReadShort f #unsigned	--number of faces in this facegroup			
+						local prevTotal = getNumFaces tr    --get number of faces written in total so far - from previous facegroup
+												
+						local keepTopology = true
+						setNumFaces tr (prevTotal + grpNumFaces) keepTopology   --increase face buffer to accomodate this facegroup
 
-						for j = 1 to numFaces do (
+						for j = 1 to grpNumFaces do (
 							local face = ReadFace f
-							setFace tr (offset+j) face
+							local faceId = prevTotal+j
+							setFace tr faceId face
+							append fcgrp.faceIds faceId
 						)					
-						local matId = ReadShort f #unsigned
+						fcgrp.matId = ReadShort f #unsigned
 						
-						for j = 1 to numFaces do (
-							append mlod.matIds matId
-						)
-						
+						append mlod.facegroups fcgrp						
 					)
 					
 					buildTVFaces tr
