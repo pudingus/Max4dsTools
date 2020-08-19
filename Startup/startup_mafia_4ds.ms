@@ -1,3 +1,3 @@
 (
-	filein "mafia_4ds/init.ms"
+    filein "mafia_4ds/init.ms"
 )

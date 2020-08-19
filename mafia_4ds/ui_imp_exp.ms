@@ -4,7 +4,7 @@
         DestroyDialog ImpExp
         destroyed = true
     )
-    
+
     global MafiaTools_ImportPath
     global MafiaTools_ExportPath
     global MafiaTools_ExportFilename
@@ -12,19 +12,19 @@
     global ImpExp
     --local imp = MafiaTools_Import4ds()
     --local exp = MafiaTools_Export4ds()
-    
+
     fn StartImport del:false = (
         local proceed = true
         if del then (
-            --proceed = queryBox "This will delete all objects in the scene!\n Do you want to continue?" beep:false icon:#warning    
-            proceed = CheckForSave()         
+            --proceed = queryBox "This will delete all objects in the scene!\n Do you want to continue?" beep:false icon:#warning
+            proceed = CheckForSave()
         )
-        
+
         if proceed then (
             local prev_name = MafiaTools_ImportPath
             if prev_name == undefined then prev_name = ""
             local file = getOpenFileName types:"4DS models (*.4ds)|*.4ds|All files (*.*)|*.*" historyCategory:"4dsImport" filename:prev_name
-            if file != undefined then (                
+            if file != undefined then (
                 --progressStart ""
                 ImpExp.labelDone.text = "Importing..."
                 if del then (
@@ -37,20 +37,20 @@
 
                 MafiaTools_ImportPath = file
                 ImpExp.labelDone.text = "Done in " + (dur as string) + " seconds"
-                ImpExp.clock.active = true  
+                ImpExp.clock.active = true
                 --progressEnd()
-            )	
-        )        
+            )
+        )
     )
 
     rollout ImpExp "4ds Import/Export" (
         group "Import" (
-            --checkbox    importNormalsD    "Import normals" enabled:false checked:true    
+            --checkbox    importNormalsD    "Import normals" enabled:false checked:true
             --checkbox    importNormals     "Normals to modifier (slow)"
             button      btnImport         "Import..." align:#left across:2
             button      btnOpen        "Open..." align:#left
         )
-        
+
         group "Export" (
             --label       aa                "Normals:" align:#left
             --checkbox    en1               "Smoothing groups" checked:true enabled:false
@@ -59,83 +59,83 @@
             edittext    editNamePath      align:#left offset:[0,10]  text:"" width:200
             edittext    editName          align:#left  text:"" width:200
             button      btnBrowse         "Browse..." align:#left across:2
-            
+
             button      btnExport         "Export" align:#right
-            
+
         )
         timer       clock   interval:5000 active:false
-        
-        label       labelDone         "" offset:[0,10] 
-        
-        on btnImport pressed do (		
+
+        label       labelDone         "" offset:[0,10]
+
+        on btnImport pressed do (
             StartImport del:false
         )
-        
+
         on btnOpen pressed do (
             StartImport del:true
         )
-        
+
         on btnBrowse pressed do (
             local file = getSaveFileName types:"4DS file (*.4ds)|*.4ds|All files (*.*)|*.*" historyCategory:"4dsExport"
             if file != undefined then (
-                
+
                 editNamePath.text = getFilenamePath file
                 editName.text = filenameFromPath file
             )
         )
-        
+
 
         on btnExport pressed do
-        (		
+        (
             local path = getFilenamePath editNamePath.text
-            
+
             if doesDirectoryExist path then (
                 local filepath = pathConfig.appendPath path editName.text
-                --progressStart ""                
-                labelDone.text = "Exporting..."  
+                --progressStart ""
+                labelDone.text = "Exporting..."
                 local exp = MafiaTools_Export4ds()
-                local dur = exp.Export4ds filepath en2.checked en3.checked   
+                local dur = exp.Export4ds filepath en2.checked en3.checked
                 labelDone.text = "Done in " + (dur as string) + " seconds"
-                clock.active = true  
-                --progressEnd()        
+                clock.active = true
+                --progressEnd()
             )
-           
+
         )
         on clock tick do (
-            labelDone.text = "" 
+            labelDone.text = ""
             clock.active = false
         )
-        
+
         on ImpExp open do (
-			if MafiaTools_ExportPath != undefined then (				
-				editNamePath.text = MafiaTools_ExportPath
+            if MafiaTools_ExportPath != undefined then (
+                editNamePath.text = MafiaTools_ExportPath
             )
-            if MafiaTools_ExportFilename != undefined then (				
-				editName.text = MafiaTools_ExportFilename
-            )            
+            if MafiaTools_ExportFilename != undefined then (
+                editName.text = MafiaTools_ExportFilename
+            )
         )
-        
+
         on ImpExp close do (
-            
+
             MafiaTools_ExportPath = editNamePath.text
             MafiaTools_ExportFilename = editName.text
             MafiaTools_ImpExpPos = GetDialogPos ImpExp
         )
     )
-    
+
     if not destroyed then (
         local pos = MafiaTools_ImpExpPos
-        local style = #( #style_titlebar, #style_border,#style_sysmenu) 
+        local style = #(#style_titlebar, #style_border, #style_sysmenu)
+        local w = 220
+        local h = 230
         if pos != undefined then (
-            CreateDialog ImpExp 220 230 pos.x pos.y style:style        
+            CreateDialog ImpExp w h pos.x pos.y style:style
         )
         else (
-            CreateDialog ImpExp 220 230 style:style
-            
+            CreateDialog ImpExp w h style:style
         )
-        
     )
 
-   
+
 
 )

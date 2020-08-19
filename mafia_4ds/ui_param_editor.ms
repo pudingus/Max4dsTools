@@ -4,12 +4,12 @@ global floater
 global MafParamEditor
 (
     --include "util.ms"
-    
+
     local util = MafiaTools_Util
-    
+
     local gp
     local EnabledMode
-    local DisabledMode    
+    local DisabledMode
     local OpenSelection
     local OnDeselected
 
@@ -21,7 +21,7 @@ global MafParamEditor
 
         on timerDeselected tick do (
             --format "DESELECTED!\n"
-            timerDeselected.active = false            
+            timerDeselected.active = false
             OnDeselected()
         )
 
@@ -31,10 +31,10 @@ global MafParamEditor
         button addParams "Add" align:#left pos:[10,25] tooltip:"Add parameters"
         button removeParams "Remove" align:#left pos:[50,25] tooltip:"Remove parameters"
         label objectTypeLabel "Object type:" across:2 offset:[0,3] align:#left
-        dropdownlist objectType "" align:#left width:80	 items:#("Dummy")
+        dropdownlist objectType "" align:#left width:80  items:#("Dummy")
 
         on objectType selected i do (
-            
+
             local strsel = objectType.items[i]
 
             if gp != undefined then gp.objectType = strsel
@@ -45,7 +45,7 @@ global MafParamEditor
         on addParams pressed do (
             local obj = selection[1]
             if obj != undefined then (
-                
+
                 custAttributes.add obj MafParams_def baseObject:false
                 gp = custAttributes.get obj MafParams_def baseObject:false
 
@@ -57,10 +57,10 @@ global MafParamEditor
                 if stricmp strsel "sector" == 0 then (
                     gp.cullFlags = 125
                 )
-                
+
                 EnabledMode()
                 MafParamEditor.objectType.selection = 1
-                OpenSelection strsel 
+                OpenSelection strsel
             )
         )
 
@@ -68,7 +68,7 @@ global MafParamEditor
             local obj = selection[1]
             if obj != undefined then (
 
-                if queryBox "Do you want to remove parameters from this object?" then (                    
+                if queryBox "Do you want to remove parameters from this object?" then (
 
                     custAttributes.delete obj MafParams_def baseObject:false
 
@@ -90,7 +90,7 @@ global MafParamEditor
         spinner renderFlags "Render flags:" range:[0,255,0] type:#integer align:#left fieldwidth:30 enabled:false across:2
         spinner renderFlags2 "" range:[0,255,0] type:#integer fieldwidth:30 enabled:false
         checkbox depthBias "Depth bias" across:2
-        checkbox shadowed "Shadowed" 
+        checkbox shadowed "Shadowed"
         checkbox texProj "Tex. proj." across:2 tooltip:"Texture projection"
         checkbox noFog "No fog"
 
@@ -108,8 +108,8 @@ global MafParamEditor
             local flags = val
 
             depthBias.checked = bit.get flags 1
-            shadowed.checked = bit.get flags 2 
-            texProj.checked = bit.get flags 6 
+            shadowed.checked = bit.get flags 2
+            texProj.checked = bit.get flags 6
             noFog.checked = bit.get flags 8
         )
 
@@ -154,7 +154,7 @@ global MafParamEditor
     rollout PortalRoll ""
     (
         spinner nearRange "Near range:" range:[-900000,900000,0] align:#left fieldwidth:50
-        spinner farRange "Far range:  " range:[-900000,900000,0] fieldwidth:50 align:#left 
+        spinner farRange "Far range:  " range:[-900000,900000,0] fieldwidth:50 align:#left
 
         on nearRange changed val do (
             gp.nearRange = val
@@ -171,7 +171,7 @@ global MafParamEditor
         dropdownlist rotAxis "" items:#("X", "Y", "Z") offset:[20,0] width:50
 
         on rotMode changed val do (
-            gp.rotMode = val        
+            gp.rotMode = val
         )
 
         on rotAxis selected i do (
@@ -182,28 +182,28 @@ global MafParamEditor
     fn OnDeselected = (
         MafParamEditor.objectName.text = ""
 
-        DisabledMode()        
+        DisabledMode()
 
         MafParamEditor.addParams.enabled = false
     )
-	
-	local rolls = #(LodRoll, PortalRoll, BillRoll)
+
+    local rolls = #(LodRoll, PortalRoll, BillRoll)
 
     fn OpenSelection strsel = (
-        
+
         local rlts = #()
-        if stricmp strsel "mesh" == 0 then (            
-            for c in ObjectRoll.controls do c.enabled = true  
+        if stricmp strsel "mesh" == 0 then (
+            for c in ObjectRoll.controls do c.enabled = true
 
             rlts = #(LodRoll)
         )
         else if stricmp strsel "lod" == 0 then (
-            for c in ObjectRoll.controls do c.enabled = false    
+            for c in ObjectRoll.controls do c.enabled = false
 
             rlts = #(LodRoll)
         )
-        else if stricmp strsel "sector" == 0 then (            
-            for c in ObjectRoll.controls do c.enabled = true  
+        else if stricmp strsel "sector" == 0 then (
+            for c in ObjectRoll.controls do c.enabled = true
             ObjectRoll.renderFlags.enabled = false
             ObjectRoll.renderFlags2.enabled = false
             ObjectRoll.depthBias.enabled = false
@@ -211,18 +211,18 @@ global MafParamEditor
             ObjectRoll.texProj.enabled = false
             ObjectRoll.noFog.enabled = false
         )
-        else if stricmp strsel "portal" == 0 then (            
-            for c in ObjectRoll.controls do c.enabled = false 
-            
+        else if stricmp strsel "portal" == 0 then (
+            for c in ObjectRoll.controls do c.enabled = false
+
             rlts = #(PortalRoll)
         )
-        else if stricmp strsel "billboard" == 0 then (            
-            for c in ObjectRoll.controls do c.enabled = true 
-            
+        else if stricmp strsel "billboard" == 0 then (
+            for c in ObjectRoll.controls do c.enabled = true
+
             rlts = #(LodRoll, BillRoll)
         )
         else if stricmp strsel "dummy" == 0 then (
-            for c in ObjectRoll.controls do c.enabled = true  
+            for c in ObjectRoll.controls do c.enabled = true
             ObjectRoll.renderFlags.enabled = false
             ObjectRoll.renderFlags2.enabled = false
             ObjectRoll.depthBias.enabled = false
@@ -231,7 +231,7 @@ global MafParamEditor
             ObjectRoll.noFog.enabled = false
         )
         else if stricmp strsel "bone" == 0 then (
-            for c in ObjectRoll.controls do c.enabled = true  
+            for c in ObjectRoll.controls do c.enabled = true
             ObjectRoll.renderFlags.enabled = false
             ObjectRoll.renderFlags2.enabled = false
             ObjectRoll.depthBias.enabled = false
@@ -240,7 +240,7 @@ global MafParamEditor
             ObjectRoll.noFog.enabled = false
         )
         else if stricmp strsel "target" == 0 then (
-            for c in ObjectRoll.controls do c.enabled = true  
+            for c in ObjectRoll.controls do c.enabled = true
             ObjectRoll.renderFlags.enabled = false
             ObjectRoll.renderFlags2.enabled = false
             ObjectRoll.depthBias.enabled = false
@@ -249,7 +249,7 @@ global MafParamEditor
             ObjectRoll.noFog.enabled = false
         )
         else if stricmp strsel "glow" == 0 then (
-            for c in ObjectRoll.controls do c.enabled = true  
+            for c in ObjectRoll.controls do c.enabled = true
         )
 
         local remove_rolls = #()
@@ -285,7 +285,7 @@ global MafParamEditor
         )
 
         displayed_rolls = rlts
-        
+
 
         if ObjectRoll.isDisplayed then (
             ObjectRoll.renderFlags.value = gp.renderFlags
@@ -294,13 +294,13 @@ global MafParamEditor
 
             if gp.strParams != undefined then (
                 ObjectRoll.strParams.text = gp.strParams
-            ) 
+            )
 
             local flags = gp.renderFlags2
 
             ObjectRoll.depthBias.checked = bit.get flags 1
-            ObjectRoll.shadowed.checked = bit.get flags 2 
-            ObjectRoll.texProj.checked = bit.get flags 6 
+            ObjectRoll.shadowed.checked = bit.get flags 2
+            ObjectRoll.texProj.checked = bit.get flags 6
             ObjectRoll.noFog.checked = bit.get flags 8
         )
 
@@ -316,22 +316,22 @@ global MafParamEditor
         if BillRoll.isDisplayed then (
             BillRoll.rotMode.state = gp.rotMode
             BillRoll.rotAxis.selection = gp.rotAxis
-        )  
-    ) 
+        )
+    )
 
     fn SetSelectionStr sel = (
         local items = MafParamEditor.objectType.items
-        
+
         local id = findItem items sel
         if id == 0 then id = 1
 
-        MafParamEditor.objectType.selection = id      
+        MafParamEditor.objectType.selection = id
     )
 
     fn EnabledMode = (
         MafParamEditor.addParams.enabled = false
-        MafParamEditor.removeParams.enabled = true        
-        MafParamEditor.objectType.enabled = true        
+        MafParamEditor.removeParams.enabled = true
+        MafParamEditor.objectType.enabled = true
         MafParamEditor.objectTypeLabel.enabled = true
 
         if not visible then (
@@ -342,17 +342,17 @@ global MafParamEditor
             for c in BillRoll.controls do c.visible = true
 
             visible = true
-        ) 
+        )
     )
 
     fn DisabledMode = (
         --MafParamEditor.addParams.enabled = true
         MafParamEditor.removeParams.enabled = false
 
-        MafParamEditor.objectTypeLabel.enabled = false 
-        MafParamEditor.objectType.enabled = false 
-        
-        MafParamEditor.objectType.selection = 1 
+        MafParamEditor.objectTypeLabel.enabled = false
+        MafParamEditor.objectType.enabled = false
+
+        MafParamEditor.objectType.selection = 1
 
         for c in ObjectRoll.controls do c.visible = false
         for c in LodRoll.controls do c.visible = false
@@ -365,16 +365,16 @@ global MafParamEditor
     --local start = timestamp()
     --local end = timestamp()
     fn OnSelectionChanged =
-    (    
+    (
         local obj = selection[1]
 
         --print selection.count
         --print obj
 
-        -- if obj == undefined then start = timeStamp()       
+        -- if obj == undefined then start = timeStamp()
         -- else (
-        --     end = timeStamp()  
-        --     format "dur: % ms\n" (end - start)               
+        --     end = timeStamp()
+        --     format "dur: % ms\n" (end - start)
         -- )
 
         -- Workaround for performance reasons - when selecting in scene explorer,
@@ -389,7 +389,7 @@ global MafParamEditor
 
         if selection.count >= 2 then (
             MafParamEditor.objectName.text = ""
-            DisabledMode()        
+            DisabledMode()
             MafParamEditor.addParams.enabled = false
         )
         else if selection.count == 1 then (
@@ -426,7 +426,7 @@ global MafParamEditor
                     MafParamEditor.objectType.items = #("Glow")
                 )
                 #morph: (
-                    DisabledMode()        
+                    DisabledMode()
                     MafParamEditor.addParams.enabled = false
                    -- MafParamEditor.objectType.items = #("")
                 )
@@ -437,24 +437,24 @@ global MafParamEditor
                     MafParamEditor.objectType.items = #("Dummy")
                 )
             )
-              
-            
+
+
             gp = custAttributes.get obj MafParams_def baseObject:false
 
-            if gp != undefined and nodeType != #morph then (    
-                local items = MafParamEditor.objectType.items   
+            if gp != undefined and nodeType != #morph then (
+                local items = MafParamEditor.objectType.items
                 --format "gp.objectType: %\n" gp.objectType
-                if findItem items gp.objectType == 0 then gp.objectType = items[1]                
+                if findItem items gp.objectType == 0 then gp.objectType = items[1]
 
                 EnabledMode()
                 SetSelectionStr gp.objectType
-                OpenSelection gp.objectType 
+                OpenSelection gp.objectType
 
                 local instances
 
-                local count = InstanceMgr.GetInstances obj &instances 
+                local count = InstanceMgr.GetInstances obj &instances
 
-                
+
                 if instances[count] == obj then (
                     --format "MASTER INSTANCE\n"
                     for c in LodRoll.controls do c.visible = true
@@ -462,26 +462,26 @@ global MafParamEditor
                 else (
                     for c in LodRoll.controls do c.visible = false
                 )
-                
+
             )
             else (  --no custom attributes
                 if nodeType != #morph then (
                     DisabledMode()
                     MafParamEditor.addParams.enabled = true
-                )                
+                )
             )
-        )       
+        )
 
     )
 
-    fn OnNodeRenamed = ( 
+    fn OnNodeRenamed = (
         OnSelectionChanged()
-    )    
-	
-    
+    )
+
+
     local title = "4DS Params"
 
-    if floater != undefined then (    
+    if floater != undefined then (
         if floater.open then (
             closeRolloutFloater floater
         )
@@ -489,22 +489,22 @@ global MafParamEditor
             local pos = floater.pos
             local size = floater.size
             floater = newRolloutFloater title size[1] size[2] pos[1] pos[2]
-        )    
+        )
     )
     else (
         floater = newRolloutFloater title 190 470
     )
 
-	if floater.open then (
-		callbacks.addScript #selectionSetChanged "OnSelectionChanged()" id:#selChangedID
-        callbacks.addScript #nodeRenamed "OnNodeRenamed()" id:#nodeRenamedID	
-        	
-		addRollout MafParamEditor floater
+    if floater.open then (
+        callbacks.addScript #selectionSetChanged "OnSelectionChanged()" id:#selChangedID
+        callbacks.addScript #nodeRenamed "OnNodeRenamed()" id:#nodeRenamedID
+
+        addRollout MafParamEditor floater
         addRollout ObjectRoll floater
-        
+
         for c in ObjectRoll.controls do c.visible = false
-        
-		OnSelectionChanged()		
-	)
-	
+
+        OnSelectionChanged()
+    )
+
 )

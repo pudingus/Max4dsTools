@@ -1,25 +1,25 @@
 try (closeUtility MafiaTools) catch()
 utility MafiaTools "Mafia 4ds Import/Export"
 (
-	button       btnImportExport   "Import/Export..." align:#left
-	button       btnParamEditor    "Parameter editor..." align:#left
-	button 		 btnFindWeights    "Find distant weights..." align:#left
+    button       btnImportExport   "Import/Export..." align:#left
+    button       btnParamEditor    "Object parameters..." align:#left
+    button       btnFindWeights    "Find distant weights..." align:#left
 
-	label        bout              "by pudingus" offset:[0,20]
-	label        version           "v0.5.0-preview"
+    label        bout              "by pudingus" offset:[0,20]
+    label        version           "v0.5.0-preview"
 
-	on btnImportExport pressed do
-	(		
-		filein "ui_imp_exp.ms"		
-	)
+    on btnImportExport pressed do
+    (
+        filein "ui_imp_exp.ms"
+    )
 
-	on btnParamEditor pressed do
-	(		
-		filein "ui_param_editor.ms"		
-	)
-	
-	on btnFindWeights pressed do (
-		filein "ui_find_weights.ms"
-	)	
+    on btnParamEditor pressed do
+    (
+        filein "ui_param_editor.ms"
+    )
+
+    on btnFindWeights pressed do (
+        filein "ui_find_weights.ms"
+    )
 )
 openUtility MafiaTools
