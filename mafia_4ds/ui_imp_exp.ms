@@ -1,7 +1,7 @@
 (
     local destroyed = false
-    if ImpExp != undefined and ImpExp.open then (
-        DestroyDialog ImpExp
+    if ::ImpExp != undefined and ::ImpExp.open then (
+        DestroyDialog ::ImpExp
         destroyed = true
     )
 
@@ -9,9 +9,6 @@
     global MafiaTools_ExportPath
     global MafiaTools_ExportFilename
     global MafiaTools_ImpExpPos
-    global ImpExp
-    --local imp = MafiaTools_Import4ds()
-    --local exp = MafiaTools_Export4ds()
 
     fn StartImport del:false = (
         local proceed = true
@@ -25,6 +22,7 @@
             if prev_name == undefined then prev_name = ""
             local file = getOpenFileName types:"4DS models (*.4ds)|*.4ds|All files (*.*)|*.*" historyCategory:"4dsImport" filename:prev_name
             if file != undefined then (
+                MafiaTools_ImportPath = file
                 --progressStart ""
                 ImpExp.labelDone.text = "Importing..."
                 if del then (
@@ -35,7 +33,7 @@
                 local dur = imp.Import4ds file
                 --if del then max tool zoomextents
 
-                MafiaTools_ImportPath = file
+                
                 ImpExp.labelDone.text = "Done in " + (dur as string) + " seconds"
                 ImpExp.clock.active = true
                 --progressEnd()

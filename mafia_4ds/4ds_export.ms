@@ -34,9 +34,10 @@ struct MafiaTools_Export4ds (
     TNode = (
         struct TNode (
             baseNode,
+            type,
             lods = #(),
             portals = #(),
-            morphs = #()
+            rootBone
         )
     ),
 
@@ -49,13 +50,17 @@ struct MafiaTools_Export4ds (
                 mnode_ids[handle]
             ),
 
-            fn GetByNode obj = (           --Get MObject from node
-                local handle = obj.inode.handle
-                local mid = GetIdFromHandle handle
-                mnodes[mid]
+            fn GetByNode obj = (           --Get TNode from node, returns undefined if not found
+				local mnode
+				if obj != undefined then (					
+					local handle = obj.inode.handle
+					local mid = GetIdFromHandle handle
+					if mid != undefined then mnode = mnodes[mid]
+				)
+				mnode
             ),
 
-            fn GetIdByNode obj = (           --Get MObject ID from node
+            fn GetIdByNode obj = (           --Get TNode ID from node, returns 0 if not found
                 if obj != undefined then (
                     local handle = obj.inode.handle
                     mnode_ids[handle]
@@ -65,10 +70,16 @@ struct MafiaTools_Export4ds (
                 )
             ),
 
-            fn Add mobj = (          --Add MObject to collection
-                local handle = mobj.baseNode.inode.handle
-                append mnodes mobj
+            fn Add obj mnode = (          --Add TNode to collection
+                local handle = obj.inode.handle
+                append mnodes mnode
                 mnode_ids[handle] = mnodes.count
+            ),
+            
+            fn AddPointer obj id = (   --Add pointer (node handle) to mnode id
+                local handle = obj.inode.handle
+                
+                mnode_ids[handle] = id
             )
         )
     ),
@@ -270,42 +281,98 @@ struct MafiaTools_Export4ds (
     boneNodeNames = #(),
     boneHandleIds = #(),
     parentBoneIds = #(),
+    
+    nodeTypes = #(),
+    
+    rootBone = #(),
 
     fn CollectNodes = (
+        local util = ::MafiaTools_util
+        for obj in objects do (
+            local type = nodeTypes[obj.inode.handle]
+            if type == undefined then (
+                type = util.GetNodeType obj
+                
+                if type == #singlemesh then (                    
+                    if (local skinMod = util.GetModByClass obj Skin) != undefined then (
+                        local bns = util.GetBoneNodes skinMod
+                        
+                        for boneNode in bns do (
+                            local handle = boneNode.inode.handle
+                            nodeTypes[handle] = #bone
+                            
+                            -- append boneNodes boneNode
+                            -- append boneNodeNames boneNode.name
+                            -- boneHandleIds[handle] = boneNodes.count
+
+                            -- local parentId
+                            -- if boneNode.parent != undefined then (
+                            --     local parentHandle = boneNode.parent.inode.handle
+                            --     parentId = boneHandleIds[parentHandle]
+                            -- )
+                            -- if parentId == undefined then parentId = 0
+
+                            -- append parentBoneIds parentId
+                        )
+                        nodeTypes[obj.parent.inode.handle] = #rootBone
+                        rootBone[obj.inode.handle] = obj.parent
+                    )
+                )  
+                  
+                nodeTypes[obj.inode.handle] = type
+            )
+        )
+        
+        
+        
+    
         local mnodeSet = TNodeSet()
 
         for obj in objects do (
             local mnode = TNode()
 
-            local nodeType = util.GetNodeType obj
+            local nodeType = nodeTypes[obj.inode.handle]     
+			format "nodeType: %\n" nodeType
             case nodeType of (
                 #portal: (
                     if obj.parent != undefined then (
-                        local parent_mobj = mnodeSet.GetByNode obj.parent
-                        append parent_mobj.portals obj
+                        local parentMnode = mnodeSet.GetByNode obj.parent
+                        append parentMnode.portals obj
                     )
                 )
                 #lod: (
                     if obj.parent != undefined then (
-                        local parent_mobj = mnodeSet.GetByNode obj.parent
-                        append parent_mobj.lods obj
+                        local parentMnode = mnodeSet.GetByNode obj.parent
+                        append parentMnode.lods obj
                     )
-                )
-                #morph: (
-                    if obj.parent != undefined then (
-                        local parent_mobj = mnodeSet.GetByNode obj.parent
-                        append parent_mobj.morphs obj
+                )         
+                #singlemesh: (                   
+                    local id = mnodeSet.GetIdByNode rootBone[obj.inode.handle]
+                    print (id as string)
+                    
+                    mnodeSet.mnodes[id].baseNode = obj
+                    mnodeSet.AddPointer obj id
+                )   
+                #rootbone: (
+                    local mnode = mnodeSet.GetByNode obj
+                    if mnode == undefined then (
+                        mnode = TNode()
+                        mnode.rootBone = obj
+                        mnode.type = #singlemesh
+                        mnodeSet.Add obj mnode
                     )
-                )
+                )    
                 default: (
+                    local mnode = TNode()
                     mnode.baseNode = obj
-                    mnodeSet.Add mnode
+                    mnode.type = nodeType
+                    mnodeSet.Add obj mnode
                 )
             )
 
-            --format "obj:%  type:% \n" obj.name nodeType
+            format "obj:%  type:% \n" obj.name nodeType
 
-            if nodeType == #bone then (
+            if nodeType == #bone or nodeType == #rootBone then (
                 append boneNodes obj
                 append boneNodeNames obj.name
                 local handle = obj.inode.handle
@@ -442,7 +509,7 @@ struct MafiaTools_Export4ds (
                         weight = skinOps.GetVertexWeight bskin i 1
                         local id = skinOps.GetVertexWeightBoneID bskin i 1
 
-                        boneid = skinBoneIds[id]
+                        boneid = skinBoneIds[id] - 1
                     )
                     else (
                         local id1 = skinOps.GetVertexWeightBoneID bskin i 1
@@ -460,27 +527,29 @@ struct MafiaTools_Export4ds (
                         if isNodeDescendantOf boneNode1 boneNode2 then (
                             useId = 1
                             weight = weight1
-                            boneid = globBoneId1
+                            boneid = globBoneId1 - 1
                         )
                         else if isNodeDescendantOf boneNode2 boneNode1 then (
                             useId = 2
                             weight = weight2
-                            boneid = globBoneId2
+                            boneid = globBoneId2 - 1
                         )
                         else (
                             if weight2 > weight1 then (
                                 weight = weight2
-                                boneid = globBoneId2
+                                boneid = globBoneId2 - 1
                             )
                             else (
                                 weight = weight1
-                                boneid = globBoneId1
+                                boneid = globBoneId1 - 1
                             )
                         )
                     )
                 )
 
-                wv = WeightedVertex()
+                if boneid == 0 then boneid = 9999
+                
+                wv = WeightedVertex()                
                 wv.boneid = boneid
                 wv.weight = weight
                 wv.vertid = i
@@ -512,7 +581,8 @@ struct MafiaTools_Export4ds (
 
             local groups = #()
 
-            for boneNode in boneNodes do (
+            for i = 2 to boneNodes.count do (
+                local boneNode = boneNodes[i]
                 local grp = TSkinVertexGroup()
                 grp.numW1Verts = 0
 
@@ -521,7 +591,7 @@ struct MafiaTools_Export4ds (
                 grp.dmax = [range, range, range]
                 grp.boneid = 0
 
-                local mm = boneNode.transform * (inverse lodnode.transform)
+                local mm = boneNode.transform * (inverse mnode.rootbone.transform)
                 grp.matrix = inverse mm
 
                 append groups grp
@@ -546,7 +616,7 @@ struct MafiaTools_Export4ds (
                 local grp = groups[i]
 
                 if (grp.numW1Verts > 0) or (grp.weights.count > 0) then (
-                    grp.boneid = parentBoneIds[i]
+                    grp.boneid = parentBoneIds[i+1]-1
                 )
             )
 
@@ -715,7 +785,13 @@ struct MafiaTools_Export4ds (
                 if lodweights != undefined then weights = lodWeights[l]
 
                 local mlod = TLod()
+                
                 mlod.otrans = lodnode.objectTransform * inverse lodnode.transform
+                
+                if mnode.rootBone != undefined then (
+                    mlod.otrans = mlod.otrans * (lodnode.transform * inverse mnode.rootbone.transform)
+                )
+                
                 local lodMesh = copy lodnode.mesh
                 local gp = custAttributes.get lodnode MafParams_def baseObject:false
 
@@ -868,7 +944,7 @@ struct MafiaTools_Export4ds (
         mbone = TBone()
         --mbone.boneId = mnode.baseNode.boneId
         local handle = mnode.baseNode.inode.handle
-        mbone.boneId = boneHandleIds[handle] - 1
+        mbone.boneId = boneHandleIds[handle] - 2
 
         mbone.matrix = matrix3 1
 
@@ -892,12 +968,42 @@ struct MafiaTools_Export4ds (
             local mobj = MObject()
 
             local baseNode = mnode.baseNode
-            local nodeType = util.GetNodeType baseNode
 
             mobj.cullFlags = 9
             mobj.renderFlags2 = 42
+            
+            local gp = custAttributes.get baseNode MafParams_def baseObject:false
+            if gp != undefined then (
+                mobj.cullFlags = gp.cullFlags
+                mobj.renderFlags = gp.renderFlags
+                mobj.renderFlags2 = gp.renderFlags2
+                mobj.strParams = gp.strParams
+            )
 
-            case nodeType of (
+            mobj.name = mnode.baseNode.name
+            mobj.parentId = mnodeSet.GetIDByNode mnode.baseNode.parent
+
+           
+            if (baseNode.parent != undefined) and (util.GetNodeType baseNode.parent == #sector) then (
+                in coordsys world
+                (
+                    mobj.offset = mnode.baseNode.pos
+                    mobj.scl = mnode.baseNode.scale
+                    mobj.rot = mnode.baseNode.rotation
+                )
+            )
+            else (
+                in coordsys parent
+                (
+                    mobj.offset = mnode.baseNode.pos
+                    mobj.scl = mnode.baseNode.scale
+                    mobj.rot = mnode.baseNode.rotation
+                )
+            )
+            
+
+
+            case mnode.type of (
                 #mesh: (
                     mobj.objectType = 1
                     mobj.visualType = 0
@@ -912,6 +1018,17 @@ struct MafiaTools_Export4ds (
 
                     mobj.definitions[1] = mmesh
                     mobj.definitions[2] = mskins
+                    
+                    mobj.name = mnode.rootBone.name
+                    
+                    mobj.parentId = mnodeSet.GetIDByNode mnode.rootBone.parent
+                    
+                    in coordsys parent
+                    (
+                        mobj.offset = mnode.rootBone.pos
+                        mobj.scl = mnode.rootBone.scale
+                        mobj.rot = mnode.rootBone.rotation
+                    )  
                 )
                 #billboard: (
                     mobj.objectType = 1
@@ -923,6 +1040,10 @@ struct MafiaTools_Export4ds (
                     mobj.objectType = 5
                     mobj.cullFlags = 125
                     mobj.definitions[1] = ExtractSector mnode
+                    
+                    mobj.offset = [0,0,0]
+                    mobj.scl = [1,1,1]
+                    mobj.rot = [0,0,0,1]
                 )
                 #dummy: (
                     mobj.objectType = 6
@@ -942,49 +1063,7 @@ struct MafiaTools_Export4ds (
                 )
             )
 
-            local gp = custAttributes.get baseNode MafParams_def baseObject:false
-            if gp != undefined then (
-                mobj.cullFlags = gp.cullFlags
-                mobj.renderFlags = gp.renderFlags
-                mobj.renderFlags2 = gp.renderFlags2
-                mobj.strParams = gp.strParams
-            )
-
-            mobj.name = mnode.baseNode.name
-            mobj.parentId = mnodeSet.GetIDByNode mnode.baseNode.parent
-
-            if mobj.objectType == 5 then (
-                mobj.offset = [0,0,0]
-                mobj.scl = [1,1,1]
-                mobj.rot = [0,0,0,1]
-            )
-            -- else if mobj.objectType == 6 then (
-            --  in coordsys parent
-            --  (
-            --      mobj.offset = mnode.baseNode.center
-            --      mobj.scl = mnode.baseNode.scale
-            --      mobj.rot = mnode.baseNode.rotation
-            --  )
-            -- )
-            else (
-                if (baseNode.parent != undefined) and (util.GetNodeType baseNode.parent == #sector) then (
-                    in coordsys world
-                    (
-                        mobj.offset = mnode.baseNode.pos
-                        mobj.scl = mnode.baseNode.scale
-                        mobj.rot = mnode.baseNode.rotation
-                    )
-                )
-                else (
-                    in coordsys parent
-                    (
-                        mobj.offset = mnode.baseNode.pos
-                        mobj.scl = mnode.baseNode.scale
-                        mobj.rot = mnode.baseNode.rotation
-                    )
-                )
-            )
-
+            
             append mobjects mobj
         )
         mobjects

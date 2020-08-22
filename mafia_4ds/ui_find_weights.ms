@@ -273,12 +273,12 @@
                 TransferWeight skinMod vertId oldid newId
             )
 
-            local items = lbFound.items
-            deleteItem items sel
-            lbFOund.items = items
+            -- local items = lbFound.items
+            -- deleteItem items sel
+            -- lbFOund.items = items
 
-            deleteItem groups sel
-            deleteItem groupsExtra sel
+            -- deleteItem groups sel
+            -- deleteItem groupsExtra sel
         )
 
         on transfer2 pressed do (
@@ -297,12 +297,12 @@
 
 
 
-            local items = lbFound.items
-            deleteItem items sel
-            lbFOund.items = items
+            -- local items = lbFound.items
+            -- deleteItem items sel
+            -- lbFOund.items = items
 
-            deleteItem groups sel
-            deleteItem groupsExtra sel
+            -- deleteItem groups sel
+            -- deleteItem groupsExtra sel
         )
     )
 

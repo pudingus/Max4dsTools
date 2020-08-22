@@ -10,6 +10,14 @@ struct MafiaTools_Util (
         )
         foundMod
     ),
+    
+    fn HasMod obj mclass = (
+        GetModByClass obj mclass != undefined
+    ),
+    
+    fn GetBoneNodes skinMod = (
+        for k in (refs.dependsOn skinMod) where (isKindOf k node) collect k
+    ),
 
     fn IsGeometry obj = (
         Superclassof obj == GeometryClass and ClassOf obj != TargetObject
