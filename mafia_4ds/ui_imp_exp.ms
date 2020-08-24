@@ -27,7 +27,9 @@
                 ImpExp.labelDone.text = "Importing..."
                 if del then (
                     delete $*
+                    MafiaTools_Util.ClearLayers()
                     gc()
+                    
                 )
                 local imp = MafiaTools_Import4ds()
                 local dur = imp.Import4ds file

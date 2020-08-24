@@ -35,6 +35,18 @@ struct MafiaTools_Util (
         )
         format (ss as string)
     ),
+    
+    fn ClearLayers = (
+		local count = LayerManager.count 
+		local layerNames = for i = 1 to count-1 collect (
+			local layer = LayerManager.getLayer i
+			layer.name
+		)
+		
+		for lname in layerNames do (
+			LayerManager.deleteLayerByName lname
+		)
+	),
 
     fn GetNodeType obj = (
         local gp = custAttributes.get obj MafParams_def baseObject:false
@@ -74,6 +86,6 @@ struct MafiaTools_Util (
             )
         )
         else #unsupported
-    )
+    )    
 )
 MafiaTools_Util = MafiaTools_Util()
