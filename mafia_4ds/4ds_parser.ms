@@ -49,13 +49,12 @@ struct MafiaTools_4dsParser (
             name,
             strParams,
             definitions = #(),
-            --transform,
 
             fn GetMatrix = (
-                local tMatrix = matrix3 [1, 0, 0] [0, 1, 0] [0, 0, 1] [offset.x, offset.y, offset.z]
-                local sclMatrix = matrix3 [scl.x, 0, 0] [0, scl.y, 0] [0, 0, scl.z] [0, 0, 0]
-                local rotMatrix = ((inverse rot) as matrix3)
-                (sclMatrix * rotMatrix * tMatrix)
+                local s = scaleMatrix scl
+                local r = rot as matrix3
+                local t = transMatrix offset
+                (s * r * t)
             )
         )
     ),
@@ -248,7 +247,7 @@ struct MafiaTools_4dsParser (
         ry = ReadFloat f
         rz = ReadFloat f
         qt = quat rx rz ry rw
-        qt
+        inverse qt
     ),
 
     fn ReadFace f = (
@@ -407,7 +406,7 @@ struct MafiaTools_4dsParser (
                     local tr = TriMesh()
                     setNumVerts tr numverts
                     setNumTVerts tr numverts
-
+               
 
                     for i = 1 to numVerts do (
                         local vert = ReadPoint3 f

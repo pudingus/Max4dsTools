@@ -1,5 +1,5 @@
 
-struct MafiaTools_Export4ds (
+struct MafiaTools_4dsExport (
 
     --imports------------
     p = MafiaTools_4dsParser,
@@ -397,11 +397,16 @@ struct MafiaTools_Export4ds (
         mnodeSet
     ),
 
-    fn ExtractSector mnode = (
+    fn ExtractSector mnode unitscl = (
         local sector = TSector()
         sector.mesh = snapshotAsMesh mnode.baseNode
-        sector.dmin = mnode.baseNode.min
-        sector.dmax = mnode.baseNode.max
+        sector.dmin = mnode.baseNode.min * unitscl
+        sector.dmax = mnode.baseNode.max * unitscl
+        
+        for i = 1 to sector.mesh.numverts do (
+            local vert = getVert sector.mesh i
+            setVert sector.mesh i (vert * unitscl)
+        )
 
         for portalNode in mnode.portals do (
             local portal = TPortal()
@@ -419,7 +424,7 @@ struct MafiaTools_Export4ds (
 
             for id in vertIds do (
                 local vert = polyop.getVert portalNode id
-                append portal.verts vert
+                append portal.verts (vert * unitscl)
             )
             append sector.portals portal
         )
@@ -427,10 +432,10 @@ struct MafiaTools_Export4ds (
         sector
     ),
 
-    fn ExtractDummy mnode = (
+    fn ExtractDummy mnode unitscl = (
         local mdummy = TDummy()
-        mdummy.dmin = in coordsys local mnode.baseNode.min
-        mdummy.dmax = in coordsys local mnode.baseNode.max
+        mdummy.dmin = in coordsys local mnode.baseNode.min * unitscl
+        mdummy.dmax = in coordsys local mnode.baseNode.max * unitscl
         mdummy
     ),
 
@@ -563,7 +568,7 @@ struct MafiaTools_Export4ds (
         lodWeights
     ),
 
-    fn ExtractSkin mnode lodWeights = (
+    fn ExtractSkin mnode lodWeights unitscl = (
         local lodnodes = copy mnode.lods #noMap
         insertItem mnode.baseNode lodnodes 1
 
@@ -589,9 +594,24 @@ struct MafiaTools_Export4ds (
                 local range = 0.2
                 grp.dmin = [-range, -range, -range]
                 grp.dmax = [range, range, range]
-                grp.boneid = 0
-
-                local mm = boneNode.transform * (inverse mnode.rootbone.transform)
+                grp.boneid = 0 
+                
+                local boneTF = boneNode.transform                
+                local t = transMatrix (boneTF.translationpart * unitscl)
+                local s = scaleMatrix boneTF.scalepart
+                local r = boneTF.rotationpart as matrix3                
+                local boneTFs = s * r * t
+                
+                
+                local rootTF = mnode.rootbone.transform                
+                local t = transMatrix (rootTF.translationpart * unitscl)
+                local s = scaleMatrix rootTF.scalepart
+                local r = rootTF.rotationpart as matrix3                
+                local rootTFs = s * r * t
+                
+                local mm = boneTFs * (inverse rootTFs)
+                
+                --local mm = boneNode.transform * (inverse mnode.rootbone.transform)
                 grp.matrix = inverse mm
 
                 append groups grp
@@ -761,7 +781,7 @@ struct MafiaTools_Export4ds (
         #(mesh, normals, weights, uvs)
     ),
 
-    fn ExtractMesh mnode mnodeSet &lodWeights = (
+    fn ExtractMesh mnode mnodeSet &lodWeights unitscl = (
         local mmesh = TMesh()
 
         local instances
@@ -786,10 +806,13 @@ struct MafiaTools_Export4ds (
 
                 local mlod = TLod()
                 
-                mlod.otrans = lodnode.objectTransform * inverse lodnode.transform
+                local scl = scaleMatrix [unitscl,unitscl,unitscl]
+                
+                mlod.otrans = lodnode.objectTransform * inverse lodnode.transform * scl
                 
                 if mnode.rootBone != undefined then (
-                    mlod.otrans = mlod.otrans * (lodnode.transform * inverse mnode.rootbone.transform)
+                    local offsetTrans = lodnode.objectTransform * inverse lodnode.transform
+                    mlod.otrans = offsetTrans * (lodnode.transform * inverse mnode.rootbone.transform) * scl
                 )
                 
                 local lodMesh = copy lodnode.mesh
@@ -961,7 +984,7 @@ struct MafiaTools_Export4ds (
         mtarget
     ),
 
-    fn ExtractObjects mnodeSet = (
+    fn ExtractObjects mnodeSet unitscl = (
         local mobjects = #()
 
         for mnode in mnodeSet.mnodes do (
@@ -981,13 +1004,12 @@ struct MafiaTools_Export4ds (
             )
 
             mobj.name = mnode.baseNode.name
-            mobj.parentId = mnodeSet.GetIDByNode mnode.baseNode.parent
-
+            mobj.parentId = mnodeSet.GetIDByNode mnode.baseNode.parent            
            
             if (baseNode.parent != undefined) and (util.GetNodeType baseNode.parent == #sector) then (
                 in coordsys world
                 (
-                    mobj.offset = mnode.baseNode.pos
+                    mobj.offset = mnode.baseNode.pos * unitscl
                     mobj.scl = mnode.baseNode.scale
                     mobj.rot = mnode.baseNode.rotation
                 )
@@ -995,7 +1017,7 @@ struct MafiaTools_Export4ds (
             else (
                 in coordsys parent
                 (
-                    mobj.offset = mnode.baseNode.pos
+                    mobj.offset = mnode.baseNode.pos  * unitscl
                     mobj.scl = mnode.baseNode.scale
                     mobj.rot = mnode.baseNode.rotation
                 )
@@ -1007,14 +1029,14 @@ struct MafiaTools_Export4ds (
                 #mesh: (
                     mobj.objectType = 1
                     mobj.visualType = 0
-                    mobj.definitions[1] = ExtractMesh mnode mnodeSet undefined
+                    mobj.definitions[1] = ExtractMesh mnode mnodeSet undefined unitscl
                 )
                 #singlemesh: (
                     mobj.objectType = 1
                     mobj.visualType = 2
                     local lodWeights = ExtractWeights mnode
-                    local mmesh = ExtractMesh mnode mnodeSet &lodWeights
-                    local mskins = ExtractSkin mnode lodWeights
+                    local mmesh = ExtractMesh mnode mnodeSet &lodWeights unitscl
+                    local mskins = ExtractSkin mnode lodWeights unitscl
 
                     mobj.definitions[1] = mmesh
                     mobj.definitions[2] = mskins
@@ -1025,21 +1047,21 @@ struct MafiaTools_Export4ds (
                     
                     in coordsys parent
                     (
-                        mobj.offset = mnode.rootBone.pos
-                        mobj.scl = mnode.rootBone.scale
+                        mobj.offset = mnode.rootBone.pos * unitscl
+                        mobj.scl = mnode.rootBone.scale 
                         mobj.rot = mnode.rootBone.rotation
                     )  
                 )
                 #billboard: (
                     mobj.objectType = 1
                     mobj.visualType = 4
-                    mobj.definitions[1] = ExtractMesh mnode mnodeSet undefined
+                    mobj.definitions[1] = ExtractMesh mnode mnodeSet undefined unitscl
                     mobj.definitions[2] = ExtractBillboard mnode
                 )
                 #sector: (
                     mobj.objectType = 5
                     mobj.cullFlags = 125
-                    mobj.definitions[1] = ExtractSector mnode
+                    mobj.definitions[1] = ExtractSector mnode unitscl
                     
                     mobj.offset = [0,0,0]
                     mobj.scl = [1,1,1]
@@ -1047,7 +1069,7 @@ struct MafiaTools_Export4ds (
                 )
                 #dummy: (
                     mobj.objectType = 6
-                    mobj.definitions[1] = ExtractDummy mnode
+                    mobj.definitions[1] = ExtractDummy mnode unitscl
                 )
                 #bone: (
                     mobj.objectType = 10
@@ -1059,7 +1081,7 @@ struct MafiaTools_Export4ds (
                 )
                 default: (
                     mobj.objectType = 6
-                    mobj.definitions[1] = ExtractDummy mnode
+                    mobj.definitions[1] = ExtractDummy mnode unitscl
                 )
             )
 
@@ -1069,7 +1091,7 @@ struct MafiaTools_Export4ds (
         mobjects
     ),
 
-    fn Export4ds file cachedNorm editNorm  = (
+    fn Export4ds file cachedNorm editNorm unitscl  = (
 
         useCachedNormals = cachedNorm
         useEditNormals = editNorm
@@ -1085,7 +1107,7 @@ struct MafiaTools_Export4ds (
         local m4ds = p.T4ds()
         m4ds.materials = ExtractMaterials()
         local mnodeSet = CollectNodes()
-        local mobjects = ExtractObjects mnodeSet
+        local mobjects = ExtractObjects mnodeSet unitscl
         m4ds.objects = mobjects
 
         local f = fopen file "wb"
@@ -1107,4 +1129,4 @@ struct MafiaTools_Export4ds (
         dur
     )
 )
---MafiaTools_Export4ds = MafiaTools_Export4ds()
+--MafiaTools_4dsExport = MafiaTools_4dsExport()
