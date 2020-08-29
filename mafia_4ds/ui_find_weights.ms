@@ -7,41 +7,42 @@
     )
 
     global M4dsTools_FindWeights_pos
+    
+    fn traverseUp lowNode highNode = (   --finding nodes inside hierarchy between lownode and highnode
+        local nodes = #()
+        while lowNode != undefined and lowNode.parent != highNode  do (
+            
+            lowNode = lowNode.parent
+            if lowNode != undefined then (
+                append nodes lownode                    
+            )
+        )
+        nodes
+    )
 
     rollout FindWeights "Find distant weights"
-    (
-        button find "Find"
-        listbox lbFound "" height:8
+    (        
+        local util = ::MafiaTools_Util        
+        
+        button btnFind "Find"
+        listbox lbFound "" height:10
         label numSel ""
-        listbox lbSel "" height:5
+        listbox lbSel "" height:6
         label lblTransfer "Transfer weights:"
-        button transfer1 "back3  ->  r_shoulder" enabled:false
-        button transfer2 "r_arm  ->  r_shoulder" enabled:false
+        button btnTransfer1 "back3  ->  r_shoulder" enabled:false
+        button btnTransfer2 "r_arm  ->  r_shoulder" enabled:false
 
         on FindWeights close do (
             M4dsTools_FindWeights_pos = GetDialogPos FindWeights
         )
 
+        
+        
         local groups = #()
-        local groupsExtra = #()
-
-        fn isNodeDescendantOf node1 node2 = (
-            while node1.parent != undefined and node1.parent != node2 do (
-                node1 = node1.parent
-            )
-            node1.parent == node2
-        )
-
-        fn traverseUp lowNode highNode = (
-            local nodes = #()
-            while lowNode.parent != highNode do (
-                lowNode = lowNode.parent
-                append nodes lownode
-            )
-            nodes
-        )
-
+        local groupsExtra = #()  
         local boneNodes
+        local skinMod
+        local lbSelItemBoneId = #()
 
         struct WeightGroup (
             boneid1,
@@ -51,6 +52,13 @@
             weightSum2 = 0.0
         )
 
+        struct GroupExtra (
+            avg1,
+            avg2,
+            upnodes = #(),
+            upBoneIds = #()
+        )
+        
         fn FindGroup groups boneid1 boneid2 = (
             local foundGrp
             for grp in groups while foundGrp == undefined do (
@@ -59,56 +67,9 @@
                 )
             )
             foundGrp
-        )
+        )             
 
-        fn directlyRelated node1 node2 = (
-            node1.parent == node2 or node2.parent == node1
-        )
-
-        fn GetBoneVertexWeight skinMod vertid boneid = (
-            local weight
-            local count = skinOps.GetVertexWeightCount skinMod vertid
-            local nth
-            for i = 1 to count while nth == undefined do (
-                id = skinOps.GetVertexWeightBoneID skinMod vertid i
-                if id == boneid then nth = i
-            )
-            if nth != undefined then (
-                weight = skinOps.GetVertexWeight skinMod vertid nth
-            )
-            weight
-        )
-
-        fn TransferWeight skinMod vertid oldId newId = (
-            local weight = GetBoneVertexWeight skinMod vertid oldid
-
-            if weight != undefined then (
-                skinOps.SetVertexWeights skinMod vertid oldid 0.0
-                skinOps.SetVertexWeights skinMod vertid newid weight
-            )
-        )
-
-        struct GroupExtra (
-            avg1,
-            avg2,
-            upnodes = #(),
-            upBoneIds = #()
-        )
-
-
-        fn ReverseArray arr = (
-            local newArr = #()
-            for i = 1 to arr.count do (
-                append newArr arr[arr.count-i+1]
-            )
-            newArr
-        )
-
-        local util = MafiaTools_Util
-
-        local skinMod
-
-        on find pressed do (
+        on btnFind pressed do (
             local obj = selection[1]
 
             if obj == undefined then (
@@ -121,7 +82,7 @@
                 )
                 else (
 
-                    boneNodes = for k in (refs.dependsOn skinMod) where (isKindOf k node) collect k
+                    boneNodes = util.GetBoneNodes skinMod
                     groups = #()
                     groupsExtra = #()
                     local numverts = skinOps.GetNumberVertices skinMod
@@ -136,11 +97,11 @@
                             local boneNode2 = boneNodes[boneid2]
 
 
-                            if not directlyRelated bonenode1 bonenode2 then (
+                            if not util.directlyRelated bonenode1 bonenode2 then (
                                 local weight1 = skinOps.GetVertexWeight skinMod i 1
                                 local weight2 = skinOps.GetVertexWeight skinMod i 2
 
-                                if isNodeDescendantOf boneNode2 boneNode1 then (
+                                if util.isDescendantOf boneNode2 boneNode1 then (
                                     swap boneid1 boneid2
                                     swap weight1 weight2
                                     swap boneNode1 boneNode2
@@ -182,7 +143,7 @@
                         local bonenode1 = bonenodes[grp.boneid1]
                         local bonenode2 = bonenodes[grp.boneid2]
                         local upnodes = traverseUp bonenode1 bonenode2          --in order from lowest to highest, 1-lowest  N-highest
-                        upnodes = ReverseArray upnodes
+                        upnodes = util.ReverseArray upnodes
 
                         grpE.upnodes = upnodes
 
@@ -196,13 +157,11 @@
             )
 
         )
-
-
-        local lbSelItemBoneId = #()
+        
         on lbFound selected val do (
             if skinMod != undefined then (
-                transfer1.enabled = true
-                transfer2.enabled = true
+                btnTransfer1.enabled = true
+                btnTransfer2.enabled = true
 
                 local grp = groups[val]
                 local grpE = groupsExtra[val]
@@ -244,8 +203,8 @@
                 )
                 append lbSelItemBoneId grp.boneid1
 
-                transfer1.text = bonenode2.name + "  ->  " + grpE.upnodes[1].name
-                transfer2.text = bonenode1.name + "  ->  " + grpE.upnodes[grpE.upnodes.count].name
+                btnTransfer1.text = bonenode2.name + "  ->  " + grpE.upnodes[1].name
+                btnTransfer2.text = bonenode1.name + "  ->  " + grpE.upnodes[grpE.upnodes.count].name
 
 
                 skinMod.wt_activeVertexSet = 2
@@ -259,50 +218,54 @@
             )
         )
 
-        on transfer1 pressed do (
-            local sel = lbFound.selection
-            local grp = groups[sel]
-            local grpE = groupsExtra[sel]
+        on btnTransfer1 pressed do (
+            undo "Transfer1" on (
+                local sel = lbFound.selection
+                local grp = groups[sel]
+                local grpE = groupsExtra[sel]
 
 
 
-            local oldId = grp.boneid2
-            local newId = grpE.upBoneIds[1]
+                local oldId = grp.boneid2
+                local newId = grpE.upBoneIds[1]
 
-            for vertId in grp.verts do (
-                TransferWeight skinMod vertId oldid newId
+                for vertId in grp.verts do (
+                    util.TransferWeight skinMod vertId oldid newId
+                )
+
+                -- local items = lbFound.items
+                -- deleteItem items sel
+                -- lbFOund.items = items
+
+                -- deleteItem groups sel
+                -- deleteItem groupsExtra sel
             )
-
-            -- local items = lbFound.items
-            -- deleteItem items sel
-            -- lbFOund.items = items
-
-            -- deleteItem groups sel
-            -- deleteItem groupsExtra sel
         )
 
-        on transfer2 pressed do (
-            local sel = lbFound.selection
-            local grp = groups[sel]
-            local grpE = groupsExtra[sel]
+        on btnTransfer2 pressed do (
+            undo "Transfer2" on (  
+                local sel = lbFound.selection
+                local grp = groups[sel]
+                local grpE = groupsExtra[sel]
 
 
 
-            local oldId = grp.boneid1
-            local newId = grpE.upBoneIds[grpE.upBoneIds.count]
+                local oldId = grp.boneid1
+                local newId = grpE.upBoneIds[grpE.upBoneIds.count]
 
-            for vertId in grp.verts do (
-                TransferWeight skinMod vertId oldid newId
+                for vertId in grp.verts do (
+                    util.TransferWeight skinMod vertId oldid newId
+                )
+
+
+
+                -- local items = lbFound.items
+                -- deleteItem items sel
+                -- lbFOund.items = items
+
+                -- deleteItem groups sel
+                -- deleteItem groupsExtra sel
             )
-
-
-
-            -- local items = lbFound.items
-            -- deleteItem items sel
-            -- lbFOund.items = items
-
-            -- deleteItem groups sel
-            -- deleteItem groupsExtra sel
         )
     )
 

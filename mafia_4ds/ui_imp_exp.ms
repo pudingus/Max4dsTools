@@ -85,13 +85,14 @@
                 if prev_name == undefined then prev_name = ""
                 local file = getOpenFileName types:"4DS models (*.4ds)|*.4ds|All files (*.*)|*.*" historyCategory:"4dsImport" filename:prev_name
                 if file != undefined then (
-                    local util = MafiaTools_Util
+                    local util = ::MafiaTools_Util
+                    local layers = ::MafiaTools_Layers
                     local imp = MafiaTools_4dsImport()
                     MafiaTools_ImpExpSettings.importPath = file
                     labelDone.text = "Importing..."
                     if del then (
                         delete $*
-                        util.ClearLayers()
+                        layers.Clear()
                         gc()                    
                     )
                     local sel = ddlUnits.selection

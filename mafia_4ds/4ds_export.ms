@@ -471,17 +471,6 @@ struct MafiaTools_4dsExport (
             vertid
         )
     ),
-
-    fn isNodeDescendantOf node1 node2 = (
-        while node1.parent != undefined and node1.parent != node2 do (
-            node1 = node1.parent
-        )
-        node1.parent == node2
-    ),
-    
-    fn directlyRelated node1 node2 = (
-        node1.parent == node2 or node2.parent == node1
-    ),
     
     VertBone = (
         struct VertBone (
@@ -554,7 +543,7 @@ struct MafiaTools_4dsExport (
                         
                         local boneNode1 = boneNodes[boneid1]
                         local boneNode2 = boneNodes[boneid2]
-                        if isNodeDescendantOf boneNode2 boneNode1 then (
+                        if util.isDescendantOf boneNode2 boneNode1 then (
                             weight = weight2 / sum
                             boneid = boneid2 - 1
                         )

@@ -1,4 +1,5 @@
 struct MafiaTools_Util (
+    --modifier ops
     fn GetModByClass obj mclass = (    --to support versions prior 2013
         local foundMod
         if obj != undefined then (
@@ -14,15 +15,59 @@ struct MafiaTools_Util (
     fn HasMod obj mclass = (
         GetModByClass obj mclass != undefined
     ),
+    ----------
     
+    
+    ---skin ops-------
     fn GetBoneNodes skinMod = (
         for k in (refs.dependsOn skinMod) where (isKindOf k node) collect k
     ),
+    
+    fn GetBoneVertexWeight skinMod vertid boneid = (
+        local weight
+        local count = skinOps.GetVertexWeightCount skinMod vertid
+        local nth
+        for i = 1 to count while nth == undefined do (
+            id = skinOps.GetVertexWeightBoneID skinMod vertid i
+            if id == boneid then nth = i
+        )
+        if nth != undefined then (
+            weight = skinOps.GetVertexWeight skinMod vertid nth
+        )
+        weight
+    ),
 
+    fn TransferWeight skinMod vertid oldId newId = (
+        local weight = GetBoneVertexWeight skinMod vertid oldid
+
+        if weight != undefined then (
+            skinOps.SetVertexWeights skinMod vertid oldid 0.0
+            skinOps.SetVertexWeights skinMod vertid newid weight
+        )
+    ),
+    ------------------
+    
+    
+    
+    ---node ops----------
     fn IsGeometry obj = (
         Superclassof obj == GeometryClass and ClassOf obj != TargetObject
     ),
-
+    
+    fn isDescendantOf node1 node2 = (
+        while node1.parent != undefined and node1.parent != node2 do (
+            node1 = node1.parent
+        )
+        node1.parent == node2
+    ),
+    
+    fn directlyRelated node1 node2 = (
+        node1.parent == node2 or node2.parent == node1
+    ),
+    ----------------------
+    
+    
+    ---array ops----
     fn containsItem array value = (
         (findItem array value) > 0
     ),
@@ -34,20 +79,21 @@ struct MafiaTools_Util (
             format "%\n" item to:ss
         )
         format (ss as string)
-    ),
+    ),    
     
-    fn ClearLayers = (
-		local count = LayerManager.count 
-		local layerNames = for i = 1 to count-1 collect (
-			local layer = LayerManager.getLayer i
-			layer.name
-		)
-		
-		for lname in layerNames do (
-			LayerManager.deleteLayerByName lname
-		)
-	),
-
+    fn ReverseArray arr = (
+        local newArr = #()
+        for i = 1 to arr.count do (
+            append newArr arr[arr.count-i+1]
+        )
+        newArr
+    ),
+    ---------------
+    
+    
+    
+    
+    -----------------
     fn GetNodeType obj = (
         local gp = custAttributes.get obj MafParams_def baseObject:false
         if (isKindOf obj BoneGeometry) or (obj.boneEnable) then (

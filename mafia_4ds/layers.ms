@@ -1,15 +1,13 @@
 struct MafiaTools_Layers (
-    fn GetLayer layerName = (
+    fn AddTo obj layerName = (        
         local layer = LayerManager.getLayerFromName layerName
         if layer == undefined then (
             layer = LayerManager.newLayerFromName layerName
         )
-        layer
-    ),
-
-    fn AddTo obj layerName = (
-        layer = GetLayer layerName
-        layer.addnode obj
+        
+        if layer != undefined then (
+            layer.addnode obj
+        )
     ),
 
     fn Hide arr = (
@@ -25,6 +23,18 @@ struct MafiaTools_Layers (
             local layer = LayerManager.getLayerFromName layerName
             if layer != undefined then layer.ishidden = true
         )
-    )
+    ),
+    
+    fn Clear = (
+		local count = LayerManager.count 
+		local layerNames = for i = 1 to count-1 collect (
+			local layer = LayerManager.getLayer i
+			layer.name
+		)
+		
+		for lname in layerNames do (
+			LayerManager.deleteLayerByName lname
+		)
+	)
 )
 MafiaTools_Layers = MafiaTools_Layers()
