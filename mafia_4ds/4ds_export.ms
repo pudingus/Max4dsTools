@@ -332,7 +332,7 @@ struct MafiaTools_4dsExport (
             local mnode = TNode()
 
             local nodeType = nodeTypes[obj.inode.handle]     
-			format "nodeType: %\n" nodeType
+			--format "nodeType: %\n" nodeType
             case nodeType of (
                 #portal: (
                     if obj.parent != undefined then (
@@ -370,7 +370,7 @@ struct MafiaTools_4dsExport (
                 )
             )
 
-            format "obj:%  type:% \n" obj.name nodeType
+            --format "obj:%  type:% \n" obj.name nodeType
 
             if nodeType == #bone or nodeType == #rootBone then (
                 append boneNodes obj
@@ -478,6 +478,23 @@ struct MafiaTools_4dsExport (
         )
         node1.parent == node2
     ),
+    
+    fn directlyRelated node1 node2 = (
+        node1.parent == node2 or node2.parent == node1
+    ),
+    
+    VertBone = (
+        struct VertBone (
+            boneid,
+            weight
+        )
+    ),
+    
+    fn CompareVertBones v1 v2 = (
+        if v1.weight > v2.weight then -1
+        else if v2.weight > v1.weight then 1
+        else 0
+    ),
 
     fn ExtractWeights mnode = (
 
@@ -509,47 +526,39 @@ struct MafiaTools_4dsExport (
                 local weight = 0.0
                 local boneid = 9999
                 if count > 0 then (
-
                     if count == 1 then (
                         weight = skinOps.GetVertexWeight bskin i 1
                         local id = skinOps.GetVertexWeightBoneID bskin i 1
-
                         boneid = skinBoneIds[id] - 1
                     )
                     else (
-                        local id1 = skinOps.GetVertexWeightBoneID bskin i 1
-                        local id2 = skinOps.GetVertexWeightBoneID bskin i 2
-
-                        local globBoneId1 = skinBoneIds[id1]
-                        local globBoneId2 = skinBoneIds[id2]
-
-                        local boneNode1 = boneNodes[globBoneId1]
-                        local boneNode2 = boneNodes[globBoneId2]
-
-                        local weight1 = skinOps.GetVertexWeight bskin i 1
-                        local weight2 = skinOps.GetVertexWeight bskin i 2
-
-                        if isNodeDescendantOf boneNode1 boneNode2 then (
-                            useId = 1
-                            weight = weight1
-                            boneid = globBoneId1 - 1
+                        local vertBones = #()
+                                        
+                        for n = 1 to count do (
+                            local w = skinOps.GetVertexWeight bskin i n
+                            local id = skinOps.GetVertexWeightBoneID bskin i n
+                            local globId = skinBoneIds[id]    
+                            local vb = VertBone boneid:globId weight:w
+                            append vertBones vb            
                         )
-                        else if isNodeDescendantOf boneNode2 boneNode1 then (
-                            useId = 2
-                            weight = weight2
-                            boneid = globBoneId2 - 1
+                        qsort vertBones CompareVertBones   
+                        
+                        local weight1 = vertBones[1].weight
+                        local weight2 = vertBones[2].weight                                                
+                        local boneid1 = vertBones[1].boneid
+                        local boneid2 = vertBones[2].boneid
+                        
+                        local sum = weight1 + weight2
+                        weight = weight1 / sum
+                        boneid = boneid1 - 1                        
+                        
+                        local boneNode1 = boneNodes[boneid1]
+                        local boneNode2 = boneNodes[boneid2]
+                        if isNodeDescendantOf boneNode2 boneNode1 then (
+                            weight = weight2 / sum
+                            boneid = boneid2 - 1
                         )
-                        else (
-                            if weight2 > weight1 then (
-                                weight = weight2
-                                boneid = globBoneId2 - 1
-                            )
-                            else (
-                                weight = weight1
-                                boneid = globBoneId1 - 1
-                            )
-                        )
-                    )
+                    )                    
                 )
 
                 if boneid == 0 then boneid = 9999
@@ -761,23 +770,7 @@ struct MafiaTools_4dsExport (
         for fixFace in fixFaces do (
             setFace mesh fixFace[1] fixFace[2]
         )
-
-        -- format "(split) uvs count % \n" uvs.count
-        -- setNumTVerts mesh uvs.count
-        -- for i = 1 to uvs.count do (
-        --  local uv = uvs[i]
-        --  if uv == undefined then uv = [0,0,0]
-
-        --  setTVert mesh i uv
-        -- )
-
-        --probably not needed:
-    --   buildTVFaces mesh
-    --   for i = 1 to mesh.numfaces do (
-    --      setTVFace mesh i (getFace mesh i)
-    --   )
-
-
+        
         #(mesh, normals, weights, uvs)
     ),
 
@@ -1017,13 +1010,11 @@ struct MafiaTools_4dsExport (
             else (
                 in coordsys parent
                 (
-                    mobj.offset = mnode.baseNode.pos  * unitscl
+                    mobj.offset = mnode.baseNode.pos * unitscl
                     mobj.scl = mnode.baseNode.scale
                     mobj.rot = mnode.baseNode.rotation
                 )
             )
-            
-
 
             case mnode.type of (
                 #mesh: (
