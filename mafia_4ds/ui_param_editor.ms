@@ -144,7 +144,8 @@ global MafParamEditor
 
     rollout LodRoll ""
     (
-        spinner lodDist "LOD distance:" align:#left fieldwidth:50 range:[0,9999,10] scale:1
+        label lblLodDist "Fadeout distance (meters):" align:#left
+        spinner lodDist align:#left fieldwidth:70 range:[-9000000000,9000000000,10] scale:1 type:#float
 
         on lodDist changed val do (
             gp.lodDist = val
@@ -153,8 +154,8 @@ global MafParamEditor
 
     rollout PortalRoll ""
     (
-        spinner nearRange "Near range:" range:[-900000,900000,0] align:#left fieldwidth:50
-        spinner farRange "Far range:  " range:[-900000,900000,0] fieldwidth:50 align:#left
+        spinner nearRange "Near range:" range:[-9000000000,9000000000,0] align:#left fieldwidth:50 type:#float
+        spinner farRange "Far range:  " range:[-9000000000,9000000000,0] align:#left fieldwidth:50 type:#float
 
         on nearRange changed val do (
             gp.nearRange = val

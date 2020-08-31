@@ -5,8 +5,8 @@ struct MafiaTools_4dsImport (
     Layers = MafiaTools_Layers,
     parser = MafiaTools_4dsParser,
     -----------
-
-    godmat,
+    
+    allMats = #(),
 
     fn GetMafParams nnode = (
         custAttributes.add nnode MafParams_def baseObject:false
@@ -33,17 +33,46 @@ struct MafiaTools_4dsImport (
             
                 local lodNode = mesh mesh:msh
                 lodNode.wirecolor = color 0 0 0
-
+                
+                
+                local usedMats = #{}
+                
                 for fcgrp in mlod.facegroups do (
-                    local matId = fcgrp.matId
-                    if godmat != undefined then (
-                        if matId == 0 then matId = godmat.numsubs
-                    )
-
-                    for faceId in fcgrp.faceIds do (
-                        setFaceMatID lodNode faceId matId
+                    if fcgrp.matId != 0 then (
+                        usedMats[fcgrp.matId] = true                        
                     )
                 )
+                
+                local multimat = multimaterial numsubs:(usedMats.numberSet + 1)
+                multimat.name = name
+                multimat[multimat.numsubs] = undefined
+                local index = 1
+                local indices = #()
+                
+                for matId in usedMats do (
+                    multimat[index] = allMats[matId]
+                    indices[matId] = index
+                    index += 1
+                )               
+                
+                
+                lodnode.material = multimat
+                
+                
+                for fcgrp in mlod.facegroups do (
+                    local matId
+                    if fcgrp.matid == 0 then (
+                        matId = multimat.numsubs
+                    )
+                    else (
+                        matId = indices[fcgrp.matId]
+                    )
+                    
+                    for faceId in fcgrp.faceIds do (
+                        setFaceMatID lodnode faceId matId
+                    )
+                )
+                
 
                 if lodId > 0 then (
                     lodNode.name = "$lod" + (lodId as string) + "__" + name
@@ -59,10 +88,7 @@ struct MafiaTools_4dsImport (
                 gp.objectType = "Lod"
                 gp.lodDist = mlod.distance
 
-                lodNode.material = godmat
-
                 append nodes lodNode
-
 
                 local cmod = CachedNormals()
                 cmod.normals = mlod.normals
@@ -152,14 +178,30 @@ struct MafiaTools_4dsImport (
         nnode.wirecolor = color 248 128 0
         nnode.boxmode = true
         nnode.renderable = false
+        
+        local usedMats = #{}
+        
+        for mglow in mglows do (            
+            usedMats[mglow.matId] = true
+        )
+        
+        local multimat = multimaterial numsubs:(usedMats.numberSet + 1)
+        multimat.name = "glow"
+        multimat[multimat.numsubs] = undefined
+        local index = 1
+        local indices = #()
+        
+        for matId in usedMats do (
+            multimat[index] = allMats[matId]
+            indices[matId] = index
+            index += 1
+        )
 
-        nnode.material = godmat
+        nnode.material = multimat
 
-        for glow in mglows do (
-            append nnode.positions glow.position
-            local matId = glow.materialId
-            local mat = godmat[matId]
-            append nnode.materials mat
+        for mglow in mglows do (
+            append nnode.positions mglow.position
+            append nnode.materials allMats[mglow.matId]
         )
 
         nnode
@@ -261,15 +303,13 @@ struct MafiaTools_4dsImport (
         nnode
     ),
 
-
     fn CreateMaterials mmats filename = (
         if mmats.count > 0 then (
             pngio.ipngio.setType #gray8
             pngio.ipngio.setInterlaced false
             pngio.ipngio.setAlpha false
-            godmat = multimaterial numsubs:(mmats.count+1)
-            godmat[mmats.count+1] = undefined
-            godmat.name = filename + " Materials"
+           
+            allmats = #()
 
             for m = 1 to mmats.count do (
                 local mmat = mmats[m]
@@ -329,8 +369,8 @@ struct MafiaTools_4dsImport (
                     mat.animFrames = mmat.animFrames
                     mat.animPeriod = mmat.animPeriod
                 )
-
-                godmat[m] = mat
+                
+                append allMats mat
             )
         )
     ),

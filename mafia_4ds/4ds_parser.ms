@@ -141,7 +141,7 @@ struct MafiaTools_4dsParser (
     TGlow = (
         struct TGlow (
             position,  --screen offset
-            materialId
+            matId
         )
     ),
 
@@ -547,7 +547,7 @@ struct MafiaTools_4dsParser (
         for i = 1 to numGlows do (
             local glow = TGlow()
             glow.position = ReadFloat f
-            glow.materialId = ReadShort f #unsigned
+            glow.matId = ReadShort f #unsigned
 
             append glows glow
         )
