@@ -39,10 +39,12 @@ struct MafiaTools_Util (
 
     fn TransferWeight skinMod vertid oldId newId = (
         local weight = GetBoneVertexWeight skinMod vertid oldid
+        
+        local existingWeight = GetBoneVertexWeight skinMod vertid newId
 
         if weight != undefined then (
             skinOps.SetVertexWeights skinMod vertid oldid 0.0
-            skinOps.SetVertexWeights skinMod vertid newid weight
+            skinOps.SetVertexWeights skinMod vertid newid (weight + existingWeight)
         )
     ),
     ------------------

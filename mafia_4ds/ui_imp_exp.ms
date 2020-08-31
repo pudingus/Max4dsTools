@@ -176,7 +176,7 @@
     )
 
     if not destroyed then (
-        local pos = MafiaTools_ImpExpSettings.position
+        local pos = ::MafiaTools_ImpExpSettings.position
         local style = #(#style_titlebar, #style_border, #style_sysmenu)
         local w = 220
         local h = 310
