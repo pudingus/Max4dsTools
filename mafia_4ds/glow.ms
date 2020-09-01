@@ -1,9 +1,7 @@
-plugin geometry M4dsGlow
+plugin SimpleObject M4dsGlow
 name:"4ds Glow"
 classID:#(0x4ec442f4, 0x6cf47395)
 category:"4dsTools"
-extends:Sphere
-replaceUI:true
 (
     parameters pblock
     (
@@ -13,10 +11,6 @@ replaceUI:true
     parameters pblock2 rollout:GlowViewportRoll
     (
         viewportSize type:#float default:1 ui:spnSize
-        
-        on viewportSize set val do (
-            delegate.radius = val
-        )
     )
     local savedSel = 0
 
@@ -185,6 +179,15 @@ replaceUI:true
     rollout GlowViewportRoll "Viewport" (
         spinner spnSize "Viewport size: " type:#float range:[0,90000,0]       
     )
+    
+    on buildMesh do (
+        local size = viewportSize/2
+        local verts = #()
+        append verts [size,size,size]
+        append verts [-size,-size,-size]
+        setMesh mesh verts:verts
+    )
+    
     tool create
     (
         on mousePoint click do
@@ -200,10 +203,5 @@ replaceUI:true
             $.material = multi
             nodeTM.translation = gridPoint;#stop            
         )
-    )
-
-    on create do (
-        delegate.radius = viewportSize
-        delegate.segs = 4
     )
 )
