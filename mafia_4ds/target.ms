@@ -9,11 +9,19 @@ replaceUI:true
     (
         nodes type:#nodeTab tabSizeVariable:true
     )
+    parameters pblock2 rollout:TargetViewportRoll
+    (
+        viewportSize type:#float default:1 ui:spnSize
+        
+        on viewportSize set val do (
+            delegate.size = val
+        )
+    )
     rollout TargetRoll "Target Parameters"
     (
         pickbutton pbAdd "Add" across:2 align:#left width:50
         button btnRemove "Remove" align:#right width:70
-        listbox lbNodes "Targeting nodes" height:5
+        listbox lbNodes "Targeting nodes" height:6
 
         on pbAdd picked val do (
             append nodes val
@@ -45,6 +53,10 @@ replaceUI:true
         )
 
     )
+    rollout TargetViewportRoll "Viewport"
+    (
+        spinner spnSize "Viewport size: " type:#float range:[0,90000,0]
+    )
     tool create
     (
         on mousePoint click do
@@ -55,7 +67,7 @@ replaceUI:true
     )
 
     on create do (
-        delegate.size = 0.1
+        delegate.size = viewportSize
         delegate.centermarker = true
         delegate.axistripod  = false
         delegate.cross = false

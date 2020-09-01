@@ -173,11 +173,13 @@ struct MafiaTools_4dsImport (
         gp.rotMode = mbillboard.rotMode + 1
     ),
 
-    fn CreateGlow mglows mobj = (
+    fn CreateGlow mglows mobj unitscl = (
         local nnode = M4dsGlow()
         nnode.wirecolor = color 248 128 0
         nnode.boxmode = true
         nnode.renderable = false
+        
+        nnode.viewportSize = 0.1 * unitscl
         
         local usedMats = #{}
         
@@ -186,7 +188,7 @@ struct MafiaTools_4dsImport (
         )
         
         local multimat = multimaterial numsubs:(usedMats.numberSet + 1)
-        multimat.name = "glow"
+        multimat.name = mobj.name
         multimat[multimat.numsubs] = undefined
         local index = 1
         local indices = #()
@@ -201,7 +203,7 @@ struct MafiaTools_4dsImport (
 
         for mglow in mglows do (
             append nnode.positions mglow.position
-            append nnode.materials allMats[mglow.matId]
+            append nnode.matIds indices[mglow.matId]
         )
 
         nnode
@@ -280,9 +282,10 @@ struct MafiaTools_4dsImport (
     ),
 
     -- returns Node
-    fn CreateTarget mtarget mobj = (
+    fn CreateTarget mtarget mobj unitscl = (
         local nnode = M4dsTarget()
         nnode.wirecolor = color 28 122 210
+        nnode.viewportSize = 0.1 * unitscl
         hide nnode
 
         nnode
@@ -531,7 +534,7 @@ struct MafiaTools_4dsImport (
 					)
 					6: ( --glow
 						local mglows = mobj.definitions[1]
-						nnode = CreateGlow mglows mobj
+						nnode = CreateGlow mglows mobj unitscl
 						Layers.AddTo nnode "Glows"
 					)
 					8: (  --mirror
@@ -551,7 +554,7 @@ struct MafiaTools_4dsImport (
 				)
 				7: ( --target
 					local mtarget = mobj.definitions[1]
-					nnode = CreateTarget mtarget mobj
+					nnode = CreateTarget mtarget mobj unitscl
 					
 					append buffer.targetBuffer (TObjPair mdefs:mtarget nodes:nnode)
 				)
