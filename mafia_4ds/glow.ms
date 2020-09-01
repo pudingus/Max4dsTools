@@ -12,7 +12,7 @@ category:"4dsTools"
     (
         viewportSize type:#float default:1 ui:spnSize
     )
-    local savedSel = 0
+    local savedSel
 
     rollout GlowRoll "Glow Parameters"
     (
@@ -162,6 +162,7 @@ category:"4dsTools"
                 append items ("Glow " + (i as string))
             )
             lstGlows.items = items
+            if savedSel == undefined then savedSel = items.count
 
             lstGlows_select savedSel
             

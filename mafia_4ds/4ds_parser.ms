@@ -680,6 +680,7 @@ struct MafiaTools_4dsParser (
     fn WriteDummy = (),
     fn WriteTarget = (),
     fn WriteBone = (),
+    fn WriteGlow = (),
 
 
     fn WriteText f txt = (
@@ -822,11 +823,14 @@ struct MafiaTools_4dsParser (
                     WriteMesh f mobj.definitions[1]
                     WriteBillboard f mobj.definitions[2]
                 )
+                6: WriteGlow f mobj.definitions[1]
+                default: throw "invalid visual type"
             )
             5: WriteSector f mobj.definitions[1]
             6: WriteDummy f mobj.definitions[1]
             7: WriteTarget f mobj.definitions[1]
             10: WriteBone f mobj.definitions[1]
+            default: throw "invalid object type"
         )
     ),
 
@@ -983,6 +987,15 @@ struct MafiaTools_4dsParser (
 
         WriteLong f mbone.boneId
     ),
+    
+    fn WriteGlow f mglows = (
+        WriteByte f mglows.count
+        for mglow in mglows do (
+            WriteFloat f mglow.position
+            WriteShort f mglow.matId
+        )
+    ),
+    
 
     fn mtypeof mobj = (
         case mobj.objectType of (

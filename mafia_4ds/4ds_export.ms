@@ -19,7 +19,7 @@ struct MafiaTools_4dsExport (
     TMorphVertex = p.TMorphVertex,
     TMorphTarget = p.TMorphTarget,
     TBillboard = p.TBillboard,
-    --TGlow = p.TGlow,
+    TGlow = p.TGlow,
     --TMirror = p.TMirror,
     TDummy = p.TDummy,
     TSector = p.TSector,
@@ -965,6 +965,21 @@ struct MafiaTools_4dsExport (
 
         mtarget
     ),
+    
+    fn ExtractGlow mnode = (
+        local mglows = #()
+        local basenode = mnode.basenode
+        local count = basenode.matids.count
+        for i = 1 to count do (            
+            local matId = basenode.matids[i]
+            local pos = basenode.positions[i]
+            local mglow = TGlow()
+            mglow.matId = GetMafiaMatId basenode.mat matId
+            mglow.position = pos
+            append mglows mglow
+        )
+        mglows
+    ),
 
     fn ExtractObjects mnodeSet unitscl = (
         local mobjects = #()
@@ -1058,6 +1073,11 @@ struct MafiaTools_4dsExport (
                 #target: (
                     mobj.objectType = 7
                     mobj.definitions[1] = ExtractTarget mnode mnodeSet
+                )
+                #glow: (
+                    mobj.objectType = 1
+                    mobj.visualType = 6
+                    mobj.definitions[1] = ExtractGlow mnode
                 )
                 default: (
                     mobj.objectType = 6
