@@ -973,10 +973,14 @@ struct MafiaTools_4dsExport (
         for i = 1 to count do (            
             local matId = basenode.matids[i]
             local pos = basenode.positions[i]
-            local mglow = TGlow()
-            mglow.matId = GetMafiaMatId basenode.mat matId
-            mglow.position = pos
-            append mglows mglow
+            
+            local mafMatId = GetMafiaMatId basenode.mat matId
+            
+            if mafMatId != 0 then (
+                local mglow = TGlow matId:mafMatId position:pos
+                append mglows mglow
+            )
+
         )
         mglows
     ),
