@@ -23,20 +23,17 @@ category:"4dsTools"
 
         imgTag imgMat "Material preview:" width:48 height:48 opacity:1.0 transparent:white align:#left across:2
         dropdownlist ddlMats  width:80 align:#right enabled:false 
-        spinner spPosition "Offset" type:#float align:#left range:[-900000,900000,0] width:70 pos:[70,205] enabled:false
+        spinner spnPosition "Offset" type:#float align:#left range:[-900000,900000,0] width:70 pos:[70,205] enabled:false
 
         local lstGlows_select
 
         on btnAdd pressed do (
             local items = lstGlows.items
-
             append items ("Glow " + ((items.count+1) as string))
-
             append matIds 0
             append positions 0.0
 
-            lstGlows.items = items            
-
+            lstGlows.items = items 
             lstGlows_select items.count
         )
 
@@ -46,7 +43,6 @@ category:"4dsTools"
                 local items = lstGlows.items
                 deleteItem items sel
                 deleteItem matIds sel
-                --deleteItem materials sel
                 deleteItem positions sel
 
                 lstGlows.items = items
@@ -54,104 +50,91 @@ category:"4dsTools"
                 if sel > items.count then lstGlows_select items.count
                 else lstGlows_select sel
             )
-
         )
 
-        fn lstGlows_select sel = (
-            lstGlows.selection = sel
-            if sel != 0 and sel <= lstGlows.items.count then (
-                local items = #()
-                
-                if $.mat != undefined then (
-                    if classof $.mat == multimaterial then (
-                        for i = 1 to $.mat.numsubs do (
-                            local mat = $.mat[i]
-                            local name
-                            if mat == undefined then name = "undefined"
-                            else name = mat.name
-                                                
-                            --append items ((i as string) + ": " + name)
-                            append items name
+        local itemIds = #()
+        
+        fn BuildMatItems mat = (
+            local items = #()
+            itemIds = #()
+            if mat != undefined then (
+                if classof mat == multimaterial then (
+                    for i = 1 to mat.numsubs do (
+                        local submat = mat[i]
+                        if submat != undefined then (
+                            append items submat.name
+                            append itemIds i
                         )
                     )
-                    else append items $.mat.name
+                )
+                else (
+                    append items mat.name
+                    append itemIds i
+                )
+            )
+            
+            items
+        )
+        
+        fn GetPreviewBitmap mat = (
+            local bmp
+            if mat != undefined then (
+                local map
+                local class = classOf mat
+                if class == MafMat4 or class == Standard then (
+                    map = mat.diffuseMap
+                )
+                else if class == PhysicalMaterial then (
+                    map = mat.base_color_map
                 )
                 
-                ddlMats.items = items  
-            
+                if map != undefined then (
+                    bmp = map.bitmap
+                )                
+            )
+        )
+        
+        fn lstGlows_select sel = (
+            lstGlows.selection = sel
+            if sel != 0 and sel <= lstGlows.items.count then (                   
+                
+                ddlMats.items = BuildMatItems $.mat
+                ddlMats.selection = findItem itemIds matIds[sel]                
+                ddlMats.tooltip = if ddlMats.selected == undefined then "" else ddlMats.selected                
+
+                spnPosition.value = positions[sel]                
+                
                 ddlMats.enabled = true
-                spPosition.enabled = true
+                spnPosition.enabled = true
 
-                local pos = positions[sel]
-				local mat
-				if $.mat != undefined then mat = $.mat[matIds[sel]]
-
-                if pos != undefined then (
-                    spPosition.value = positions[sel]
-                )
-
-                ddlMats.selection = matIds[sel]
-
-				imgMat.bitmap = undefined
-			
-				if mat != undefined then (
-					local map
-					local class = classOf mat
-					if class == MafMat4 or class == Standard then (
-						map = mat.diffuseMap
-					)
-					else if class == PhysicalMaterial then (
-						map = mat.base_color_map
-					)
-					
-					if map != undefined then (
-						imgMat.bitmap = map.bitmap
-					)                
-				)
+                          
+                local mat
+                if $.mat != undefined then mat = $.mat[matIds[sel]]
+                imgMat.bitmap = GetPreviewBitmap mat
             )
             else (
                 ddlMats.enabled = false
-                spPosition.enabled = false
+                spnPosition.enabled = false
                 imgMat.bitmap = undefined
             )
         )
 
         on lstGlows selected sel do lstGlows_select sel
 
-        on spPosition changed val do (
+        on spnPosition changed val do (
             local sel = lstGlows.selection
             if sel != 0 then (
                 positions[sel] = val
             )
         )
         
-        on ddlMats selected sel do (
-            
+        on ddlMats selected sel do (            
             ddlMats.tooltip = ddlMats.selected
-            print "selected"
             
-            local gsel = lstGlows.selection
-            
-            matIds[gsel] = sel
-            
-            local mat = $.mat[sel]
-            
-			imgMat.bitmap = undefined
-			
-            if mat != undefined then (
-				local map
-				local class = classOf mat
-				if class == MafMat4 or class == Standard then (
-					map = mat.diffuseMap
-				)
-				else if class == PhysicalMaterial then (
-					map = mat.base_color_map
-				)
-				
-				if map != undefined then (
-					imgMat.bitmap = map.bitmap
-				)                
-            )
+            local gsel = lstGlows.selection            
+            matIds[gsel] = itemIds[sel]            
+            local mat = $.mat[sel]            
+            imgMat.bitmap = GetPreviewBitmap mat  
         )
 
         on GlowRoll open do (
@@ -165,16 +148,10 @@ category:"4dsTools"
             if savedSel == undefined then savedSel = items.count
 
             lstGlows_select savedSel
-            
-            
-            local items = #()
-            print "open"
-            print selection.count
         )
 
         on GlowRoll close do (
             savedSel = lstGlows.selection
-            --imgMat.bitmap = undefined
         )
     )
     rollout GlowViewportRoll "Viewport" (
