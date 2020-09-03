@@ -1,5 +1,5 @@
-plugin material MafMat4
-name:"4ds Material v4"
+plugin material M4dsMat
+name:"4ds Material (p)"
 classID:#(0x61cbf531, 0x2197994)
 extends:Standard
 replaceUI:true
@@ -113,6 +113,20 @@ remap:#(#(#isAnimatedM,#useMips,#useColoring,#useColorKey,#useAddBlend),#(#anima
         )
         newbt
     )
+    
+    fn SavePng bt = (
+        local png = pngio.ipngio
+        local pngType = png.getType()
+        local pngInterlaced = png.getInterlaced()
+        local pngAlpha = png.getAlpha()
+        png.setType #gray8
+        png.setInterlaced false
+        png.setAlpha false
+        save bt
+        png.setType pngType
+        png.setInterlaced pngInterlaced
+        png.setAlpha pngAlpha
+    )
 
     fn GeneratePreview map = (
         local result
@@ -124,7 +138,7 @@ remap:#(#(#isAnimatedM,#useMips,#useColoring,#useColorKey,#useAddBlend),#(#anima
                 local bt = KeyBitmap map.bitmap
                 local filename = tempDir + (getFilenameFile map.filename) + "_key.png"
                 bt.filename = filename
-                save bt
+                SavePng bt
                 close bt
                 free bt
 
@@ -165,7 +179,7 @@ remap:#(#(#isAnimatedM,#useMips,#useColoring,#useColorKey,#useAddBlend),#(#anima
 
 
 
-    rollout params "4DS Params"
+    rollout params "4ds Material Parameters"
     (
         colorpicker ambient "Ambient" across:2
         colorpicker emission "Emission"

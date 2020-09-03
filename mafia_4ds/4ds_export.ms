@@ -114,7 +114,7 @@ struct MafiaTools_4dsExport (
     mat_map = #(),
 
     fn ConvertStandardMaterial mat = (
-        local cm = MafMat4()
+        local cm = M4dsMat()
 
         cm.diffuseMapEnable = mat.diffuseMapEnable
         cm.envMapEnable = mat.reflectionMapEnable
@@ -139,7 +139,7 @@ struct MafiaTools_4dsExport (
     ),
 
     fn ConvertPhysicalMaterial mat = (
-        local cm = MafMat4()
+        local cm = M4dsMat()
 
         cm.diffuse = mat.base_color
         cm.emission = mat.emit_color
@@ -185,13 +185,13 @@ struct MafiaTools_4dsExport (
             if isKindOf mat MultiMaterial then (
                 for submat in mat.materialList where submat != undefined do (
 
-                    if util.containsItem #(Standard, Physical_Material, MafMat4) (classOf subMat) then (
+                    if util.containsItem #(Standard, Physical_Material, M4dsMat) (classOf subMat) then (
                         AddToMafiaMaterials submat
                     )
                 )
             )
             else (
-                if util.containsItem #(Standard, Physical_Material, MafMat4) (classOf mat) then (
+                if util.containsItem #(Standard, Physical_Material, M4dsMat) (classOf mat) then (
                     AddToMafiaMaterials mat
                 )
             )
@@ -215,7 +215,7 @@ struct MafiaTools_4dsExport (
                 mat = ConvertPhysicalMaterial mat
             )
 
-            if classof mat == MafMat4 then  (
+            if classof mat == M4dsMat then  (
                 local mmat = TMaterial()
 
                 local flags = 0
@@ -1111,8 +1111,7 @@ struct MafiaTools_4dsExport (
         local m4ds = p.T4ds()
         m4ds.materials = ExtractMaterials()
         local mnodeSet = CollectNodes()
-        local mobjects = ExtractObjects mnodeSet unitscl
-        m4ds.objects = mobjects
+        m4ds.objects = ExtractObjects mnodeSet unitscl
 
         local f = fopen file "wb"
         p.Write4ds f m4ds

@@ -2,11 +2,11 @@
     global MafiaTools_version = "v0.5.0-preview"
     global MafiaTools_scriptsPath = getFilenamePath (getThisScriptFilename())
 
-    local set_heapsize = 64 * 1024 * 1024  --64 MiB
-    if heapsize < set_heapsize then heapsize = set_heapsize
+    --local set_heapsize = 64 * 1024 * 1024  --64 MiB
+   -- if heapsize < set_heapsize then heapsize = set_heapsize
 
     --scriptedPlugins
-    filein "MafMat4.ms"
+    filein "material.ms"
     filein "MafParams.ms"
     filein "cached_normals.ms"
     filein "target.ms"

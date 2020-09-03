@@ -12,7 +12,7 @@
         position,
         editNorm,
         cachedNorm,
-        unitsSel = 2
+        unitsSel = 4
     )
     global MafiaTools_ImpExpSettings
     if MafiaTools_ImpExpSettings == undefined then MafiaTools_ImpExpSettings = settings()

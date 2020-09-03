@@ -81,7 +81,7 @@ category:"4dsTools"
             if mat != undefined then (
                 local map
                 local class = classOf mat
-                if class == MafMat4 or class == Standard then (
+                if class == M4dsMat or class == Standard then (
                     map = mat.diffuseMap
                 )
                 else if class == PhysicalMaterial then (

@@ -15,7 +15,7 @@ global MafParamEditor
 
     local visible = false
 
-    rollout MafParamEditor "4DS Parameters"
+    rollout MafParamEditor "4ds Parameters"
     (
         timer timerDeselected interval:50 active:false
 
@@ -480,7 +480,7 @@ global MafParamEditor
     )
 
 
-    local title = "4DS Params"
+    local title = "4ds Object Parameters"
 
     if floater != undefined then (
         if floater.open then (

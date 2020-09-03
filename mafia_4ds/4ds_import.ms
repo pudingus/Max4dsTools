@@ -307,16 +307,12 @@ struct MafiaTools_4dsImport (
     ),
 
     fn CreateMaterials mmats filename = (
-        if mmats.count > 0 then (
-            pngio.ipngio.setType #gray8
-            pngio.ipngio.setInterlaced false
-            pngio.ipngio.setAlpha false
-           
+        if mmats.count > 0 then (           
             allmats = #()
 
             for m = 1 to mmats.count do (
                 local mmat = mmats[m]
-                local mat = MafMat4()
+                local mat = M4dsMat()
                 mat.name = "4dsMat"+(m as string)
 
                 local flags = mmat.flags
