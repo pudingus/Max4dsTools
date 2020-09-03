@@ -4,7 +4,7 @@
         DestroyDialog ::ImpExp
         destroyed = true
     )
-    
+
     struct settings (
         importPath,
         exportPath,
@@ -19,19 +19,19 @@
 
     rollout ImpExp "4ds Import/Export" (
         local unitItems = #(
-			"Milimeters",
-			"Centimeters",
-			"Decimeters",
-			"Meters",
-			"Kilometers",
-			"Inches",
-			"Feet",
-			"Yards",
-			"Miles"			
+            "Milimeters",
+            "Centimeters",
+            "Decimeters",
+            "Meters",
+            "Kilometers",
+            "Inches",
+            "Feet",
+            "Yards",
+            "Miles"
         )
-        
+
         local unitMeterRatios = #(     --  n * (1/ratio) for import, n * ratio for export
-            0.001,     
+            0.001,
             0.01,     --1cm = 0.01m
             0.1,
             1.0,
@@ -41,17 +41,17 @@
             0.9144,
             1609.344
         )
-        
+
         local settings = ::MafiaTools_ImpExpSettings
-        
+
         label lblUnits "Units:" offset:[0,3] align:#left across:2
         dropdownList ddlUnits    align:#right width:160  items:unitItems height:11 selection:settings.unitsSel
-        
+
         group "Import" (
             label       lblUnitSclI     "Scale factor:" align:#left across:2
             label       lblSclI         "" align:#right
-            button		btnImport		"Import..." align:#left across:2 width:70
-            button      btnOpen			"Open..." align:#right width:70
+            button      btnImport       "Import..." align:#left across:2 width:70
+            button      btnOpen         "Open..." align:#right width:70
         )
 
         group "Export" (
@@ -66,20 +66,20 @@
         )
         timer       clock   interval:5000 active:false
         label       labelDone         "" offset:[0,10]
-        
+
         fn ddlUnits_select sel = (
             lblSclI.text = (1/unitMeterRatios[sel]) as string
             lblSclE.text = unitMeterRatios[sel] as string
         )
-        
-        on ddlUnits selected sel do ddlUnits_select sel    
-        
+
+        on ddlUnits selected sel do ddlUnits_select sel
+
         fn StartImport del:false = (
             local proceed = true
             if del then (
                 proceed = CheckForSave()
             )
-    
+
             if proceed then (
                 local prev_name = MafiaTools_ImpExpSettings.importPath
                 if prev_name == undefined then prev_name = ""
@@ -93,12 +93,12 @@
                     if del then (
                         delete $*
                         layers.Clear()
-                        gc()                    
+                        gc()
                     )
                     local sel = ddlUnits.selection
                     local unitscl = 1 / unitMeterRatios[sel]
-                    local dur = imp.Import4ds file unitscl  
-                    
+                    local dur = imp.Import4ds file unitscl
+
                     labelDone.text = "Done in " + (dur as string) + " seconds"
                     clock.active = true
                 )
@@ -144,7 +144,7 @@
 
         on ImpExp open do (
             local settings = ::MafiaTools_ImpExpSettings
-            
+
             if settings.exportPath != undefined then (
                 edtNamePath.text = settings.exportPath
             )
@@ -156,7 +156,7 @@
             )
             if settings.cachedNorm != undefined then (
                 cbCachedNorm.checked = settings.cachedNorm
-            )            
+            )
             if settings.editNorm != undefined then (
                 cbEditNorm.checked = settings.editNorm
             )
