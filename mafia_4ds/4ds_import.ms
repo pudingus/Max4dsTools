@@ -5,7 +5,7 @@ struct MafiaTools_4dsImport (
     Layers = MafiaTools_Layers,
     parser = MafiaTools_4dsParser,
     -----------
-    
+
     allMats = #(),
 
     fn GetMafParams nnode = (
@@ -15,7 +15,7 @@ struct MafiaTools_4dsImport (
 
 
     --returns array of nodes
-    fn CreateMesh mmesh name unitscl = (
+    fn CreateMesh mmesh name unitscale = (
         local nodes = #()
 
         if mmesh.lods.count == 0 then (
@@ -25,40 +25,56 @@ struct MafiaTools_4dsImport (
             local lodId = 0
             for mlod in mmesh.lods do (
                 local msh = mlod.mesh
-                
+
                 for i = 1 to msh.numverts do (
                     local vert = getVert msh i
-                    setVert msh i (vert * unitscl)
-                )               
-            
+                    setVert msh i (vert * unitscale)
+                )
+
                 local lodNode = mesh mesh:msh
                 lodNode.wirecolor = color 0 0 0
-                
-                
+
+
                 local usedMats = #{}
-                
+
                 for fcgrp in mlod.facegroups do (
                     if fcgrp.matId != 0 then (
-                        usedMats[fcgrp.matId] = true                        
+                        usedMats[fcgrp.matId] = true
                     )
                 )
-                
-                local multimat = multimaterial numsubs:(usedMats.numberSet + 1)
-                multimat.name = name
-                multimat[multimat.numsubs] = undefined
-                local index = 1
+
+                usedMats = usedMats as array
+
                 local indices = #()
-                
-                for matId in usedMats do (
-                    multimat[index] = allMats[matId]
-                    indices[matId] = index
-                    index += 1
-                )               
-                
-                
-                lodnode.material = multimat
-                
-                
+
+                if usedMats.count == 1 then (
+                    local matId = usedMats[1]
+                    if matId != 0 then (
+                        indices[matId] = 1
+                        lodnode.material = allMats[matId]
+                    )
+                )
+                else (
+                    local multimat = multimaterial numsubs:(usedMats.count + 1)
+                    multimat.name = name
+                    multimat[multimat.numsubs] = undefined
+
+                    local i = 1
+                    for matId in usedMats do (
+                        multimat[i] = allMats[matId]
+                        i += 1
+                    )
+
+                    local i = 1
+                    for matId in usedMats do (
+                        indices[matId] = i
+                        i += 1
+                    )
+
+
+                    lodnode.material = multimat
+                )
+
                 for fcgrp in mlod.facegroups do (
                     local matId
                     if fcgrp.matid == 0 then (
@@ -67,12 +83,12 @@ struct MafiaTools_4dsImport (
                     else (
                         matId = indices[fcgrp.matId]
                     )
-                    
+
                     for faceId in fcgrp.faceIds do (
                         setFaceMatID lodnode faceId matId
                     )
                 )
-                
+
 
                 if lodId > 0 then (
                     lodNode.name = "$lod" + (lodId as string) + "__" + name
@@ -106,7 +122,7 @@ struct MafiaTools_4dsImport (
     ),
 
 
-    fn CreateMorph mmorph mmesh nnode unitscl = (
+    fn CreateMorph mmorph mmesh nnode unitscale = (
         local baseMesh = mmesh.lods[1].mesh
         local meshes = #()
 
@@ -123,7 +139,7 @@ struct MafiaTools_4dsImport (
 
                 for j = 1 to mvert.targets.count do (
                     local target = mvert.targets[j]
-                    local vert = target.pos * unitscl
+                    local vert = target.pos * unitscale
                     setVert sectionMeshes[j] vertId vert
                 )
             )
@@ -173,26 +189,26 @@ struct MafiaTools_4dsImport (
         gp.rotMode = mbillboard.rotMode + 1
     ),
 
-    fn CreateGlow mglows mobj unitscl = (
+    fn CreateGlow mglows mobj unitscale = (
         local nnode = M4dsGlow()
         nnode.wirecolor = color 248 128 0
         nnode.boxmode = true
         nnode.renderable = false
-        
-        nnode.viewportSize = 0.1 * unitscl
-        
+
+        nnode.viewportSize = 0.1 * unitscale
+
         local usedMats = #{}
-        
-        for mglow in mglows do (            
+
+        for mglow in mglows do (
             usedMats[mglow.matId] = true
         )
-        
+
         local multimat = multimaterial numsubs:(usedMats.numberSet + 1)
         multimat.name = mobj.name
         multimat[multimat.numsubs] = undefined
         local index = 1
         local indices = #()
-        
+
         for matId in usedMats do (
             multimat[index] = allMats[matId]
             indices[matId] = index
@@ -209,23 +225,24 @@ struct MafiaTools_4dsImport (
         nnode
     ),
 
-    fn CreateMirror mmirror mobj unitscl = (
+    fn CreateMirror mmirror mobj unitscale = (
         local msh = mmirror.mesh
+
         for i = 1 to msh.numverts do (
             local vert = getVert msh i
-            setVert msh i (vert * unitscl)
-        )     
-        
+            setVert msh i (vert * unitscale)
+        )
+
         nnode = mesh mesh:msh
         nnode.wirecolor = white
         Layers.AddTo nnode "Mirrors"
-        
+
         nnode
     ),
 
-    fn CreateDummy mdummy mobj unitscl = (
-        local dmin = mdummy.dmin * unitscl
-        local dmax = mdummy.dmax * unitscl
+    fn CreateDummy mdummy mobj unitscale = (
+        local dmin = mdummy.dmin * unitscale
+        local dmax = mdummy.dmax * unitscale
         local nnode = dummy()
         nnode.boxsize = [(abs (dmin.x-dmax.x)), (abs (dmin.y-dmax.y)), (abs (dmin.z-dmax.z))]
 
@@ -235,15 +252,15 @@ struct MafiaTools_4dsImport (
     ),
 
     --returns array of nodes
-    fn CreateSector msector mobj unitscl = (
+    fn CreateSector msector mobj unitscale = (
         local nodes = #()
-        
+
         local msh = msector.mesh
-        
+
         for i = 1 to msh.numverts do (
             local vert = getVert msh i
-            setVert msh i (vert * unitscl)
-        )    
+            setVert msh i (vert * unitscale)
+        )
 
         nodes[1] = mesh mesh:msh
         nodes[1].wirecolor = (color 255 199 0)
@@ -256,7 +273,7 @@ struct MafiaTools_4dsImport (
 
             for v = 1 to numVerts do (
                 local vert = mportal.verts[v]
-                setVert portalNode v (vert * unitscl)
+                setVert portalNode v (vert * unitscale)
             )
             local face = for v = 1 to numVerts collect v
             portalNode = convertToPoly portalNode
@@ -282,10 +299,10 @@ struct MafiaTools_4dsImport (
     ),
 
     -- returns Node
-    fn CreateTarget mtarget mobj unitscl = (
+    fn CreateTarget mtarget mobj unitscale = (
         local nnode = M4dsTarget()
         nnode.wirecolor = color 28 122 210
-        nnode.viewportSize = 0.1 * unitscl
+        nnode.viewportSize = 0.1 * unitscale
         hide nnode
 
         nnode
@@ -296,18 +313,18 @@ struct MafiaTools_4dsImport (
         nnode.width = 0.0
         nnode.height = 0.0
         nnode.setBoneEnable false sliderTime
-        nnode.showlinks = true   
+        nnode.showlinks = true
         nnode.sidefins = false
         nnode.frontfin = false
         nnode.backfin = false
-        
+
         Layers.AddTo nnode "Bones"
 
         nnode
     ),
 
     fn CreateMaterials mmats filename = (
-        if mmats.count > 0 then (           
+        if mmats.count > 0 then (
             allmats = #()
 
             for m = 1 to mmats.count do (
@@ -368,7 +385,7 @@ struct MafiaTools_4dsImport (
                     mat.animFrames = mmat.animFrames
                     mat.animPeriod = mmat.animPeriod
                 )
-                
+
                 append allMats mat
             )
         )
@@ -394,235 +411,235 @@ struct MafiaTools_4dsImport (
 
     fn CreateSkins skinBuffer boneNodes  = (
         for pair in skinBuffer do (
-			local mskins = pair.mdefs
-			local nodes = pair.nodes			
-			
-			for q = 1 to nodes.count do (			
-				local nnode = nodes[q]
-				local mskin = mskins[q]
-			
-				local oskin = Skin()	
+            local mskins = pair.mdefs
+            local nodes = pair.nodes
+
+            for q = 1 to nodes.count do (
+                local nnode = nodes[q]
+                local mskin = mskins[q]
+
+                local oskin = Skin()
                 oskin.showNoEnvelopes = true
-				addModifier nnode oskin				
-				max modify mode			
-				select nnode
-                
+                addModifier nnode oskin
+                max modify mode
+                select nnode
+
                 for i = 1 to boneNodes.count do (
-					skinOps.AddBone oskin boneNodes[i] 0
+                    skinOps.AddBone oskin boneNodes[i] 0
                 )
-                
-                for vertId = 1 to nnode.numverts do (                    
+
+                for vertId = 1 to nnode.numverts do (
                     for bnId = 1 to boneNodes.count do (
-                        skinOps.ReplaceVertexWeights oskin vertId bnId 0.0                       
+                        skinOps.ReplaceVertexWeights oskin vertId bnId 0.0
                     )
                 )
-                
-								
-				local vertId = 1
-				
-				for i = 1 to mskin.vgroups.count do (
-					local grp = mskin.vgroups[i]	
-					local boneid1 = i+1
-					local boneid2 = grp.boneId+1
-					
-					for j = 1 to grp.numW1Verts do (
-						local weight = 1.0
-						skinOps.SetVertexWeights oskin vertId boneid1 weight				
-						
-						vertId += 1
-					)
-					
-					for weight in grp.weights do (
-						skinOps.SetVertexWeights oskin vertId boneid1 weight						
-						skinOps.SetVertexWeights oskin vertId boneid2 (1.0 - weight)						
-								
-						vertId += 1
-					)
-				)
-				
-				for i = 1 to mskin.numW0Verts do (
-					local weight = 1.0
-					skinOps.SetVertexWeights oskin vertId 1 weight
-					vertid += 1
-				)
-			)		
-		)
+
+
+                local vertId = 1
+
+                for i = 1 to mskin.vgroups.count do (
+                    local grp = mskin.vgroups[i]
+                    local boneid1 = i+1
+                    local boneid2 = grp.boneId+1
+
+                    for j = 1 to grp.numW1Verts do (
+                        local weight = 1.0
+                        skinOps.SetVertexWeights oskin vertId boneid1 weight
+
+                        vertId += 1
+                    )
+
+                    for weight in grp.weights do (
+                        skinOps.SetVertexWeights oskin vertId boneid1 weight
+                        skinOps.SetVertexWeights oskin vertId boneid2 (1.0 - weight)
+
+                        vertId += 1
+                    )
+                )
+
+                for i = 1 to mskin.numW0Verts do (
+                    local weight = 1.0
+                    skinOps.SetVertexWeights oskin vertId 1 weight
+                    vertid += 1
+                )
+            )
+        )
         for boneNode in boneNodes do (
             boneNode.setBoneEnable true sliderTime
         )
-	),
-	
-	fn CreateObjects mobjects filename unitscl = (	
-		local buffer = TWorldBuffer()	
-		
-		for i = 1 to mobjects.count do (		
-			local mobj = mobjects[i]		
-			local nnode
-			local baseMesh
-			
-			case mobj.objectType of (
-				1: case mobj.visualType of (
-					0: (  --standardmesh
-						local mmesh = mobj.definitions[1]
-						
-						local nodes = #()
-						if mmesh.instanceId == 0 then (
-							nodes = CreateMesh mmesh mobj.name unitscl
-						)
-						else (
-							nodes[1] = instance buffer.mafiaNodes[mmesh.instanceId]							
-						)
-												
-						nnode = nodes[1]
-					)
-					2: (  --singlemesh
-						local mmesh = mobj.definitions[1]
-						local mskins = mobj.definitions[2]
-						local nodes = CreateMesh mmesh filename unitscl
-						
-						baseMesh = nodes[1]
-						baseMesh.name = filename
-															
-						append buffer.skinBuffer (TObjPair mdefs:mskins nodes:nodes)
-						
-						
-						nnode = CreateBone()
-						buffer.boneNodes[1] = nnode						
-						
-						--baseMesh.parent = nnode
-					)
-					3: (  --singlemorph
-						local mmesh = mobj.definitions[1]
-						local mskins = mobj.definitions[2]
-						local mmorph = mobj.definitions[3]
-						local nodes = CreateMesh mmesh filename unitscl
-						CreateMorph mmorph mmesh nodes[1] unitscl
-						
-						baseMesh = nodes[1]
-						baseMesh.name = filename
-															
-						append buffer.skinBuffer (TObjPair mdefs:mskins nodes:nodes)			
-						
-						
-						nnode = CreateBone()
-						buffer.boneNodes[1] = nnode						
-						
-						--baseMesh.parent = nnode
-					)
-					4: ( --billboard
-						local mmesh = mobj.definitions[1]
-						local mbillboard = mobj.definitions[2]
-						local nodes = CreateMesh mmesh mobj.name unitscl
-						nnode = nodes[1]
-						CreateBillboard mbillboard nnode
-						
-						Layers.AddTo nnode "Billboards"
-						
-						
-						--append buffer.normalNodes
-					)
-					5: ( --morph
-						local mmesh = mobj.definitions[1]
-						local mmorph = mobj.definitions[2]
-						local nodes = CreateMesh mmesh mobj.name unitscl
-						nnode = nodes[1]			
-						CreateMorph mmorph mmesh nnode unitscl
-					)
-					6: ( --glow
-						local mglows = mobj.definitions[1]
-						nnode = CreateGlow mglows mobj unitscl
-						Layers.AddTo nnode "Glows"
-					)
-					8: (  --mirror
-						local mmirror = mobj.definitions[1]
-						nnode = CreateMirror mmirror mobj unitscl
-					)
-				)
-				5: ( --sector
-					local msector = mobj.definitions[1]
-					nnode = (CreateSector msector mobj unitscl)[1]
-					Layers.AddTo nnode "Sectors"
-				)
-				6: ( --dummy
-					local mdummy = mobj.definitions[1]
-					nnode = CreateDummy mdummy mobj unitscl
-					Layers.AddTo nnode "Dummies"
-				)
-				7: ( --target
-					local mtarget = mobj.definitions[1]
-					nnode = CreateTarget mtarget mobj unitscl
-					
-					append buffer.targetBuffer (TObjPair mdefs:mtarget nodes:nnode)
-				)
-				10: ( --bone
-					local mbone = mobj.definitions[1]
-					nnode = CreateBone()
-					
-					buffer.boneNodes[mbone.boneId+2] = nnode
-					
-					--format "% | objId: % | boneid: %\n" mobj.name i mbone.boneid
-				)
-			)
-			
-			if mobj.cullFlags == 16 then (
-				Layers.AddTo nnode "Disabled"
-			)				
+    ),
 
-			
-			
-			
-            ---basebone			
-            
-                                
+    fn CreateObjects mobjects filename unitscale = (
+        local buffer = TWorldBuffer()
+
+        for i = 1 to mobjects.count do (
+            local mobj = mobjects[i]
+            local nnode
+            local baseMesh
+
+            case mobj.objectType of (
+                1: case mobj.visualType of (
+                    0: (  --standardmesh
+                        local mmesh = mobj.definitions[1]
+
+                        local nodes = #()
+                        if mmesh.instanceId == 0 then (
+                            nodes = CreateMesh mmesh mobj.name unitscale
+                        )
+                        else (
+                            nodes[1] = instance buffer.mafiaNodes[mmesh.instanceId]
+                        )
+
+                        nnode = nodes[1]
+                    )
+                    2: (  --singlemesh
+                        local mmesh = mobj.definitions[1]
+                        local mskins = mobj.definitions[2]
+                        local nodes = CreateMesh mmesh filename unitscale
+
+                        baseMesh = nodes[1]
+                        baseMesh.name = filename
+
+                        append buffer.skinBuffer (TObjPair mdefs:mskins nodes:nodes)
+
+
+                        nnode = CreateBone()
+                        buffer.boneNodes[1] = nnode
+
+                        --baseMesh.parent = nnode
+                    )
+                    3: (  --singlemorph
+                        local mmesh = mobj.definitions[1]
+                        local mskins = mobj.definitions[2]
+                        local mmorph = mobj.definitions[3]
+                        local nodes = CreateMesh mmesh filename unitscale
+                        CreateMorph mmorph mmesh nodes[1] unitscale
+
+                        baseMesh = nodes[1]
+                        baseMesh.name = filename
+
+                        append buffer.skinBuffer (TObjPair mdefs:mskins nodes:nodes)
+
+
+                        nnode = CreateBone()
+                        buffer.boneNodes[1] = nnode
+
+                        --baseMesh.parent = nnode
+                    )
+                    4: ( --billboard
+                        local mmesh = mobj.definitions[1]
+                        local mbillboard = mobj.definitions[2]
+                        local nodes = CreateMesh mmesh mobj.name unitscale
+                        nnode = nodes[1]
+                        CreateBillboard mbillboard nnode
+
+                        Layers.AddTo nnode "Billboards"
+
+
+                        --append buffer.normalNodes
+                    )
+                    5: ( --morph
+                        local mmesh = mobj.definitions[1]
+                        local mmorph = mobj.definitions[2]
+                        local nodes = CreateMesh mmesh mobj.name unitscale
+                        nnode = nodes[1]
+                        CreateMorph mmorph mmesh nnode unitscale
+                    )
+                    6: ( --glow
+                        local mglows = mobj.definitions[1]
+                        nnode = CreateGlow mglows mobj unitscale
+                        Layers.AddTo nnode "Glows"
+                    )
+                    8: (  --mirror
+                        local mmirror = mobj.definitions[1]
+                        nnode = CreateMirror mmirror mobj unitscale
+                    )
+                )
+                5: ( --sector
+                    local msector = mobj.definitions[1]
+                    nnode = (CreateSector msector mobj unitscale)[1]
+                    Layers.AddTo nnode "Sectors"
+                )
+                6: ( --dummy
+                    local mdummy = mobj.definitions[1]
+                    nnode = CreateDummy mdummy mobj unitscale
+                    Layers.AddTo nnode "Dummies"
+                )
+                7: ( --target
+                    local mtarget = mobj.definitions[1]
+                    nnode = CreateTarget mtarget mobj unitscale
+
+                    append buffer.targetBuffer (TObjPair mdefs:mtarget nodes:nnode)
+                )
+                10: ( --bone
+                    local mbone = mobj.definitions[1]
+                    nnode = CreateBone()
+
+                    buffer.boneNodes[mbone.boneId+2] = nnode
+
+                    --format "% | objId: % | boneid: %\n" mobj.name i mbone.boneid
+                )
+            )
+
+            if mobj.cullFlags == 16 then (
+                Layers.AddTo nnode "Disabled"
+            )
+
+
+
+
+            ---basebone
+
+
             local s = scaleMatrix mobj.scl
             local r = mobj.rot as matrix3
-            local t = transMatrix (mobj.offset * unitscl)  
-            
-			if mobj.parentId > 0 then (
+            local t = transMatrix (mobj.offset * unitscale)
+
+            if mobj.parentId > 0 then (
                 nnode.parent = buffer.mafiaNodes[mobj.parentId]
                 nnode.transform = s * r * t * nnode.parent.transform
-			)
-			else (
-				nnode.transform = s * r * t
             )
-			
-			
-			if baseMesh != undefined then (
-				baseMesh.parent = nnode
-				baseMesh.transform = nnode.transform
-			)
-			
-			nnode.name = mobj.name
-			append buffer.mafiaNodes nnode		
-			--basebone	
+            else (
+                nnode.transform = s * r * t
+            )
 
-			
-			---basemesh
-			local gp
-			if baseMesh != undefined then gp = GetMafParams baseMesh
-			else gp = GetMafParams nnode
-			
 
-			gp.objectType = case mobj.objectType of (
-				1: case mobj.visualType of (
-					6: "Dummy"
-					4: "Billboard"
-					default: "Mesh"
-				)
-				5: "Sector"
-				7: "Target"
-				default: "Dummy"
-			)
-					
-			gp.renderFlags = mobj.renderFlags
-			gp.renderFlags2 = mobj.renderFlags2
-			gp.cullFlags = mobj.cullFlags
-			if mobj.strParams != undefined then gp.strParams = mobj.strParams	
-			
-		)
-		
-		buffer
-	),
+            if baseMesh != undefined then (
+                baseMesh.parent = nnode
+                baseMesh.transform = nnode.transform
+            )
+
+            nnode.name = mobj.name
+            append buffer.mafiaNodes nnode
+            --basebone
+
+
+            ---basemesh
+            local gp
+            if baseMesh != undefined then gp = GetMafParams baseMesh
+            else gp = GetMafParams nnode
+
+
+            gp.objectType = case mobj.objectType of (
+                1: case mobj.visualType of (
+                    6: "Dummy"
+                    4: "Billboard"
+                    default: "Mesh"
+                )
+                5: "Sector"
+                7: "Target"
+                default: "Dummy"
+            )
+
+            gp.renderFlags = mobj.renderFlags
+            gp.renderFlags2 = mobj.renderFlags2
+            gp.cullFlags = mobj.cullFlags
+            if mobj.strParams != undefined then gp.strParams = mobj.strParams
+
+        )
+
+        buffer
+    ),
 
     fn LinkTargets targetBuffer mafiaNodes = (
         for pair in targetBuffer do (
@@ -635,7 +652,7 @@ struct MafiaTools_4dsImport (
         )
     ),
 
-    fn Import4ds file unitscl = (
+    fn Import4ds file unitscale = (
         if getCommandPanelTaskMode() == #modify then (
             setCommandPanelTaskMode #create
         )
@@ -659,7 +676,7 @@ struct MafiaTools_4dsImport (
         else (
             with redraw off (
                 CreateMaterials m4ds.materials filename
-                local buffer = CreateObjects m4ds.objects filename unitscl
+                local buffer = CreateObjects m4ds.objects filename unitscale
 
                 LinkTargets buffer.targetBuffer buffer.mafiaNodes
                 CreateSkins buffer.skinBuffer buffer.boneNodes
@@ -668,10 +685,10 @@ struct MafiaTools_4dsImport (
             )
 
             CompleteRedraw()
-            
+
             local used_end = (heapsize - heapfree) / 1024.0
             format "memory used ~ % KiB\n" (used_end - used_start)
-            
+
             gc light:true
 
             local end = timeStamp()
