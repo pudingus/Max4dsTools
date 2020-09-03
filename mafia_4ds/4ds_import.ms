@@ -668,14 +668,16 @@ struct MafiaTools_4dsImport (
             )
 
             CompleteRedraw()
+            
+            local used_end = (heapsize - heapfree) / 1024.0
+            format "memory used ~ % KiB\n" (used_end - used_start)
+            
             gc light:true
 
             local end = timeStamp()
             if end < start then end += 86400000 --timing over midnight
             local dur = (end - start) / 1000.0
 
-            local used_end = (heapsize - heapfree) / 1024.0
-            format "memory used ~ % KiB\n" (used_end - used_start)
 
             local message = "Importing took " + (dur as string) + " seconds\n"
             format message
