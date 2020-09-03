@@ -79,8 +79,7 @@ struct MafiaTools_4dsParser (
             mesh,
             normals = #(),  --array of point3, count = count of vertices in mesh
             facegroups = #(),
-            vertOrder,
-            otrans
+            vertOrder
         )
     ),
 
@@ -406,7 +405,7 @@ struct MafiaTools_4dsParser (
                     local tr = TriMesh()
                     setNumVerts tr numverts
                     setNumTVerts tr numverts
-               
+
 
                     for i = 1 to numVerts do (
                         local vert = ReadPoint3 f
@@ -846,12 +845,10 @@ struct MafiaTools_4dsParser (
                 if lod.vertOrder == undefined then (
                     for i = 1 to lod.mesh.numverts do (
                         local vert = getVert lod.mesh i
-                        local offsetVert = vert * lod.oTrans
-                        WritePoint3 f offsetVert
+                        WritePoint3 f vert
                         local normal = lod.normals[i]
                         if normal == undefined then normal = [0,0,1]
-                        local nnorm = normalize (normal * lod.oTrans.rotationpart)
-                        WritePoint3 f nnorm
+                        WritePoint3 f normal
                         WriteUV f (getTVert lod.mesh i)
                     )
 
@@ -869,12 +866,10 @@ struct MafiaTools_4dsParser (
                         local corrVertId = lod.vertOrder[i]
 
                         local vert = getVert lod.mesh corrVertId
-                        local offsetVert = vert * lod.oTrans
-                        WritePoint3 f offsetVert
+                        WritePoint3 f vert
                         local normal = lod.normals[corrVertId]
                         if normal == undefined then normal = [0,0,1]
-                        local nnorm = normalize (normal * lod.oTrans.rotationpart)
-                        WritePoint3 f nnorm
+                        WritePoint3 f normal
                         WriteUV f (getTVert lod.mesh corrVertId)
                     )
 
@@ -987,7 +982,7 @@ struct MafiaTools_4dsParser (
 
         WriteLong f mbone.boneId
     ),
-    
+
     fn WriteGlow f mglows = (
         WriteByte f mglows.count
         for mglow in mglows do (
@@ -995,7 +990,7 @@ struct MafiaTools_4dsParser (
             WriteShort f mglow.matId
         )
     ),
-    
+
 
     fn mtypeof mobj = (
         case mobj.objectType of (
