@@ -21,11 +21,12 @@ category:"4dsTools"
         listbox lstGlows ""
 
 
-        imgTag imgMat "Material preview:" width:48 height:48 opacity:1.0 transparent:white align:#left across:2
-        dropdownlist ddlMats  width:80 align:#right enabled:false 
-        spinner spnPosition "Offset" type:#float align:#left range:[-900000,900000,0] width:70 pos:[70,205] enabled:false
+        imgTag imgMat "Material preview:" width:40 height:40 opacity:1.0 transparent:white align:#left across:2
+        spinner spnPosition "Position" type:#float align:#right range:[-900000,900000,0] fieldWidth:40 offset:[0,18] enabled:false
+        dropdownlist ddlMats enabled:false 
 
         local lstGlows_select
+        local ddlMats_select
 
         on btnAdd pressed do (
             local items = lstGlows.items
@@ -96,26 +97,20 @@ category:"4dsTools"
         
         fn lstGlows_select sel = (
             lstGlows.selection = sel
-            if sel != 0 and sel <= lstGlows.items.count then (                   
-                
+            if sel != 0 and sel <= lstGlows.items.count then (                
                 ddlMats.items = BuildMatItems $.mat
-                ddlMats.selection = findItem itemIds matIds[sel]                
-                ddlMats.tooltip = if ddlMats.selected == undefined then "" else ddlMats.selected                
-
+                local dsel = findItem itemIds matIds[sel] 
+                if dsel == 0 then dsel = 1                
+                ddlMats_select dsel          
+                
                 spnPosition.value = positions[sel]                
                 
                 ddlMats.enabled = true
                 spnPosition.enabled = true
-
-                          
-                local mat
-                if $.mat != undefined then mat = $.mat[matIds[sel]]
-                imgMat.bitmap = GetPreviewBitmap mat
             )
             else (
                 ddlMats.enabled = false
                 spnPosition.enabled = false
-                imgMat.bitmap = undefined
             )
         )
 
@@ -128,14 +123,19 @@ category:"4dsTools"
             )
         )
         
-        on ddlMats selected sel do (            
-            ddlMats.tooltip = ddlMats.selected
-            
-            local gsel = lstGlows.selection            
-            matIds[gsel] = itemIds[sel]            
-            local mat = $.mat[sel]            
-            imgMat.bitmap = GetPreviewBitmap mat  
+        fn ddlMats_select sel = (
+            ddlMats.selection = sel             
+            if sel != 0 and sel <= ddlMats.items.count then (  
+                ddlMats.tooltip = ddlMats.selected
+                
+                local gsel = lstGlows.selection            
+                matIds[gsel] = itemIds[sel]            
+                local mat = $.mat[sel]            
+                imgMat.bitmap = GetPreviewBitmap mat  
+            )
         )
+        
+        on ddlMats selected sel do ddlMats_select sel
 
         on GlowRoll open do (
             local count = matIds.count
