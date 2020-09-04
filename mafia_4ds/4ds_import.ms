@@ -660,7 +660,8 @@ struct MafiaTools_4dsImport (
         filename = getFilenameFile file
 
         format "importing: %\n" file
-        local start = timeStamp()
+        
+        local st = Stopwatch.StartNew()
 
         gc light:true
 
@@ -691,9 +692,7 @@ struct MafiaTools_4dsImport (
 
             gc light:true
 
-            local end = timeStamp()
-            if end < start then end += 86400000 --timing over midnight
-            local dur = (end - start) / 1000.0
+            local dur = st.Elapsed() / 1000.0
 
 
             local message = "Importing took " + (dur as string) + " seconds\n"

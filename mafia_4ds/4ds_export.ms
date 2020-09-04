@@ -1117,7 +1117,7 @@ struct MafiaTools_4dsExport (
 
         format "exporting: %\n" file
 
-        local start = timeStamp()
+        local st = Stopwatch.StartNew()
 
         gc light:true
 
@@ -1132,9 +1132,7 @@ struct MafiaTools_4dsExport (
         p.Write4ds f m4ds
         fclose f
 
-        local end = timeStamp()
-        if end < start then end += 86400000  --timing over midnight
-        local dur =  (end - start) / 1000.0
+        local dur = st.elapsed() / 1000.0
 
         local used_end = (heapsize - heapfree) / 1024.0
         format "memory used ~ % KiB\n" (used_end - used_start)
