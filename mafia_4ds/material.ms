@@ -48,6 +48,7 @@ remap:#(#(#isAnimatedM,#useMips,#useColoring,#useColorKey,#useAddBlend),#(#anima
 
         on ambient set val do delegate.ambient = val
         on diffuse set val do delegate.diffuse = val
+        on diffuse get val do delegate.diffuse
         on emission set val do delegate.selfIllumColor = val
         on opacity set val do delegate.opacity = val
         on diffuseMapEnable set val do (
