@@ -15,7 +15,7 @@ global MafParamEditor
 
     local visible = false
 
-    rollout MafParamEditor "4ds Parameters"
+    rollout MafParamEditor "4ds Object Parameters"
     (
         timer timerDeselected interval:50 active:false
 
@@ -34,7 +34,6 @@ global MafParamEditor
         dropdownlist objectType "" align:#left width:80  items:#("Dummy")
 
         on objectType selected i do (
-
             local strsel = objectType.items[i]
 
             if gp != undefined then gp.objectType = strsel

@@ -190,7 +190,7 @@ struct MafiaTools_4dsImport (
     ),
 
     fn CreateGlow mglows mobj unitscale = (
-        local nnode = M4dsGlow()
+        local nnode = Glow4ds()
         nnode.wirecolor = color 248 128 0
         nnode.boxmode = true
         nnode.renderable = false
@@ -300,7 +300,7 @@ struct MafiaTools_4dsImport (
 
     -- returns Node
     fn CreateTarget mtarget mobj unitscale = (
-        local nnode = M4dsTarget()
+        local nnode = Target4ds()
         nnode.wirecolor = color 28 122 210
         nnode.viewportSize = 0.1 * unitscale
         hide nnode
@@ -329,7 +329,7 @@ struct MafiaTools_4dsImport (
 
             for m = 1 to mmats.count do (
                 local mmat = mmats[m]
-                local mat = M4dsMat()
+                local mat = Mat4ds()
                 mat.name = "4dsMat"+(m as string)
 
                 local flags = mmat.flags

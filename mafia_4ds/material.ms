@@ -1,4 +1,4 @@
-plugin material M4dsMat
+plugin material Mat4ds
 name:"4ds Material (p)"
 classID:#(0x61cbf531, 0x2197994)
 extends:Standard

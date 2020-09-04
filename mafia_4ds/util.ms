@@ -101,10 +101,10 @@ struct MafiaTools_Util (
         if (isKindOf obj BoneGeometry) or (obj.boneEnable) then (
             #bone
         )
-        else if isKindOf obj M4dsTarget then (
+        else if isKindOf obj Target4ds then (
             #target
         )
-        else if isKindOf obj M4dsGlow then (
+        else if isKindOf obj Glow4ds then (
             #glow
         )
         else if isKindOf obj Dummy then (

@@ -1,7 +1,7 @@
-plugin SimpleObject M4dsGlow
+plugin SimpleObject Glow4ds
 name:"4ds Glow"
 classID:#(0x4ec442f4, 0x6cf47395)
-category:"4dsTools"
+category:"4ds Max"
 (
     parameters pblock
     (
@@ -82,7 +82,7 @@ category:"4dsTools"
             if mat != undefined then (
                 local map
                 local class = classOf mat
-                if class == M4dsMat or class == Standard then (
+                if class == Mat4ds or class == Standard then (
                     map = mat.diffuseMap
                 )
                 else if class == PhysicalMaterial then (

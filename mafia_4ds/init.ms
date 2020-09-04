@@ -22,9 +22,10 @@
 
     filein "ui_utility.ms"
 
+    macros.load MafiaTools_scriptsPath
 
 
-    format "Mafia 4ds Import/Export plugin % loaded\n" MafiaTools_version
+    format "4ds Max Tools plugin % loaded\n" MafiaTools_version
 )
 
 -- callbacks.addScript #systemPostNew "PostNew()" id:#MafiaTools

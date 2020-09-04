@@ -1,5 +1,5 @@
 try (closeUtility MafiaTools) catch()
-utility MafiaTools "Mafia 4ds Import/Export"
+utility MafiaTools "4ds Max Tools"
 (
     button       btnImportExport   "Import/Export..." align:#left
     button       btnParamEditor    "Object parameters..." align:#left

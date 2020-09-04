@@ -114,7 +114,7 @@ struct MafiaTools_4dsExport (
     mat_map = #(),
 
     fn ConvertStandardMaterial mat = (
-        local cm = M4dsMat()
+        local cm = Mat4ds()
 
         cm.diffuseMapEnable = mat.diffuseMapEnable
         cm.envMapEnable = mat.reflectionMapEnable
@@ -139,7 +139,7 @@ struct MafiaTools_4dsExport (
     ),
 
     fn ConvertPhysicalMaterial mat = (
-        local cm = M4dsMat()
+        local cm = Mat4ds()
 
         cm.diffuse = mat.base_color
         cm.emission = mat.emit_color
@@ -185,13 +185,13 @@ struct MafiaTools_4dsExport (
             if isKindOf mat MultiMaterial then (
                 for submat in mat.materialList where submat != undefined do (
 
-                    if util.containsItem #(Standard, Physical_Material, M4dsMat) (classOf subMat) then (
+                    if util.containsItem #(Standard, Physical_Material, Mat4ds) (classOf subMat) then (
                         AddToMafiaMaterials submat
                     )
                 )
             )
             else (
-                if util.containsItem #(Standard, Physical_Material, M4dsMat) (classOf mat) then (
+                if util.containsItem #(Standard, Physical_Material, Mat4ds) (classOf mat) then (
                     AddToMafiaMaterials mat
                 )
             )
@@ -215,7 +215,7 @@ struct MafiaTools_4dsExport (
                 mat = ConvertPhysicalMaterial mat
             )
 
-            if classof mat == M4dsMat then  (
+            if classof mat == Mat4ds then  (
                 local mmat = TMaterial()
 
                 local flags = 0
