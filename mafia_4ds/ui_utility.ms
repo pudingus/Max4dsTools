@@ -1,12 +1,16 @@
-try (closeUtility MafiaTools) catch()
+if MafiaTools != undefined and MafiaTools.isDisplayed then (
+    setCommandPanelTaskMode #utility   --this is to prevent utility from not closing
+    closeUtility MafiaTools
+)
 utility MafiaTools "4ds Max Tools"
 (
-    button       btnImportExport   "Import/Export..." align:#left
-    button       btnParamEditor    "Object parameters..." align:#left
-    button       btnFindWeights    "Find distant weights..." align:#left
+    button      btnImportExport   "Import/Export..." align:#left
+    button      btnParamEditor    "Object parameters..." align:#left
+    button      btnFindWeights    "Find distant weights..." align:#left
+    button      btnConvertSkeleton "Convert old skeleton..." align:#left
 
-    label        bout              "by pudingus" offset:[0,20]
-    label        version           "v0.5.0-preview"
+    label       bout              "by pudingus" offset:[0,20]
+    label       version           "v0.5.0-preview"
 
     on btnImportExport pressed do
     (
@@ -21,5 +25,11 @@ utility MafiaTools "4ds Max Tools"
     on btnFindWeights pressed do (
         filein "ui_find_weights.ms"
     )
+    
+    on btnConvertSkeleton pressed do (
+        filein "ui_convert_skeleton.ms"
+    )
 )
 openUtility MafiaTools
+
+ok

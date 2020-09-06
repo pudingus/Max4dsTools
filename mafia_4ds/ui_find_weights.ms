@@ -1,6 +1,6 @@
 (
     local destroyed = false
-    if ::FindWeights != undefined and ::FindWeights.open do (
+    if ::FindWeights != undefined and ::FindWeights.isDisplayed do (
         DestroyDialog ::FindWeights
         destroyed = true
     )

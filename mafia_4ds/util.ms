@@ -137,3 +137,4 @@ struct MafiaTools_Util (
     )    
 )
 MafiaTools_Util = MafiaTools_Util()
+ok

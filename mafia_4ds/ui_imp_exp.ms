@@ -1,6 +1,6 @@
 (
     local destroyed = false
-    if ::ImpExp != undefined and ::ImpExp.open then (
+    if ::ImpExp != undefined and ::ImpExp.isDisplayed then (
         DestroyDialog ::ImpExp
         destroyed = true
     )

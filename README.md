@@ -8,17 +8,52 @@ Mafia 4ds plugin for 3ds Max. Based on the work by Mr F, but almost everything h
 ![3dsmax_2020-06-25_12-15-09](https://user-images.githubusercontent.com/39903631/85701543-c8233680-b6dd-11ea-992c-d84cce7cb50a.jpg)
 
 ### Features
-- Sectors & portals
-- Meshes with level of detail, billboards
-- Dummies
-- Changing of [object parameters](https://user-images.githubusercontent.com/39903631/85778105-8668af00-b722-11ea-999c-7ccf81775a53.png) and [material flags](https://user-images.githubusercontent.com/39903631/84805351-67706b80-b004-11ea-846a-2d633223620a.png)
-- Vertex normals (smoothing groups, or explicit normals)
-- Original scene.4ds files can be imported and exported without losing lighting or collision (depends on how much you edit)
-- Skinned meshes
+- [X] 4ds model files
+    - [X] Meshes, lods, instances
+    - [X] Dummies (bounding boxes)
+    - [X] Sectors, portals
+    - [X] Billboards
+    - [X] Skinned meshes, bones
+    - [X] Targets
+    - [X] Glows
+    - [ ] Morphs
+        - [X] Import
+        - [ ] Export
+    - [ ] Mirrors
+        - [X] Import (partial)
+        - [ ] Export
+- [ ] 5ds animation files
+- [ ] 6ds shadow files
 
-### To do
-- Morphs, bones, mirrors, targets, glows. Files containing these types can be opened, but they will be imported only partially. 
+Support for other formats like scene2.bin is not planned.
 
+#### Games
+- [X] Mafia
+- [ ] Hidden & Dangerous 2
+- [ ] Chameleon
+
+#### Model features
+- Lods
+- Mesh instances
+- Vertex normals
+    - Smoothing groups
+    - Explicit normals (from modifier)
+- Correct UV export
+- Unit scaling
+- Object parameters
+    - Culling flags
+    - Rendering flags
+    - String parameters
+    - Lod fade distance
+    - Billboard rotation mode
+    - Portal ranges
+- Material features
+    - Color (diffuse, ambient, emission)
+    - Maps (diffuse, alpha, environment)
+    - Animation
+    - Environment map flags (Overlay, Multiply, Additive, Y proj, Y detail, Z detail)
+    - Other flags (Mip mapping, 2-sided, Color key ...)    
+    - Color key preview in viewport
 
 ### Installation
 [Download here](https://github.com/pudingus/mafia-4ds-import-export/releases)  
@@ -33,3 +68,9 @@ To see textures, hit Customize in the top menu > Configure Project Paths > Exter
 If you move pivot for an object, you have to reset it before exporting.
 
 See [wiki](https://github.com/pudingus/mafia-4ds-import-export/wiki) for tutorials
+
+### Screenshots
+
+![object parameters](https://user-images.githubusercontent.com/39903631/85778105-8668af00-b722-11ea-999c-7ccf81775a53.png)
+
+![material flags](https://user-images.githubusercontent.com/39903631/84805351-67706b80-b004-11ea-846a-2d633223620a.png)

@@ -6,8 +6,6 @@ struct MafiaTools_4dsImport (
     parser = MafiaTools_4dsParser,
     -----------
 
-    allMats = #(),
-
     fn GetMafParams nnode = (
         custAttributes.add nnode MafParams_def baseObject:false
         custAttributes.get nnode MafParams_def baseObject:false
@@ -15,7 +13,7 @@ struct MafiaTools_4dsImport (
 
 
     --returns array of nodes
-    fn CreateMesh mmesh name unitscale = (
+    fn CreateMesh mmesh name unitscale materials = (
         local nodes = #()
 
         if mmesh.lods.count == 0 then (
@@ -51,7 +49,7 @@ struct MafiaTools_4dsImport (
                     local matId = usedMats[1]
                     if matId != 0 then (
                         indices[matId] = 1
-                        lodnode.material = allMats[matId]
+                        lodnode.material = materials[matId]
                     )
                 )
                 else (
@@ -61,7 +59,7 @@ struct MafiaTools_4dsImport (
 
                     local i = 1
                     for matId in usedMats do (
-                        multimat[i] = allMats[matId]
+                        multimat[i] = materials[matId]
                         i += 1
                     )
 
@@ -189,7 +187,7 @@ struct MafiaTools_4dsImport (
         gp.rotMode = mbillboard.rotMode + 1
     ),
 
-    fn CreateGlow mglows mobj unitscale = (
+    fn CreateGlow mglows mobj unitscale materials = (
         local nnode = Glow4ds()
         nnode.wirecolor = color 248 128 0
         nnode.boxmode = true
@@ -210,7 +208,7 @@ struct MafiaTools_4dsImport (
         local indices = #()
 
         for matId in usedMats do (
-            multimat[index] = allMats[matId]
+            multimat[index] = materials[matId]
             indices[matId] = index
             index += 1
         )
@@ -324,71 +322,71 @@ struct MafiaTools_4dsImport (
     ),
 
     fn CreateMaterials mmats filename = (
-        if mmats.count > 0 then (
-            allmats = #()
+        local materials = #()
+        
+        for m = 1 to mmats.count do (
+            local mmat = mmats[m]
+            local mat = Mat4ds()
+            mat.name = "4dsMat"+(m as string)
 
-            for m = 1 to mmats.count do (
-                local mmat = mmats[m]
-                local mat = Mat4ds()
-                mat.name = "4dsMat"+(m as string)
+            local flags = mmat.flags
 
-                local flags = mmat.flags
+            --Diffuse Map
+            mat.diffuseMapEnable = (bit.get flags 19)
 
-                --Diffuse Map
-                mat.diffuseMapEnable = (bit.get flags 19)
+            mat.colored = (bit.get flags 28)
+            mat.mipMapping = (bit.get flags 24)
+            mat.twoSided = (bit.get flags 29)
+            mat.animatedDiffuse = (bit.get flags 27)
+            mat.animatedAlpha = (bit.get flags 26)
 
-                mat.colored = (bit.get flags 28)
-                mat.mipMapping = (bit.get flags 24)
-                mat.twoSided = (bit.get flags 29)
-                mat.animatedDiffuse = (bit.get flags 27)
-                mat.animatedAlpha = (bit.get flags 26)
+            --Environment Map
+            mat.envMapEnable = (bit.get flags 20)
 
-                --Environment Map
-                mat.envMapEnable = (bit.get flags 20)
+            mat.envOverlay = (bit.get flags 9)
+            mat.envMultiply = (bit.get flags 10)
+            mat.envAdditive = (bit.get flags 11)
+            mat.YProj = (bit.get flags 13)
+            mat.YDetail = (bit.get flags 14)
+            mat.ZDetail = (bit.get flags 15)
 
-                mat.envOverlay = (bit.get flags 9)
-                mat.envMultiply = (bit.get flags 10)
-                mat.envAdditive = (bit.get flags 11)
-                mat.YProj = (bit.get flags 13)
-                mat.YDetail = (bit.get flags 14)
-                mat.ZDetail = (bit.get flags 15)
+            --Additional Effect
+            mat.addEffect = (bit.get flags 16)
+            mat.alphaMapEnable = (bit.get flags 31)
+            mat.colorKey = (bit.get flags 30)
+            mat.additiveMixing = (bit.get flags 32)
 
-                --Additional Effect
-                mat.addEffect = (bit.get flags 16)
-                mat.alphaMapEnable = (bit.get flags 31)
-                mat.colorKey = (bit.get flags 30)
-                mat.additiveMixing = (bit.get flags 32)
-
-                mat.ambient = mmat.ambient
-                mat.diffuse = mmat.diffuse
-                mat.emission = mmat.emission
-                mat.opacity = mmat.opacity*100
+            mat.ambient = mmat.ambient
+            mat.diffuse = mmat.diffuse
+            mat.emission = mmat.emission
+            mat.opacity = mmat.opacity*100
 
 
-                if mat.envMapEnable then (
-                    mat.envMapAmount = mmat.envMapAmount*100
-                    if mmat.envMapName != undefined then (
-                        mat.envMap = bitmaptex filename:mmat.envMapName name:mmat.envMapName
-                    )
+            if mat.envMapEnable then (
+                mat.envMapAmount = mmat.envMapAmount*100
+                if mmat.envMapName != undefined then (
+                    mat.envMap = bitmaptex filename:mmat.envMapName name:mmat.envMapName
                 )
-
-                if mmat.diffMapName != undefined then (
-                    mat.diffuseMap = bitmaptex filename:mmat.diffMapName name:mmat.diffMapName
-                    showTextureMap mat on
-
-                    if mat.alphaMapEnable and (mmat.alphaMapName != undefined) then (
-                        mat.alphaMap = bitmaptex filename:mmat.alphaMapName name:mmat.alphaMapName
-                    )
-                )
-
-                if mat.animatedDiffuse then (
-                    mat.animFrames = mmat.animFrames
-                    mat.animPeriod = mmat.animPeriod
-                )
-
-                append allMats mat
             )
+
+            if mmat.diffMapName != undefined then (
+                mat.diffuseMap = bitmaptex filename:mmat.diffMapName name:mmat.diffMapName
+                showTextureMap mat on
+
+                if mat.alphaMapEnable and (mmat.alphaMapName != undefined) then (
+                    mat.alphaMap = bitmaptex filename:mmat.alphaMapName name:mmat.alphaMapName
+                )
+            )
+
+            if mat.animatedDiffuse then (
+                mat.animFrames = mmat.animFrames
+                mat.animPeriod = mmat.animPeriod
+            )
+
+            append materials mat
         )
+        
+        materials
     ),
 
     TWorldBuffer = (
@@ -469,7 +467,7 @@ struct MafiaTools_4dsImport (
         )
     ),
 
-    fn CreateObjects mobjects filename unitscale = (
+    fn CreateObjects mobjects filename unitscale materials = (
         local buffer = TWorldBuffer()
 
         for i = 1 to mobjects.count do (
@@ -484,7 +482,7 @@ struct MafiaTools_4dsImport (
 
                         local nodes = #()
                         if mmesh.instanceId == 0 then (
-                            nodes = CreateMesh mmesh mobj.name unitscale
+                            nodes = CreateMesh mmesh mobj.name unitscale materials
                         )
                         else (
                             nodes[1] = instance buffer.mafiaNodes[mmesh.instanceId]
@@ -495,10 +493,10 @@ struct MafiaTools_4dsImport (
                     2: (  --singlemesh
                         local mmesh = mobj.definitions[1]
                         local mskins = mobj.definitions[2]
-                        local nodes = CreateMesh mmesh filename unitscale
+                        local nodes = CreateMesh mmesh filename unitscale materials
 
                         baseMesh = nodes[1]
-                        baseMesh.name = filename
+                        baseMesh.name = "_" + filename
 
                         append buffer.skinBuffer (TObjPair mdefs:mskins nodes:nodes)
 
@@ -512,11 +510,11 @@ struct MafiaTools_4dsImport (
                         local mmesh = mobj.definitions[1]
                         local mskins = mobj.definitions[2]
                         local mmorph = mobj.definitions[3]
-                        local nodes = CreateMesh mmesh filename unitscale
+                        local nodes = CreateMesh mmesh filename unitscale materials
                         CreateMorph mmorph mmesh nodes[1] unitscale
 
                         baseMesh = nodes[1]
-                        baseMesh.name = filename
+                        baseMesh.name = "_" + filename
 
                         append buffer.skinBuffer (TObjPair mdefs:mskins nodes:nodes)
 
@@ -529,7 +527,7 @@ struct MafiaTools_4dsImport (
                     4: ( --billboard
                         local mmesh = mobj.definitions[1]
                         local mbillboard = mobj.definitions[2]
-                        local nodes = CreateMesh mmesh mobj.name unitscale
+                        local nodes = CreateMesh mmesh mobj.name unitscale materials
                         nnode = nodes[1]
                         CreateBillboard mbillboard nnode
 
@@ -541,13 +539,13 @@ struct MafiaTools_4dsImport (
                     5: ( --morph
                         local mmesh = mobj.definitions[1]
                         local mmorph = mobj.definitions[2]
-                        local nodes = CreateMesh mmesh mobj.name unitscale
+                        local nodes = CreateMesh mmesh mobj.name unitscale materials
                         nnode = nodes[1]
                         CreateMorph mmorph mmesh nnode unitscale
                     )
                     6: ( --glow
                         local mglows = mobj.definitions[1]
-                        nnode = CreateGlow mglows mobj unitscale
+                        nnode = CreateGlow mglows mobj unitscale materials
                         Layers.AddTo nnode "Glows"
                     )
                     8: (  --mirror
@@ -676,8 +674,8 @@ struct MafiaTools_4dsImport (
         )
         else (
             with redraw off (
-                CreateMaterials m4ds.materials filename
-                local buffer = CreateObjects m4ds.objects filename unitscale
+                local materials = CreateMaterials m4ds.materials filename
+                local buffer = CreateObjects m4ds.objects filename unitscale materials
 
                 LinkTargets buffer.targetBuffer buffer.mafiaNodes
                 CreateSkins buffer.skinBuffer buffer.boneNodes
@@ -704,3 +702,4 @@ struct MafiaTools_4dsImport (
     )
 )
 --MafiaTools_4dsImport = MafiaTools_4dsImport()
+ok

@@ -48,9 +48,12 @@ category:"4ds Max"
             tmrCooldown.active = false
             --print "cool story bro"
             local sel = lstGlows.selection
-            ddlMats.items = BuildMatItems $.mat
-            local dsel = findItem itemIds matIds[sel] 
-            ddlMats_select dsel 
+            if sel != 0 then (
+                
+                ddlMats.items = BuildMatItems $.mat
+                local dsel = findItem itemIds matIds[sel] 
+                ddlMats_select dsel 
+            )
         )
 
         on btnAdd pressed do (
@@ -162,8 +165,9 @@ category:"4ds Max"
         
         on ddlMats selected sel do ddlMats_select sel       
 
-        on GlowRoll open do (            
-            ddlMats.items = BuildMatItems $.mat
+        on GlowRoll open do (
+            if $ != undefined then
+                ddlMats.items = BuildMatItems $.mat
             callbacks.removeScripts #mtlRefAdded id:#MafiaTools
             callbacks.addScript #mtlRefAdded "::MatNotification()" id:#MafiaTools
             

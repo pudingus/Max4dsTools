@@ -1011,3 +1011,4 @@ struct MafiaTools_4dsParser (
     )
 )
 MafiaTools_4dsParser = MafiaTools_4dsParser()
+ok

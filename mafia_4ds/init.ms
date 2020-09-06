@@ -1,9 +1,17 @@
 (
+    local set_heapsize = 48 * 1024 * 1024  --48 MiB
+    if heapsize < set_heapsize then heapsize = set_heapsize
+   
     global MafiaTools_version = "v0.5.0-preview"
     global MafiaTools_scriptsPath = getFilenamePath (getThisScriptFilename())
+    
+    format "init: %\n" localTime
+    
+    --macros.load MafiaTools_scriptsPath
+    
+    --copyFile (MafiaTools_scriptsPath + "/macros.mcr") ((GetDir #userMacros) + "/macros.mcr")
 
-    --local set_heapsize = 64 * 1024 * 1024  --64 MiB
-   -- if heapsize < set_heapsize then heapsize = set_heapsize
+
 
     --scriptedPlugins
     filein "material.ms"
@@ -22,7 +30,7 @@
 
     filein "ui_utility.ms"
 
-    macros.load MafiaTools_scriptsPath
+    
 
 
     format "4ds Max Tools plugin % loaded\n" MafiaTools_version
