@@ -31,7 +31,7 @@
         label lblTransfer "Transfer weights:"
         button btnTransfer1 "back3  ->  r_shoulder" enabled:false
         button btnTransfer2 "r_arm  ->  r_shoulder" enabled:false
-        button btnTable "Open Weight Table" offset:[0,10]
+        button btnTable "Open Weight Table" offset:[0,10] enabled:false
         
         on FindWeights close do (
             M4dsTools_FindWeights_pos = GetDialogPos FindWeights
@@ -42,7 +42,9 @@
             if obj != undefined then (
                 local sk = util.GetModByClass obj Skin
                 if sk != undefined then (
-                    skinOps.buttonWeightTable sk
+                    if modPanel.getCurrentObject() == sk then (
+                        skinOps.buttonWeightTable sk                        
+                    )
                 )
             )
         )
@@ -207,15 +209,19 @@
             if skinMod != undefined then (
                 btnTransfer1.enabled = true
                 btnTransfer2.enabled = true
+                btnTable.enabled = true
 
                 local grp = groups[val]
-                ---edit envelopes mode
-                if getCommandPanelTaskMode() == #modify then (
-                    if modPanel.getCurrentObject() != skinMod then (
-                        modPanel.setCurrentObject skinMod                        
-                    )
-                    subObjectLevel = 1
+                
+                if getCommandPanelTaskMode() != #modify then (
+                    setCommandPanelTaskMode #modify                    
                 ) 
+                ---edit envelopes mode
+                if modPanel.getCurrentObject() != skinMod then (
+                    modPanel.setCurrentObject skinMod                        
+                )
+                subObjectLevel = 1
+                
                 
                 ---select vertices and bone
                 skinOps.SelectVertices skinMod grp.verts
