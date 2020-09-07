@@ -1,4 +1,6 @@
-struct MafiaTools_Layers (
+
+rollout MafiaTools_Layers "" (  --module
+
     fn AddTo obj layerName = (
         local layer = LayerManager.getLayerFromName layerName
         if layer == undefined then (
@@ -8,14 +10,14 @@ struct MafiaTools_Layers (
         if layer != undefined then (
             layer.addnode obj
         )
-    ),
+    )
 
     fn Hide arr = (
         for layerName in arr do (
             local layer = LayerManager.getLayerFromName layerName
             if layer != undefined then layer.ishidden = true
         )
-    ),
+    )
 
     fn HideLods bitArr = (
         for b in bitArr do (
@@ -23,7 +25,7 @@ struct MafiaTools_Layers (
             local layer = LayerManager.getLayerFromName layerName
             if layer != undefined then layer.ishidden = true
         )
-    ),
+    )
 
     fn Clear = (
         local count = LayerManager.count
@@ -37,4 +39,3 @@ struct MafiaTools_Layers (
         )
     )
 )
-MafiaTools_Layers = MafiaTools_Layers()

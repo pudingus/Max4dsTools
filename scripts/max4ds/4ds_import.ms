@@ -1,15 +1,14 @@
 
-struct MafiaTools_4dsImport (
+rollout MafiaTools_4dsImport "" (   --module
 
     --imports--
-    Layers = MafiaTools_Layers,
-    parser = MafiaTools_4dsParser,
+    local Layers = ::MafiaTools_Layers    
     -----------
 
     fn GetMafParams nnode = (
         custAttributes.add nnode MafParams_def baseObject:false
         custAttributes.get nnode MafParams_def baseObject:false
-    ),
+    )
 
 
     --returns array of nodes
@@ -117,7 +116,7 @@ struct MafiaTools_4dsImport (
             )
         )
         nodes
-    ),
+    )
 
 
     fn CreateMorph mmorph mmesh nnode unitscale = (
@@ -177,7 +176,7 @@ struct MafiaTools_4dsImport (
         )
 
         WM3_SetCurrentMarker tmod 1
-    ),
+    )
 
     fn CreateBillboard mbillboard nnode = (
         custAttributes.add nnode MafParams_def baseObject:false
@@ -185,7 +184,7 @@ struct MafiaTools_4dsImport (
 
         gp.rotAxis = mbillboard.rotAxis + 1
         gp.rotMode = mbillboard.rotMode + 1
-    ),
+    )
 
     fn CreateGlow mglows mobj unitscale materials = (
         local nnode = Glow4ds()
@@ -221,7 +220,7 @@ struct MafiaTools_4dsImport (
         )
 
         nnode
-    ),
+    )
 
     fn CreateMirror mmirror mobj unitscale = (
         local msh = mmirror.mesh
@@ -236,7 +235,7 @@ struct MafiaTools_4dsImport (
         Layers.AddTo nnode "Mirrors"
 
         nnode
-    ),
+    )
 
     fn CreateDummy mdummy mobj unitscale = (
         local dmin = mdummy.dmin * unitscale
@@ -247,7 +246,7 @@ struct MafiaTools_4dsImport (
         hide nnode
 
         nnode
-    ),
+    )
 
     --returns array of nodes
     fn CreateSector msector mobj unitscale = (
@@ -294,7 +293,7 @@ struct MafiaTools_4dsImport (
             portalId += 1
         )
         nodes
-    ),
+    )
 
     -- returns Node
     fn CreateTarget mtarget mobj unitscale = (
@@ -304,7 +303,7 @@ struct MafiaTools_4dsImport (
         hide nnode
 
         nnode
-    ),
+    )
 
     fn CreateBone = (
         local nnode = bonesys.createBone [0,0,0] [0,0,0] [0,0,0]
@@ -319,7 +318,7 @@ struct MafiaTools_4dsImport (
         Layers.AddTo nnode "Bones"
 
         nnode
-    ),
+    )
 
     fn CreateMaterials mmats filename = (
         local materials = #()
@@ -387,24 +386,20 @@ struct MafiaTools_4dsImport (
         )
         
         materials
-    ),
+    )
 
-    TWorldBuffer = (
-        struct TWorldBuffer (
-            skinBuffer = #(),   --array of TObjPair
-            targetBuffer = #(),  --array of TObjPair
-            boneNodes = #(),   --array of nodes sorted in boneid order
-            normalNodes = #(),    --array of nodes for modifier normals
-            mafiaNodes = #()
-        )
-    ),
+    struct TWorldBuffer (
+        skinBuffer = #(),   --array of TObjPair
+        targetBuffer = #(),  --array of TObjPair
+        boneNodes = #(),   --array of nodes sorted in boneid order
+        normalNodes = #(),    --array of nodes for modifier normals
+        mafiaNodes = #()
+    )
 
-    TObjPair = (
-        struct TObjPair (
-            mdefs,   --mafia object definitions
-            nodes
-        )
-    ),
+    struct TObjPair (
+        mdefs,   --mafia object definitions
+        nodes
+    )
 
 
     fn CreateSkins skinBuffer boneNodes  = (
@@ -465,7 +460,7 @@ struct MafiaTools_4dsImport (
         for boneNode in boneNodes do (
             boneNode.setBoneEnable true sliderTime
         )
-    ),
+    )
 
     fn CreateObjects mobjects filename unitscale materials = (
         local buffer = TWorldBuffer()
@@ -637,7 +632,7 @@ struct MafiaTools_4dsImport (
         )
 
         buffer
-    ),
+    )
 
     fn LinkTargets targetBuffer mafiaNodes = (
         for pair in targetBuffer do (
@@ -648,7 +643,7 @@ struct MafiaTools_4dsImport (
                 append targetNode.nodes mafiaNodes[linkId]
             )
         )
-    ),
+    )
 
     fn Import4ds file unitscale = (
         if getCommandPanelTaskMode() == #modify then (
@@ -666,6 +661,7 @@ struct MafiaTools_4dsImport (
         local used_start = (heapsize - heapfree) / 1024.0
 
         local f = fopen file "rb"
+        local parser = ::MafiaTools_4dsParser
         local m4ds = parser.Read4ds f
         fclose f
 
@@ -701,5 +697,3 @@ struct MafiaTools_4dsImport (
         )
     )
 )
---MafiaTools_4dsImport = MafiaTools_4dsImport()
-ok

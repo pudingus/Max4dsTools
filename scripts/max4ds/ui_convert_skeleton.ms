@@ -7,8 +7,9 @@ undo off (
     )
     
     
-    rollout ConvertSkeleton "Convert skeleton"
+    rollout ConvertSkeleton "Convert old skeleton"
     (
+        label lblInfo "This tool converts old 0.4.x skeleton \nformat to the new one." height:30
         button btnConvert "Convert" width:70
         
         on btnConvert pressed do (
@@ -19,7 +20,7 @@ undo off (
                 if obj.parent == undefined and util.GetNodeType obj == #singlemesh then (
                     found = true
                     local skinMesh = obj
-                    local imp = MafiaTools_4dsImport()
+                    local imp = ::MafiaTools_4dsImport
                     local rootBone = imp.CreateBone()
                     rootBone.transform = skinMesh.transform
                     rootBone.name = skinMesh.name
@@ -75,8 +76,8 @@ undo off (
     
     if not destroyed do (
         local style = #(#style_resizing, #style_titlebar, #style_sysmenu)
-        local w = 170
-        local h = 50
+        local w = 200
+        local h = 75
         
         CreateDialog ConvertSkeleton width:w height:h style:style        
     )

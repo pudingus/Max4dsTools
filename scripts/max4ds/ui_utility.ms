@@ -9,8 +9,8 @@ utility MafiaTools "4ds Max Tools"
     button      btnFindWeights    "Find distant weights..." align:#left
     button      btnConvertSkeleton "Convert old skeleton..." align:#left
 
-    label       bout              "by pudingus" offset:[0,20]
-    label       version           "v0.5.0-preview"
+    label       lblAuthor         "by pudingus" offset:[0,20]
+    label       lblVersion        "v0.5.0-preview"
 
     on btnImportExport pressed do
     (

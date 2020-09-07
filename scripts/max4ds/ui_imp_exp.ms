@@ -87,7 +87,7 @@
                 if file != undefined then (
                     local util = ::MafiaTools_Util
                     local layers = ::MafiaTools_Layers
-                    local imp = MafiaTools_4dsImport()
+                    local imp = ::MafiaTools_4dsImport
                     MafiaTools_ImpExpSettings.importPath = file
                     labelDone.text = "Importing..."
                     if del then (
@@ -126,7 +126,7 @@
             local path = getFilenamePath edtNamePath.text
 
             if doesDirectoryExist path then (
-                local exp = MafiaTools_4dsExport()
+                local exp = ::MafiaTools_4dsExport
                 local filepath = pathConfig.appendPath path edtName.text
                 labelDone.text = "Exporting..."
                 local sel = ddlUnits.selection

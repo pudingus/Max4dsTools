@@ -1,117 +1,131 @@
-
-struct MafiaTools_4dsExport (
+rollout MafiaTools_4dsExport "" (   --module
 
     --imports------------
-    p = MafiaTools_4dsParser,
-    util = MafiaTools_Util,
-
-    T4ds = p.T4ds,
-    THeader = p.THeader,
-    TMaterial = p.TMaterial,
-    MObject = p.Mobject,
-    TMesh = p.TMesh,
-    TFacegroup = p.TFacegroup,
-    TLod = p.TLod,
-    TSkin = p.TSkin,
-    TSkinVertexGroup = p.TSkinVertexGroup,
-    TMorph = p.TMorph,
-    TMorphSection = p.TMorphSection,
-    TMorphVertex = p.TMorphVertex,
-    TMorphTarget = p.TMorphTarget,
-    TBillboard = p.TBillboard,
-    TGlow = p.TGlow,
-    --TMirror = p.TMirror,
-    TDummy = p.TDummy,
-    TSector = p.TSector,
-    TPortal = p.TPortal,
-    TTarget = p.TTarget,
-    TBone = p.TBone,
+    local parser = ::MafiaTools_4dsParser
+    local util = ::MafiaTools_Util
     ---------------------
 
-    useEditNormals,
-    useCachedNormals,
+    local useEditNormals
+    local useCachedNormals
 
-    TNode = (
-        struct TNode (
-            baseNode,
-            type,
-            lods = #(),
-            portals = #(),
-            rootBone
-        )
-    ),
 
-    TNodeSet = (
-        struct TNodeSet (
-            mnodes = #(),       --list of objects as they are about to be exported
-            mnode_ids = #(),        --key = node handle, value = id in mnodes
+    
+    local boneNodes = #()
+    local boneNodeNames = #()
+    local boneHandleIds = #()
+    local parentBoneIds = #()
+    local nodeTypes = #()
+    local rootBone = #()
+    local matset
 
-            fn GetIdFromHandle handle = (    --Get Mafia object id from node handle
+    struct TNode (
+        baseNode,
+        type,
+        lods = #(),
+        portals = #(),
+        rootBone
+    )
+    
+    struct TNodeSet (
+        mnodes = #(),       --list of objects as they are about to be exported
+        mnode_ids = #(),        --key = node handle, value = id in mnodes
+
+        fn GetIdFromHandle handle = (    --Get Mafia object id from node handle
+            mnode_ids[handle]
+        ),
+
+        fn GetByNode obj = (           --Get TNode from node, returns undefined if not found
+            local mnode
+            if obj != undefined then (
+                local handle = obj.inode.handle
+                local mid = GetIdFromHandle handle
+                if mid != undefined then mnode = mnodes[mid]
+            )
+            mnode
+        ),
+
+        fn GetIdByNode obj = (           --Get TNode ID from node, returns 0 if not found
+            if obj != undefined then (
+                local handle = obj.inode.handle
                 mnode_ids[handle]
-            ),
+            )
+            else (
+                0
+            )
+        ),
 
-            fn GetByNode obj = (           --Get TNode from node, returns undefined if not found
-                local mnode
-                if obj != undefined then (
-                    local handle = obj.inode.handle
-                    local mid = GetIdFromHandle handle
-                    if mid != undefined then mnode = mnodes[mid]
-                )
-                mnode
-            ),
+        fn Add obj mnode = (          --Add TNode to collection
+            local handle = obj.inode.handle
+            append mnodes mnode
+            mnode_ids[handle] = mnodes.count
+        ),
 
-            fn GetIdByNode obj = (           --Get TNode ID from node, returns 0 if not found
-                if obj != undefined then (
-                    local handle = obj.inode.handle
-                    mnode_ids[handle]
-                )
-                else (
-                    0
-                )
-            ),
+        fn AddPointer obj id = (   --Add pointer (node handle) to mnode id
+            local handle = obj.inode.handle
 
-            fn Add obj mnode = (          --Add TNode to collection
-                local handle = obj.inode.handle
-                append mnodes mnode
-                mnode_ids[handle] = mnodes.count
-            ),
+            mnode_ids[handle] = id
+        )
+    )
 
-            fn AddPointer obj id = (   --Add pointer (node handle) to mnode id
-                local handle = obj.inode.handle
+    struct TFacegroupSet (
+        facegroups = #(),   --array of MFacegroup
+        facegroup_ids = #(),   --get facegroup id from matid
 
-                mnode_ids[handle] = id
+        fn GetByMatId matid = (
+            matid = matid + 1
+            local grp_id = facegroup_ids[matid]
+
+            if grp_id == undefined then (
+                local grp = parser.TFacegroup matid:matid
+                append facegroups grp
+                grp_id = facegroups.count
+                facegroup_ids[matid] = grp_id
+            )
+            facegroups[grp_id]
+        )
+    )
+    
+    struct TMatSet (
+        mafia_materials = #(),
+        mat_map = #(),
+        
+        fn AddToMafiaMaterials mat = (
+            local handle = GetHandleByAnim mat
+
+            if mat_map[handle] == undefined then (
+                append mafia_materials mat
+                mat_map[handle] = mafia_materials.count
             )
         )
-    ),
-
-    TFacegroupSet = (
-        struct TFacegroupSet (
-            facegroups = #(),   --array of MFacegroup
-            facegroup_ids = #(),   --get facegroup id from matid
-
-            fn GetByMatId matid = (
-                matid = matid + 1
-                local grp_id = facegroup_ids[matid]
-
-                if grp_id == undefined then (
-                    local grp = MafiaTools_4dsParser.TFacegroup matid:matid
-                    append facegroups grp
-                    grp_id = facegroups.count
-                    facegroup_ids[matid] = grp_id
-                )
-                facegroups[grp_id]
+        
+        fn GetMafiaMatId mat matid = (
+            local mid = 0
+            if isKindOf mat MultiMaterial then (
+                mat = mat[matid]
             )
-        )
-    ),
+    
+            if mat != undefined then (
+                local handle = getHandleByAnim mat
+                mid = mat_map[handle]
+                if mid == undefined then mid = 0
+            )
+    
+            mid
+        )        
+    )
+    
+    struct WeightedVertex (
+        boneid,
+        weight,
+        vertid
+    )
 
-    fn CompareNodesByName obj1 obj2 = stricmp obj1.name obj2.name,
+    struct VertBone (
+        boneid,
+        weight
+    )    
 
-
-
-
-
-    mafia_materials = #(),
-    mat_map = #(),
+    fn CompareNodesByName obj1 obj2 = stricmp obj1.name obj2.name    
 
     fn ConvertStandardMaterial mat = (
         local cm = Mat4ds()
@@ -136,7 +150,7 @@ struct MafiaTools_4dsExport (
         )
 
         cm
-    ),
+    )
 
     fn ConvertPhysicalMaterial mat = (
         local cm = Mat4ds()
@@ -169,41 +183,31 @@ struct MafiaTools_4dsExport (
         -- )
 
         cm
-    ),
-
-    fn AddToMafiaMaterials mat = (
-        local handle = GetHandleByAnim mat
-
-        if mat_map[handle] == undefined then (
-            append mafia_materials mat
-            mat_map[handle] = mafia_materials.count
-        )
-    ),
-
-    fn ExtractMaterials = (
+    )
+    
+    fn CollectMaterials = (
+        matset = TMatSet() 
+        
         for mat in sceneMaterials do (
             if isKindOf mat MultiMaterial then (
                 for submat in mat.materialList where submat != undefined do (
 
                     if util.containsItem #(Standard, Physical_Material, Mat4ds) (classOf subMat) then (
-                        AddToMafiaMaterials submat
+                        matset.AddToMafiaMaterials submat
                     )
                 )
             )
             else (
                 if util.containsItem #(Standard, Physical_Material, Mat4ds) (classOf mat) then (
-                    AddToMafiaMaterials mat
+                    matset.AddToMafiaMaterials mat
                 )
             )
         )
-
-        --for mat in mafia_materials do print mat
-        --for matm in mat_map where matm != undefined do print matm
-        --print mat_map
-
-        --local numMats = mafia_materials.count
-        --WriteShort f numMats
-
+        print matset.mafia_materials
+        matset.mafia_materials
+    )
+    
+    fn ExtractMaterials mafia_materials = (
         local mmaterials = #()
 
         for mat in mafia_materials do (
@@ -216,7 +220,7 @@ struct MafiaTools_4dsExport (
             )
 
             if classof mat == Mat4ds then  (
-                local mmat = TMaterial()
+                local mmat = parser.TMaterial()
 
                 local flags = 0
                 flags += (bit.set 0 1 true)
@@ -275,16 +279,7 @@ struct MafiaTools_4dsExport (
             )
         )
         mmaterials
-    ),
-
-    boneNodes = #(),
-    boneNodeNames = #(),
-    boneHandleIds = #(),
-    parentBoneIds = #(),
-
-    nodeTypes = #(),
-
-    rootBone = #(),
+    )    
 
     fn CollectNodes = (
         local util = ::MafiaTools_util
@@ -300,19 +295,6 @@ struct MafiaTools_4dsExport (
                         for boneNode in bns do (
                             local handle = boneNode.inode.handle
                             nodeTypes[handle] = #bone
-
-                            -- append boneNodes boneNode
-                            -- append boneNodeNames boneNode.name
-                            -- boneHandleIds[handle] = boneNodes.count
-
-                            -- local parentId
-                            -- if boneNode.parent != undefined then (
-                            --     local parentHandle = boneNode.parent.inode.handle
-                            --     parentId = boneHandleIds[parentHandle]
-                            -- )
-                            -- if parentId == undefined then parentId = 0
-
-                            -- append parentBoneIds parentId
                         )
                         nodeTypes[obj.parent.inode.handle] = #rootBone
                         rootBone[obj.inode.handle] = obj.parent
@@ -322,9 +304,6 @@ struct MafiaTools_4dsExport (
                 nodeTypes[obj.inode.handle] = type
             )
         )
-
-
-
 
         local mnodeSet = TNodeSet()
 
@@ -395,10 +374,10 @@ struct MafiaTools_4dsExport (
         )
 
         mnodeSet
-    ),
+    )
 
     fn ExtractSector mnode unitscl = (
-        local sector = TSector()
+        local sector = parser.TSector()
         sector.mesh = snapshotAsMesh mnode.baseNode
         sector.dmin = mnode.baseNode.min * unitscl
         sector.dmax = mnode.baseNode.max * unitscl
@@ -409,7 +388,7 @@ struct MafiaTools_4dsExport (
         )
 
         for portalNode in mnode.portals do (
-            local portal = TPortal()
+            local portal = parser.TPortal()
             local gp = custAttributes.get portalNode MafParams_def baseObject:false
 
             if gp == undefined then (
@@ -430,30 +409,15 @@ struct MafiaTools_4dsExport (
         )
 
         sector
-    ),
+    )
 
     fn ExtractDummy mnode unitscl = (
-        local mdummy = TDummy()
+        local mdummy = parser.TDummy()
         mdummy.dmin = in coordsys local mnode.baseNode.min * unitscl
         mdummy.dmax = in coordsys local mnode.baseNode.max * unitscl
         mdummy
-    ),
-
-    fn GetMafiaMatId mat matid = (
-        local mid = 0
-        if isKindOf mat MultiMaterial then (
-            mat = mat[matid]
-        )
-
-        if mat != undefined then (
-            local handle = getHandleByAnim mat
-            mid = mat_map[handle]
-            if mid == undefined then mid = 0
-        )
-
-        mid
-    ),
-
+    )
+    
     fn CompareWeights v1 v2 = (
         if v1.boneid > v2.boneid then 1
         else if v1.boneid < v2.boneid then -1
@@ -462,28 +426,15 @@ struct MafiaTools_4dsExport (
             else if v1.weight > v2.weight then -1
             else 0
         )
-    ),
+    )
 
-    WeightedVertex = (
-        struct WeightedVertex (
-            boneid,
-            weight,
-            vertid
-        )
-    ),
 
-    VertBone = (
-        struct VertBone (
-            boneid,
-            weight
-        )
-    ),
 
     fn CompareVertBones v1 v2 = (
         if v1.weight > v2.weight then -1
         else if v2.weight > v1.weight then 1
         else 0
-    ),
+    )
 
     fn ExtractWeights mnode = (
 
@@ -564,7 +515,7 @@ struct MafiaTools_4dsExport (
         )
 
         lodWeights
-    ),
+    )
 
     fn ExtractSkin mnode lodWeights unitscl = (
         local lodnodes = copy mnode.lods #noMap
@@ -576,7 +527,7 @@ struct MafiaTools_4dsExport (
             local lodnode = lodnodes[l]
             local weights = lodWeights[l]
 
-            local mskin = TSkin()
+            local mskin = parser.TSkin()
             mskin.numW0Verts = 0
             local range = 0.2
             mskin.dmin = [-range, -range, -range]
@@ -586,7 +537,7 @@ struct MafiaTools_4dsExport (
 
             for i = 2 to boneNodes.count do (
                 local boneNode = boneNodes[i]
-                local grp = TSkinVertexGroup()
+                local grp = parser.TSkinVertexGroup()
                 grp.numW1Verts = 0
 
                 local range = 0.2
@@ -643,11 +594,11 @@ struct MafiaTools_4dsExport (
             append mskins mskin
         )
         mskins
-    ),
+    )
 
     fn close_enough_p3 v1 v2 prec  = (
         (close_enough v1.x v2.x prec) and (close_enough v1.y v2.y prec) and (close_enough v1.z v2.z prec)
-    ),
+    )
 
     /*
     splitVerts
@@ -761,10 +712,10 @@ struct MafiaTools_4dsExport (
         )
 
         #(mesh, normals, weights, uvs)
-    ),
+    )
 
     fn ExtractMesh mnode mnodeSet &lodWeights unitscl = (
-        local mmesh = TMesh()
+        local mmesh = parser.TMesh()
 
         local instances
         local count = InstanceMgr.GetInstances mnode.baseNode &instances
@@ -786,7 +737,7 @@ struct MafiaTools_4dsExport (
                 local weights
                 if lodweights != undefined then weights = lodWeights[l]
 
-                local mlod = TLod()
+                local mlod = parser.TLod()
 
                 local lodMesh = copy lodnode.mesh
 
@@ -934,7 +885,7 @@ struct MafiaTools_4dsExport (
 
                 for i = 1 to lodmesh.numfaces do (
                     local matid = getFaceMatID lodmesh i
-                    local mafMatId = GetMafiaMatId lodnode.mat matid
+                    local mafMatId = matset.GetMafiaMatId lodnode.mat matid
 
                     local facegroup = fcgrpSet.GetByMatId mafMatId
                     append facegroup.faceIds i
@@ -950,18 +901,18 @@ struct MafiaTools_4dsExport (
             )
         )
         mmesh
-    ),
+    )
 
     fn ExtractBillboard mnode = (
-        local mbillboard = TBillboard()
+        local mbillboard = parser.TBillboard()
         local gp = custAttributes.get mnode.baseNode MafParams_def baseObject:false
         mbillboard.rotAxis = gp.rotAxis - 1
         mbillboard.rotMode = gp.rotMode - 1
         mbillboard
-    ),
+    )
 
     fn ExtractBone mnode = (
-        mbone = TBone()
+        mbone = parser.TBone()
         --mbone.boneId = mnode.baseNode.boneId
         local handle = mnode.baseNode.inode.handle
         mbone.boneId = boneHandleIds[handle] - 2
@@ -969,17 +920,17 @@ struct MafiaTools_4dsExport (
         mbone.matrix = matrix3 1
 
         mbone
-    ),
+    )
 
     fn ExtractTarget mnode mnodeSet = (
-        local mtarget = TTarget()
+        local mtarget = parser.TTarget()
 
         for linkedNode in mnode.basenode.nodes do (
             append mtarget.linkIds (mnodeSet.GetIDByNode linkedNode)
         )
 
         mtarget
-    ),
+    )
 
     fn ExtractGlow mnode = (
         local mglows = #()
@@ -989,22 +940,22 @@ struct MafiaTools_4dsExport (
             local matId = basenode.matids[i]
             local pos = basenode.positions[i]
 
-            local mafMatId = GetMafiaMatId basenode.mat matId
+            local mafMatId = matset.GetMafiaMatId basenode.mat matId
 
             if mafMatId != 0 then (
-                local mglow = TGlow matId:mafMatId position:pos
+                local mglow = parser.TGlow matId:mafMatId position:pos
                 append mglows mglow
             )
 
         )
         mglows
-    ),
+    )
 
     fn ExtractObjects mnodeSet unitscl = (
         local mobjects = #()
 
         for mnode in mnodeSet.mnodes do (
-            local mobj = MObject()
+            local mobj = parser.MObject()
 
             local baseNode = mnode.baseNode
 
@@ -1108,13 +1059,20 @@ struct MafiaTools_4dsExport (
             append mobjects mobj
         )
         mobjects
-    ),
+    )
 
     fn Export4ds file cachedNorm editNorm unitscl  = (
 
         useCachedNormals = cachedNorm
         useEditNormals = editNorm
-
+        
+        boneNodes = #()
+        boneNodeNames = #()
+        boneHandleIds = #()
+        parentBoneIds = #()
+        nodeTypes = #()
+        rootBone = #()
+        
         format "exporting: %\n" file
 
         local st = Stopwatch.StartNew()
@@ -1123,13 +1081,15 @@ struct MafiaTools_4dsExport (
 
         local used_start = (heapsize - heapfree) / 1024.0
 
-        local m4ds = p.T4ds()
-        m4ds.materials = ExtractMaterials()
+        local m4ds = parser.T4ds()
+        local mmmm = CollectMaterials()      
+        
+        m4ds.materials = ExtractMaterials mmmm
         local mnodeSet = CollectNodes()
         m4ds.objects = ExtractObjects mnodeSet unitscl
 
         local f = fopen file "wb"
-        p.Write4ds f m4ds
+        parser.Write4ds f m4ds
         fclose f
 
         local dur = st.elapsed() / 1000.0
@@ -1145,4 +1105,3 @@ struct MafiaTools_4dsExport (
         dur
     )
 )
---MafiaTools_4dsExport = MafiaTools_4dsExport()

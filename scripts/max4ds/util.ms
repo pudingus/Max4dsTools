@@ -1,4 +1,6 @@
-struct MafiaTools_Util (
+
+rollout MafiaTools_Util "" (    --module
+    
     --modifier ops
     fn GetModByClass obj mclass = (    --to support versions prior 2013
         local foundMod
@@ -10,18 +12,18 @@ struct MafiaTools_Util (
             )
         )
         foundMod
-    ),
+    )
     
     fn HasMod obj mclass = (
         GetModByClass obj mclass != undefined
-    ),
+    )
     ----------
     
     
     ---skin ops-------
     fn GetBoneNodes skinMod = (
         for k in (refs.dependsOn skinMod) where (isKindOf k node) collect k
-    ),
+    )
     
     fn GetBoneVertexWeight skinMod vertid boneid = (
         local weight
@@ -35,7 +37,7 @@ struct MafiaTools_Util (
             weight = skinOps.GetVertexWeight skinMod vertid nth
         )
         weight
-    ),
+    )
 
     fn TransferWeight skinMod vertid oldId newId = (
         local weight = GetBoneVertexWeight skinMod vertid oldid
@@ -46,7 +48,7 @@ struct MafiaTools_Util (
             skinOps.SetVertexWeights skinMod vertid oldid 0.0
             skinOps.SetVertexWeights skinMod vertid newid (weight + existingWeight)
         )
-    ),
+    )
     ------------------
     
     
@@ -54,25 +56,25 @@ struct MafiaTools_Util (
     ---node ops----------
     fn IsGeometry obj = (
         Superclassof obj == GeometryClass and ClassOf obj != TargetObject
-    ),
+    )
     
     fn isDescendantOf node1 node2 = (
         while node1.parent != undefined and node1.parent != node2 do (
             node1 = node1.parent
         )
         node1.parent == node2
-    ),
+    )
     
     fn directlyRelated node1 node2 = (
         node1.parent == node2 or node2.parent == node1
-    ),
+    )
     ----------------------
     
     
     ---array ops----
     fn containsItem array value = (
         (findItem array value) > 0
-    ),
+    )
 
     fn PrintArray arr = (
         local ss = stringstream ""
@@ -81,7 +83,7 @@ struct MafiaTools_Util (
             format "%\n" item to:ss
         )
         format (ss as string)
-    ),    
+    )
     
     fn ReverseArray arr = (
         local newArr = #()
@@ -89,7 +91,7 @@ struct MafiaTools_Util (
             append newArr arr[arr.count-i+1]
         )
         newArr
-    ),
+    )
     ---------------
     
     
@@ -135,6 +137,5 @@ struct MafiaTools_Util (
         )
         else #unsupported
     )    
+    
 )
-MafiaTools_Util = MafiaTools_Util()
-ok
