@@ -955,7 +955,7 @@ rollout MafiaTools_4dsExport "" (   --module
         local mobjects = #()
 
         for mnode in mnodeSet.mnodes do (
-            local mobj = parser.MObject()
+            local mobj = parser.TObject()
 
             local baseNode = mnode.baseNode
 

@@ -27,7 +27,7 @@ rollout MafiaTools_4dsParser "" ( --module
         animPeriod  --u32
     )
 
-    struct MObject (
+    struct TObject (
         objectType,
         visualType,
         renderFlags = 0,
@@ -328,7 +328,7 @@ rollout MafiaTools_4dsParser "" ( --module
     )
 
     fn ReadObject f = (
-        local mobj = MObject()
+        local mobj = TObject()
 
         mobj.objectType = ReadByte f #unsigned
 
