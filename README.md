@@ -8,7 +8,7 @@ Mafia 4ds plugin for 3ds Max. Based on the work by Mr F, but almost everything h
 ![3dsmax_2020-06-25_12-15-09](https://user-images.githubusercontent.com/39903631/85701543-c8233680-b6dd-11ea-992c-d84cce7cb50a.jpg)
 
 ### Features
-- [X] 4ds model files
+- [X] 4ds types
     - [X] Meshes, lods, instances
     - [X] Dummies (bounding boxes)
     - [X] Sectors, portals
@@ -22,24 +22,16 @@ Mafia 4ds plugin for 3ds Max. Based on the work by Mr F, but almost everything h
     - [ ] Mirrors
         - [X] Import (partial)
         - [ ] Export
-- [ ] 5ds animation files
-- [ ] 6ds shadow files
 
-Support for other formats like scene2.bin is not planned.
-
-#### Games
-- [X] Mafia
-- [ ] Hidden & Dangerous 2
-- [ ] Chameleon
-
-#### Model features
-- Lods
-- Mesh instances
-- Vertex normals
-    - Smoothing groups
-    - Explicit normals (from modifier)
-- Correct UV export
-- Unit scaling
+#### 
+- Model features
+    - Lods
+    - Mesh instances
+    - Vertex normals
+        - Smoothing groups
+        - Explicit normals (from modifier)
+    - Correct UV export
+    - Unit scaling
 - Object parameters
     - Culling flags
     - Rendering flags
