@@ -94,7 +94,12 @@ rollout MafiaTools_Util "" (    --module
     )
     ---------------
     
+    ---string ops----
+    fn isStringEmpty str = (
+        str == undefined or str.count == 0
+    )
     
+    -------------------
     
     
     -----------------

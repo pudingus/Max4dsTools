@@ -5,7 +5,8 @@
     global MafiaTools_version = "v0.5.0-preview"
     global MafiaTools_scriptsPath = getFilenamePath (getThisScriptFilename()) 
     
-
+    MafiaTools_ImpExpSettings = undefined
+        
     --scriptedPlugins
     filein "material.ms"
     filein "MafParams.ms"
@@ -27,24 +28,13 @@
     format "4ds Max Tools % loaded\n" MafiaTools_version
 )
 
--- callbacks.addScript #systemPostNew "PostNew()" id:#MafiaTools
--- callbacks.addScript #systemPostReset "PostNew()" id:#MafiaTools
+callbacks.removeScripts #systemPostNew id:#MafiaTools
+callbacks.removeScripts #systemPostReset id:#MafiaTools
+callbacks.addScript #systemPostNew "PostReset()" id:#MafiaTools
+callbacks.addScript #systemPostReset "PostReset()" id:#MafiaTools
 
--- callbacks.addScript #filePostOpen "PostOpen()" id:#MafiaTools
--- callbacks.addScript #filePostSave "PostSave()" id:#MafiaTools
-
--- fn PostNew = (
---  MafiaTools.editName.text = ""
--- )
-
--- fn PostOpen = (
---  MafiaTools.editName.text = getFilenameFile maxFileName
--- )
-
--- fn PostSave = (
---  if MafiaTools.editName.text == "" then (
---      MafiaTools.editName.text = getFilenameFile maxFileName
---  )
--- )
-
---format "Mafia 4ds Import/Export plugin % loaded\n" MafiaTools.version.caption
+fn PostReset = (
+    if ::MafiaTools_ImpExpSettings != undefined then (
+        ::MafiaTools_ImpExpSettings.filenameForExport = undefined
+    )
+)

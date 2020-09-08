@@ -5,17 +5,20 @@
         destroyed = true
     )
 
-    struct settings (
-        importPath,
-        exportPath,
-        exportFilename,
-        position,
-        editNorm,
-        cachedNorm,
-        unitsSel = 4
-    )
     global MafiaTools_ImpExpSettings
-    if MafiaTools_ImpExpSettings == undefined then MafiaTools_ImpExpSettings = settings()
+    (
+        struct settings (
+            importPath,
+            exportPath,
+            exportFilename,
+            position,
+            editNorm,
+            cachedNorm,
+            unitsSel = 4,
+            filenameForExport
+        )
+        if ::MafiaTools_ImpExpSettings == undefined then ::MafiaTools_ImpExpSettings = settings()
+    )
 
     rollout ImpExp "4ds Import/Export" (
         local unitItems = #(
@@ -43,9 +46,10 @@
         )
 
         local settings = ::MafiaTools_ImpExpSettings
+        local util = ::MafiaTools_Util
 
         label lblUnits "Units:" offset:[0,3] align:#left across:2
-        dropdownList ddlUnits    align:#right width:160  items:unitItems height:11 selection:settings.unitsSel
+        dropdownList ddlUnits    align:#right width:140  items:unitItems height:11 selection:settings.unitsSel
 
         group "Import" (
             label       lblUnitSclI     "Scale factor:" align:#left across:2
@@ -59,9 +63,9 @@
             label       lblSclE         "" align:#right
             checkbox    cbCachedNorm    "Cached normals" checked:true
             checkbox    cbEditNorm      "Edit Normals modifier" checked:true
-            edittext    edtNamePath    align:#left offset:[0,10]  text:"" width:200
-            edittext    edtName        align:#left  text:"" width:200
-            button      btnBrowse       "Browse..." align:#left across:2 width:70
+            edittext    edtDirectory "Directory:"   align:#left offset:[0,5]  text:""labelOnTop:true
+            edittext    edtFilename  "Filename:"      align:#left  text:"" labelOnTop:true
+            button      btnBrowse       "Browse..." align:#left width:70 across:2 
             button      btnExport       "Export" align:#right width:70
         )
         timer       clock   interval:5000 active:false
@@ -83,12 +87,13 @@
             if proceed then (
                 local prev_name = MafiaTools_ImpExpSettings.importPath
                 if prev_name == undefined then prev_name = ""
-                local file = getOpenFileName types:"4DS models (*.4ds)|*.4ds|All files (*.*)|*.*" historyCategory:"4dsImport" filename:prev_name
+                local file = getOpenFileName types:"4ds Model (*.4ds)|*.4ds|All files (*.*)|*.*" historyCategory:"4dsImport" filename:prev_name
                 if file != undefined then (
                     local util = ::MafiaTools_Util
                     local layers = ::MafiaTools_Layers
                     local imp = ::MafiaTools_4dsImport
                     MafiaTools_ImpExpSettings.importPath = file
+                    MafiaTools_ImpExpSettings.filenameForExport = filenameFromPath file
                     labelDone.text = "Importing..."
                     if del then (
                         delete $*
@@ -114,28 +119,55 @@
         )
 
         on btnBrowse pressed do (
-            local file = getSaveFileName types:"4DS file (*.4ds)|*.4ds|All files (*.*)|*.*" historyCategory:"4dsExport"
+            local filename = edtFilename.text
+            if util.isStringEmpty filename then (
+                filename = settings.filenameForExport
+                if util.isStringEmpty filename then (
+                    filename = getfilenamefile maxFilename
+                    if util.isStringEmpty filename then (
+                        filename = ""
+                    )
+                )
+            )
+        
+            local file = getSaveFileName types:"4ds Model (*.4ds)|*.4ds|All files (*.*)|*.*" historyCategory:"4dsExport" filename:filename
             if file != undefined then (
-
-                edtNamePath.text = getFilenamePath file
-                edtName.text = filenameFromPath file
+                edtDirectory.text = getFilenamePath file
+                edtFilename.text = filenameFromPath file
             )
         )
 
         on btnExport pressed do (
-            local path = getFilenamePath edtNamePath.text
+            local path = edtDirectory.text
 
             if doesDirectoryExist path then (
                 local exp = ::MafiaTools_4dsExport
-                local filepath = pathConfig.appendPath path edtName.text
-                labelDone.text = "Exporting..."
-                local sel = ddlUnits.selection
-                local unitscl = unitMeterRatios[sel]
-                local dur = exp.Export4ds filepath cbCachedNorm.checked cbEditNorm.checked unitscl
-                labelDone.text = "Done in " + (dur as string) + " seconds"
-                clock.active = true
+                local filename = edtFilename.text
+                if util.isStringEmpty filename then (
+                    messageBox "Provide a filename."
+                )
+                else (
+                    local ext = ".4ds"
+                    if filename.count < ext.count then (
+                        append filename ext
+                    )
+                    else (
+                        local sub = substring filename (filename.count-3) 4                        
+                        if toLower sub != ext then append filename ext                        
+                    )
+                    
+                    local filepath = pathConfig.appendPath path filename
+                    labelDone.text = "Exporting..."
+                    local sel = ddlUnits.selection
+                    local unitscl = unitMeterRatios[sel]
+                    local dur = exp.Export4ds filepath cbCachedNorm.checked cbEditNorm.checked unitscl
+                    labelDone.text = "Done in " + (dur as string) + " seconds"
+                    clock.active = true
+                )
             )
-
+            else (
+                messageBox "Specified directory doesn't exist."
+            )
         )
         on clock tick do (
             labelDone.text = ""
@@ -146,13 +178,13 @@
             local settings = ::MafiaTools_ImpExpSettings
 
             if settings.exportPath != undefined then (
-                edtNamePath.text = settings.exportPath
+                edtDirectory.text = settings.exportPath
             )
             if settings.exportFilename != undefined then (
-                edtName.text = settings.exportFilename
+                edtFilename.text = settings.exportFilename
             )
             if settings.exportFilename != undefined then (
-                edtName.text = settings.exportFilename
+                edtFilename.text = settings.exportFilename
             )
             if settings.cachedNorm != undefined then (
                 cbCachedNorm.checked = settings.cachedNorm
@@ -165,9 +197,9 @@
 
         on ImpExp close do (
             local settings = ::MafiaTools_ImpExpSettings
-            print "close"
-            settings.exportPath = edtNamePath.text
-            settings.exportFilename = edtName.text
+            --print "close"
+            settings.exportPath = edtDirectory.text
+            settings.exportFilename = edtFilename.text
             settings.position = GetDialogPos ImpExp
             settings.cachedNorm = cbCachedNorm.checked
             settings.editNorm = cbEditNorm.checked
@@ -178,8 +210,8 @@
     if not destroyed then (
         local pos = ::MafiaTools_ImpExpSettings.position
         local style = #(#style_titlebar, #style_border, #style_sysmenu)
-        local w = 220
-        local h = 310
+        local w = 200
+        local h = 335
         if pos != undefined then (
             CreateDialog ImpExp w h pos.x pos.y style:style
         )

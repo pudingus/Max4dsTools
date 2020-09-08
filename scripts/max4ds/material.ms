@@ -133,7 +133,7 @@ remap:#(#(#isAnimatedM,#useMips,#useColoring,#useColorKey,#useAddBlend),#(#anima
         local result
         if (map != undefined) and (ClassOf map == Bitmaptexture) then (
             local tempDir = GetDir #temp
-            tempDir += "\\mafia_4ds\\"
+            tempDir += "\\max4ds\\"
             local tempExists = makeDir tempDir
             if tempExists then (
                 local bt = KeyBitmap map.bitmap
