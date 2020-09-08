@@ -96,7 +96,7 @@ rollout MafiaTools_4dsExport "" (   --module
                 append mafia_materials mat
                 mat_map[handle] = mafia_materials.count
             )
-        )
+        ),
         
         fn GetMafiaMatId mat matid = (
             local mid = 0
@@ -203,7 +203,6 @@ rollout MafiaTools_4dsExport "" (   --module
                 )
             )
         )
-        print matset.mafia_materials
         matset.mafia_materials
     )
     
@@ -1062,45 +1061,54 @@ rollout MafiaTools_4dsExport "" (   --module
     )
 
     fn Export4ds file cachedNorm editNorm unitscl  = (
-
+        
         useCachedNormals = cachedNorm
         useEditNormals = editNorm
         
-        boneNodes = #()
-        boneNodeNames = #()
-        boneHandleIds = #()
-        parentBoneIds = #()
-        nodeTypes = #()
-        rootBone = #()
+        local dur = 0.0
         
-        format "exporting: %\n" file
-
-        local st = Stopwatch.StartNew()
-
-        gc light:true
-
-        local used_start = (heapsize - heapfree) / 1024.0
-
-        local m4ds = parser.T4ds()
-        local mmmm = CollectMaterials()      
-        
-        m4ds.materials = ExtractMaterials mmmm
-        local mnodeSet = CollectNodes()
-        m4ds.objects = ExtractObjects mnodeSet unitscl
-
         local f = fopen file "wb"
-        parser.Write4ds f m4ds
-        fclose f
+        if f == undefined then (
+            messageBox "Error. Could not write to file."   
+        )
+        else (
+            boneNodes = #()
+            boneNodeNames = #()
+            boneHandleIds = #()
+            parentBoneIds = #()
+            nodeTypes = #()
+            rootBone = #()
+            
+            format "exporting: %\n" file
+    
+            local st = Stopwatch.StartNew()
+    
+            gc light:true
+    
+            local used_start = (heapsize - heapfree) / 1024.0
+    
+            local m4ds = parser.T4ds()
+            local mmmm = CollectMaterials()
+            
+            m4ds.materials = ExtractMaterials mmmm
+            local mnodeSet = CollectNodes()
+            m4ds.objects = ExtractObjects mnodeSet unitscl
+    
+            
+            parser.Write4ds f m4ds
+            fclose f
+    
+            dur = st.elapsed() / 1000.0
+    
+            local used_end = (heapsize - heapfree) / 1024.0
+            format "memory used ~ % KiB\n" (used_end - used_start)
+    
+            gc light:true
+    
+            format "Exporting took % seconds\n" dur
+            --messageBox ("Exporting took " + (dur as string) + " seconds")
+        )      
 
-        local dur = st.elapsed() / 1000.0
-
-        local used_end = (heapsize - heapfree) / 1024.0
-        format "memory used ~ % KiB\n" (used_end - used_start)
-
-        gc light:true
-
-        format "Exporting took % seconds\n" dur
-        --messageBox ("Exporting took " + (dur as string) + " seconds")
 
         dur
     )
