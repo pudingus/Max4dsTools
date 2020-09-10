@@ -138,9 +138,9 @@
         )
 
         on btnExport pressed do (
-            local path = edtDirectory.text
+            local dir = edtDirectory.text
 
-            if doesDirectoryExist path then (
+            if doesFileExist dir then (
                 local exp = ::MafiaTools_4dsExport
                 local filename = edtFilename.text
                 if util.isStringEmpty filename then (
@@ -156,7 +156,7 @@
                         if toLower sub != ext then append filename ext                        
                     )
                     
-                    local filepath = pathConfig.appendPath path filename
+                    local filepath = pathConfig.appendPath dir filename
                     labelDone.text = "Exporting..."
                     local sel = ddlUnits.selection
                     local unitscl = unitMeterRatios[sel]
@@ -198,12 +198,15 @@
         on ImpExp close do (
             local settings = ::MafiaTools_ImpExpSettings
             --print "close"
-            settings.exportPath = edtDirectory.text
-            settings.exportFilename = edtFilename.text
-            settings.position = GetDialogPos ImpExp
-            settings.cachedNorm = cbCachedNorm.checked
-            settings.editNorm = cbEditNorm.checked
-            settings.unitsSel = ddlUnits.selection
+			if settings != undefined then (  -- in case init.ms was reloaded while the rollout was open
+				settings.exportPath = edtDirectory.text
+				settings.exportFilename = edtFilename.text
+				settings.position = GetDialogPos ImpExp
+				settings.cachedNorm = cbCachedNorm.checked
+				settings.editNorm = cbEditNorm.checked
+				settings.unitsSel = ddlUnits.selection
+			)
+
         )
     )
 
