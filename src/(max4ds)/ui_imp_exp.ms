@@ -5,21 +5,6 @@
         destroyed = true
     )
 
-    global MafiaTools_ImpExpSettings
-    (
-        struct settings (
-            importPath,
-            exportPath,
-            exportFilename,
-            position,
-            editNorm,
-            cachedNorm,
-            unitsSel = 4,
-            filenameForExport
-        )
-        if ::MafiaTools_ImpExpSettings == undefined then ::MafiaTools_ImpExpSettings = settings()
-    )
-
     rollout ImpExp "4ds Import/Export" (
         local unitItems = #(
             "Milimeters",
@@ -200,15 +185,12 @@
         on ImpExp close do (
             local settings = ::MafiaTools_ImpExpSettings
             --print "close"
-			if settings != undefined then (  -- in case init.ms was reloaded while the rollout was open
-				settings.exportPath = edtDirectory.text
-				settings.exportFilename = edtFilename.text
-				settings.position = GetDialogPos ImpExp
-				settings.cachedNorm = cbCachedNorm.checked
-				settings.editNorm = cbEditNorm.checked
-				settings.unitsSel = ddlUnits.selection
-			)
-
+            settings.exportPath = edtDirectory.text
+            settings.exportFilename = edtFilename.text
+            settings.position = GetDialogPos ImpExp
+            settings.cachedNorm = cbCachedNorm.checked
+            settings.editNorm = cbEditNorm.checked
+            settings.unitsSel = ddlUnits.selection	
         )
     )
 

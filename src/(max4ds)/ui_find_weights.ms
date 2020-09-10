@@ -100,11 +100,17 @@
                     messageBox "Select an object with Skin modifier!"
                 )
                 else (
-
+					if getCommandPanelTaskMode() != #modify then (
+						setCommandPanelTaskMode #modify
+					) 
+					modpanel.setcurrentobject skinMod
+					
                     boneNodes = util.GetBoneNodes skinMod
                     groups = #()
                     local numverts = skinOps.GetNumberVertices skinMod
 
+                    local xskin = skin_makeCache skinMod
+                    
                     --collect broken weights into groups
                     for i = 1 to numverts do (
                         local count = skinOps.GetVertexWeightCount skinMod i
@@ -114,7 +120,7 @@
                                         
                             for n = 1 to count do (
                                 local w = skinOps.GetVertexWeight skinMod i n
-                                local id = skinOps.GetVertexWeightBoneID skinMod i n
+                                local id = skin_getVertexWeightBoneId xskin i n
                                 local vb = VertBone boneid:id weight:w
                                 append vertBones vb            
                             )
@@ -222,10 +228,11 @@
                 )
                 subObjectLevel = 1
                 
+                local xskin = skin_makeCache skinMod
                 
                 ---select vertices and bone
                 skinOps.SelectVertices skinMod grp.verts
-                skinOps.SelectBone skinMod grp.boneid1
+                skin_selectBone xskin grp.boneid1
 
 
                 local bonenode1 = bonenodes[grp.boneid1]
@@ -312,7 +319,8 @@
 
         on lstBones selected val do (
             if skinMod != undefined then (
-                skinOps.SelectBone skinMod bonesItemData[val]
+                local xskin = skin_makeCache skinMod
+                skin_SelectBone xskin bonesItemData[val]
             )
         )        
 

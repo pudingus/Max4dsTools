@@ -3,7 +3,7 @@ category:"4ds Max Tools"
 internalCategory:"Max4ds"
 buttonText:"4ds Imp/Exp"
 toolTip:"4ds Import Export"
-autoUndoEnabled:false
+--autoUndoEnabled:false
 (
     on execute do (
         filein (::MafiaTools_scriptsPath + "ui_imp_exp.ms")
@@ -15,7 +15,7 @@ category:"4ds Max Tools"
 internalCategory:"Max4ds"
 buttonText:"4ds Params"
 toolTip:"4ds Object Parameters"
-autoUndoEnabled:false
+--autoUndoEnabled:false
 (
     on execute do (
         filein (::MafiaTools_scriptsPath + "ui_param_editor.ms")
@@ -27,7 +27,7 @@ category:"4ds Max Tools"
 internalCategory:"Max4ds"
 buttonText:"4ds Weights"
 toolTip:"Find weight conflicts"
-autoUndoEnabled:false
+--autoUndoEnabled:false
 (
     on execute do (
         filein (::MafiaTools_scriptsPath + "ui_find_weights.ms")

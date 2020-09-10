@@ -145,8 +145,12 @@ rollout MafiaTools_4dsImport "" (   --module
 
         local tmod = Morpher()
         addModifier nnode tmod
-        max modify mode
-        select nnode
+        local maxver = (maxversion())[1]
+        if maxver < 22000 then (
+            max modify mode
+            select nnode
+        )
+
 
         local sectionNames = #("A", "B", "C")
         local layerNames = #("layer A", "layer B", "layer C")
@@ -403,6 +407,7 @@ rollout MafiaTools_4dsImport "" (   --module
 
 
     fn CreateSkins skinBuffer boneNodes  = (
+        local maxver = (maxversion())[1]
         for pair in skinBuffer do (
             local mskins = pair.mdefs
             local nodes = pair.nodes
@@ -414,8 +419,11 @@ rollout MafiaTools_4dsImport "" (   --module
                 local oskin = Skin()
                 oskin.showNoEnvelopes = true
                 addModifier nnode oskin
-                max modify mode
-                select nnode
+                if maxver < 22000 then (
+                    max modify mode
+                    select nnode
+                )
+ 
 
                 for i = 1 to boneNodes.count do (
                     skinOps.AddBone oskin boneNodes[i] 0
@@ -428,36 +436,26 @@ rollout MafiaTools_4dsImport "" (   --module
                     )
                 )
                 ---------
-                
-                local boneNodeNames = for bn in boneNodes collect bn.name
-                local skinBoneIds = #()
-                local numbones = skinOps.GetNumberBones oskin
-                for i = 1 to numbones do (
-                    local boneName = skinops_getBoneName oskin i 0
-                    local mafiaBoneId = findItem boneNodeNames boneName
-                    skinBoneIds[mafiaBoneId] = i
-                )
-                
-                
-
+                                
+                local xskin = skin_makeCache oskin             
 
                 local vertId = 1
 
                 for i = 1 to mskin.vgroups.count do (
                     local grp = mskin.vgroups[i]
-                    local boneid1 = skinBoneIds[i+1]
-                    local boneid2 = skinBoneIds[grp.boneId+1]
+                    local boneid1 = i+1
+                    local boneid2 = grp.boneId+1
 
                     for j = 1 to grp.numW1Verts do (
                         local weight = 1.0
-                        skinOps.SetVertexWeights oskin vertId boneid1 weight
+                        skin_setVertexWeight xskin vertId boneid1 weight
 
                         vertId += 1
                     )
 
                     for weight in grp.weights do (
-                        skinOps.SetVertexWeights oskin vertId boneid1 weight
-                        skinOps.SetVertexWeights oskin vertId boneid2 (1.0 - weight)
+                        skin_setVertexWeight xskin vertId boneid1 weight
+                        skin_setVertexWeight xskin vertId boneid2 (1.0 - weight)
 
                         vertId += 1
                     )
@@ -465,7 +463,7 @@ rollout MafiaTools_4dsImport "" (   --module
 
                 for i = 1 to mskin.numW0Verts do (
                     local weight = 1.0
-                    skinOps.SetVertexWeights oskin vertId skinBoneIds[1] weight
+                    skin_setVertexWeight xskin vertId 1 weight
                     vertid += 1
                 )
             )
@@ -659,7 +657,10 @@ rollout MafiaTools_4dsImport "" (   --module
     )
 
     fn Import4ds file unitscale = (
-        if getCommandPanelTaskMode() == #modify then (
+        local mode = getCommandPanelTaskMode()
+        local savedMode
+        if mode == #modify then (
+            savedMode = mode
             setCommandPanelTaskMode #create
         )
 
@@ -699,12 +700,15 @@ rollout MafiaTools_4dsImport "" (   --module
 
             gc light:true
 
-            local dur = util.elapsed_since(st) / 1000.0
-
+            local dur = elapsed_since(st) / 1000.0
 
             local message = "Importing took " + (dur as string) + " seconds\n"
             format message
             --messageBox message
+            
+            if savedMode != undefined do (
+                setCommandPanelTaskMode savedMode
+            )
 
             dur
         )

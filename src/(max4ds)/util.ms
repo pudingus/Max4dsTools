@@ -22,15 +22,16 @@ rollout MafiaTools_Util "" (    --module
     
     ---skin ops-------
     fn GetBoneNodes skinMod = (
-        for k in (refs.dependsOn skinMod) where (isKindOf k node) collect k
+        for k in (refs.dependsOn skinMod) where (isValidNode k) collect k
     )
     
     fn GetBoneVertexWeight skinMod vertid boneid = (
+        local xskin = skin_makeCache skinMod
         local weight
         local count = skinOps.GetVertexWeightCount skinMod vertid
         local nth
         for i = 1 to count while nth == undefined do (
-            id = skinOps.GetVertexWeightBoneID skinMod vertid i
+            id = skin_GetVertexWeightBoneID xskin vertid i
             if id == boneid then nth = i
         )
         if nth != undefined then (
@@ -40,13 +41,14 @@ rollout MafiaTools_Util "" (    --module
     )
 
     fn TransferWeight skinMod vertid oldId newId = (
+        local xskin = skin_makeCache skinMod
         local weight = GetBoneVertexWeight skinMod vertid oldid
         
         local existingWeight = GetBoneVertexWeight skinMod vertid newId
 
         if weight != undefined then (
-            skinOps.SetVertexWeights skinMod vertid oldid 0.0
-            skinOps.SetVertexWeights skinMod vertid newid (weight + existingWeight)
+            skin_SetVertexWeights xskin vertid oldid 0.0
+            skin_SetVertexWeights xskin vertid newid (weight + existingWeight)
         )
     )
     ------------------
@@ -141,12 +143,12 @@ rollout MafiaTools_Util "" (    --module
             )
         )
         else #unsupported
-    )    
-    
-    fn elapsed_since time = (
-        local now = timeStamp()
-            
-        if now < time then now += 86400000 --timing over midnight
-        (now - time)
-    )
+    )        
+)
+
+fn elapsed_since time = (
+    local now = timeStamp()
+        
+    if now < time then now += 86400000 --timing over midnight
+    (now - time)
 )

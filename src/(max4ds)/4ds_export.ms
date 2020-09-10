@@ -11,7 +11,6 @@ rollout MafiaTools_4dsExport "" (   --module
 
     
     local boneNodes = #()
-    local boneNodeNames = #()
     local boneHandleIds = #()
     local parentBoneIds = #()
     local nodeTypes = #()
@@ -352,7 +351,6 @@ rollout MafiaTools_4dsExport "" (   --module
 
             if nodeType == #bone or nodeType == #rootBone then (
                 append boneNodes obj
-                append boneNodeNames obj.name
                 local handle = obj.inode.handle
                 boneHandleIds[handle] = boneNodes.count
 
@@ -440,26 +438,20 @@ rollout MafiaTools_4dsExport "" (   --module
         local lodnodes = copy mnode.lods #noMap
         insertItem mnode.baseNode lodnodes 1
 
-        local lodWeights = #()
-        
-        
-        local maxver = (maxVersion())[1]
-        local GetBoneName = skinops.getBoneName
-        if maxver == 16000 and isProperty skinops #getbonenamebylistid do (
-           GetBoneName = skinops.getBoneNameByListID        
-        )
+        local lodWeights = #() 
 
         for lodnode in lodnodes do (
             local bskin = util.GetModByClass lodnode Skin
 
             max modify mode
-            modPanel.setCurrentObject bskin
+            modPanel.setCurrentObject bskin            
 
-            local skinBoneIds = #()
-            local numbones = skinOps.GetNumberBones bskin
-            for i = 1 to numbones do (
-                local boneName = GetBoneName bskin i 0
-                local globBoneId = findItem boneNodeNames boneName
+            local xskin = skin_makeCache bskin
+            
+            local skinBoneIds = #()            
+            local skinBones = util.GetBoneNodes bskin            
+            for i = 1 to skinBones.count do (
+                local globBoneId = findItem boneNodes skinBones[i]
                 skinBoneIds[i] = globBoneId
             )
 
@@ -474,7 +466,7 @@ rollout MafiaTools_4dsExport "" (   --module
                 if count > 0 then (
                     if count == 1 then (
                         weight = skinOps.GetVertexWeight bskin i 1
-                        local id = skinOps.GetVertexWeightBoneID bskin i 1
+                        local id = skin_getVertexWeightBoneId xskin i 1
                         boneid = skinBoneIds[id] - 1
                     )
                     else (
@@ -482,7 +474,7 @@ rollout MafiaTools_4dsExport "" (   --module
 
                         for n = 1 to count do (
                             local w = skinOps.GetVertexWeight bskin i n
-                            local id = skinOps.GetVertexWeightBoneID bskin i n
+                            local id = skin_getVertexWeightBoneId xskin i n
                             local globId = skinBoneIds[id]
                             local vb = VertBone boneid:globId weight:w
                             append vertBones vb
@@ -1080,7 +1072,6 @@ rollout MafiaTools_4dsExport "" (   --module
         )
         else (
             boneNodes = #()
-            boneNodeNames = #()
             boneHandleIds = #()
             parentBoneIds = #()
             nodeTypes = #()
@@ -1105,7 +1096,7 @@ rollout MafiaTools_4dsExport "" (   --module
             parser.Write4ds f m4ds
             fclose f
     
-            dur = util.elapsed_since(st) / 1000.0
+            dur = elapsed_since(st) / 1000.0
     
             local used_end = (heapsize - heapfree) / 1024.0
             format "memory used ~ % KiB\n" (used_end - used_start)

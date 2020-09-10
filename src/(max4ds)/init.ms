@@ -3,11 +3,24 @@
     if heapsize < set_heapsize then heapsize = set_heapsize
    
     global MafiaTools_version = "v0.5.0-preview"
-    global MafiaTools_scriptsPath = getFilenamePath (getThisScriptFilename()) 
-    
-    ::MafiaTools_ImpExpSettings = undefined       
+    global MafiaTools_scriptsPath = getFilenamePath (getThisScriptFilename())    
 
-    macros.load MafiaTools_scriptsPath
+    global MafiaTools_ImpExpSettings
+    (
+        struct settings (
+            importPath,
+            exportPath,
+            exportFilename,
+            position,
+            editNorm,
+            cachedNorm,
+            unitsSel = 4,
+            filenameForExport
+        )
+        ::MafiaTools_ImpExpSettings = settings()
+    )
+
+    --macros.load MafiaTools_scriptsPath
         
     --scriptedPlugins
     filein "material.ms"
@@ -17,6 +30,7 @@
     filein "glow.ms"
 
     --
+    filein "skin_compat.ms"
     filein "util.ms"
     filein "layers.ms"
     filein "4ds_parser.ms"
