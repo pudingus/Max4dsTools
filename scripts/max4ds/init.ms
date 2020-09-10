@@ -5,7 +5,7 @@
     global MafiaTools_version = "v0.5.0-preview"
     global MafiaTools_scriptsPath = getFilenamePath (getThisScriptFilename()) 
     
-    MafiaTools_ImpExpSettings = undefined
+    ::MafiaTools_ImpExpSettings = undefined        
         
     --scriptedPlugins
     filein "material.ms"

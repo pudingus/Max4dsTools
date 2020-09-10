@@ -6,7 +6,7 @@ rollout MafiaTools_4dsParser "" ( --module
         objects = #(),   --array of TObject
         allow5ds = false
     )   
-
+    
     struct THeader (
         fourcc,
         version,
@@ -49,21 +49,16 @@ rollout MafiaTools_4dsParser "" ( --module
         )
     )    
 
-
     struct TMesh (
         instanceId,
         lods = #()
     )
 
-
-
     struct TFacegroup (
         faceIds = #(),
         matId
     )
-
-
-
+    
     struct TLod (
         distance,
         mesh,
@@ -72,16 +67,12 @@ rollout MafiaTools_4dsParser "" ( --module
         vertOrder
     )
 
-
-
     struct TSkin (
         numW0Verts,
         dmin,
         dmax,
         vgroups = #()   --array of TSkinVertexGroup
     )
-
-
 
     struct TSkinVertexGroup (
         matrix = #(),  --4x4 matrix
@@ -91,48 +82,35 @@ rollout MafiaTools_4dsParser "" ( --module
         dmax,
         weights = #()   --array of float
     )
-
-
-
+    
     struct TMorph (
         sections = #(),
         numTargets
     )
-
-
-
+    
     struct TMorphSection (
         vertices = #(),   --array of TMorphVertex
         vertexLinks = #()
     )
-
-
-
+    
     struct TMorphVertex (
         targets = #()   --array of TMorphTarget
     )
-
-
-
+    
     struct TMorphTarget (
         pos,    --point3
         normal  --point3
     )
-
-
+    
     struct TBillboard (
         rotAxis,
         rotMode
     )
 
-
-
     struct TGlow (
         position,  --screen offset
         matId
     )
-
-
 
     struct TMirror (
         dmin,
@@ -144,15 +122,11 @@ rollout MafiaTools_4dsParser "" ( --module
         mesh
     )
 
-
-
     struct TDummy (
         dmin,
         dmax
     )
-
-
-
+    
     struct TSector (
         mesh,
         dmin,
@@ -160,15 +134,11 @@ rollout MafiaTools_4dsParser "" ( --module
         portals = #() --array of TPortal
     )
 
-
-
     struct TPortal (
         nearRange,
         farRange,
         verts = #() --array of point3
     )
-
-
 
     struct TTarget (
         unk1,
@@ -176,13 +146,10 @@ rollout MafiaTools_4dsParser "" ( --module
         linkIds = #()
     )
 
-
-
     struct TBone (
         matrix = #(), --4x4 matrix
         boneId
     )
-
 
     local ReadMatrix
     local ReadHeader
@@ -299,8 +266,6 @@ rollout MafiaTools_4dsParser "" ( --module
         m4ds
     )
 
-
-
     fn ReadMaterial f = (
         local mmat = TMaterial()
         mmat.flags = ReadLong f #unsigned
@@ -377,7 +342,6 @@ rollout MafiaTools_4dsParser "" ( --module
 
         mobj
     )
-
 
     fn ReadMesh f = (
         local mmesh = TMesh()
@@ -584,7 +548,6 @@ rollout MafiaTools_4dsParser "" ( --module
         mDummy
     )
 
-
     fn ReadSector f = (
         local msector = TSector()
 
@@ -647,7 +610,6 @@ rollout MafiaTools_4dsParser "" ( --module
 
         mTarget
     )
-
 
     fn ReadBone f = (
         local mbone = TBone()
@@ -888,7 +850,6 @@ rollout MafiaTools_4dsParser "" ( --module
         )
     )
 
-
     fn WriteSkin f mskins = (
         for mskin in mskins do (
             WriteByte f mskin.vgroups.count
@@ -999,5 +960,3 @@ rollout MafiaTools_4dsParser "" ( --module
         )
     )
 )
---MafiaTools_4dsParser = MafiaTools_4dsParser()
---ok

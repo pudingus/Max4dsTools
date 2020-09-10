@@ -421,19 +421,32 @@ rollout MafiaTools_4dsImport "" (   --module
                     skinOps.AddBone oskin boneNodes[i] 0
                 )
 
+                --clear weights
                 for vertId = 1 to nnode.numverts do (
                     for bnId = 1 to boneNodes.count do (
                         skinOps.ReplaceVertexWeights oskin vertId bnId 0.0
                     )
                 )
+                ---------
+                
+                local boneNodeNames = for bn in boneNodes collect bn.name
+                local skinBoneIds = #()
+                local numbones = skinOps.GetNumberBones oskin
+                for i = 1 to numbones do (
+                    local boneName = skinops_getBoneName oskin i 0
+                    local mafiaBoneId = findItem boneNodeNames boneName
+                    skinBoneIds[mafiaBoneId] = i
+                )
+                
+                
 
 
                 local vertId = 1
 
                 for i = 1 to mskin.vgroups.count do (
                     local grp = mskin.vgroups[i]
-                    local boneid1 = i+1
-                    local boneid2 = grp.boneId+1
+                    local boneid1 = skinBoneIds[i+1]
+                    local boneid2 = skinBoneIds[grp.boneId+1]
 
                     for j = 1 to grp.numW1Verts do (
                         local weight = 1.0
@@ -452,7 +465,7 @@ rollout MafiaTools_4dsImport "" (   --module
 
                 for i = 1 to mskin.numW0Verts do (
                     local weight = 1.0
-                    skinOps.SetVertexWeights oskin vertId 1 weight
+                    skinOps.SetVertexWeights oskin vertId skinBoneIds[1] weight
                     vertid += 1
                 )
             )
