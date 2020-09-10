@@ -143,4 +143,10 @@ rollout MafiaTools_Util "" (    --module
         else #unsupported
     )    
     
+    fn elapsed_since time = (
+        local now = timeStamp()
+            
+        if now < time then now += 86400000 --timing over midnight
+        (now - time)
+    )
 )

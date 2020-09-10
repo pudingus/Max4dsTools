@@ -96,6 +96,8 @@
                     MafiaTools_ImpExpSettings.filenameForExport = filenameFromPath file
                     labelDone.text = "Importing..."
                     if del then (
+                        if numsubobjectlevels != undefined then subobjectlevel = 0
+                        --setCommandPanelTaskMode #create
                         delete $*
                         layers.Clear()
                         gc()

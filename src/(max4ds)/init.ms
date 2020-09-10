@@ -5,7 +5,9 @@
     global MafiaTools_version = "v0.5.0-preview"
     global MafiaTools_scriptsPath = getFilenamePath (getThisScriptFilename()) 
     
-    ::MafiaTools_ImpExpSettings = undefined        
+    ::MafiaTools_ImpExpSettings = undefined       
+
+    macros.load MafiaTools_scriptsPath
         
     --scriptedPlugins
     filein "material.ms"
@@ -17,7 +19,6 @@
     --
     filein "util.ms"
     filein "layers.ms"
-    filein "stopwatch.ms"
     filein "4ds_parser.ms"
     filein "4ds_import.ms"
     filein "4ds_export.ms"

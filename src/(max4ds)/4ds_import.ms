@@ -667,7 +667,7 @@ rollout MafiaTools_4dsImport "" (   --module
 
         format "importing: %\n" file
         
-        local st = Stopwatch.StartNew()
+        local st = timestamp()
 
         gc light:true
 
@@ -699,7 +699,7 @@ rollout MafiaTools_4dsImport "" (   --module
 
             gc light:true
 
-            local dur = st.Elapsed() / 1000.0
+            local dur = util.elapsed_since(st) / 1000.0
 
 
             local message = "Importing took " + (dur as string) + " seconds\n"

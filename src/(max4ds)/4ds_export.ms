@@ -441,6 +441,13 @@ rollout MafiaTools_4dsExport "" (   --module
         insertItem mnode.baseNode lodnodes 1
 
         local lodWeights = #()
+        
+        
+        local maxver = (maxVersion())[1]
+        local GetBoneName = skinops.getBoneName
+        if maxver == 16000 and isProperty skinops #getbonenamebylistid do (
+           GetBoneName = skinops.getBoneNameByListID        
+        )
 
         for lodnode in lodnodes do (
             local bskin = util.GetModByClass lodnode Skin
@@ -451,7 +458,7 @@ rollout MafiaTools_4dsExport "" (   --module
             local skinBoneIds = #()
             local numbones = skinOps.GetNumberBones bskin
             for i = 1 to numbones do (
-                local boneName = skinOps.GetBoneName bskin i 0
+                local boneName = GetBoneName bskin i 0
                 local globBoneId = findItem boneNodeNames boneName
                 skinBoneIds[i] = globBoneId
             )
@@ -1081,7 +1088,7 @@ rollout MafiaTools_4dsExport "" (   --module
             
             format "exporting: %\n" file
     
-            local st = Stopwatch.StartNew()
+            local st = timestamp()
     
             gc light:true
     
@@ -1098,7 +1105,7 @@ rollout MafiaTools_4dsExport "" (   --module
             parser.Write4ds f m4ds
             fclose f
     
-            dur = st.elapsed() / 1000.0
+            dur = util.elapsed_since(st) / 1000.0
     
             local used_end = (heapsize - heapfree) / 1024.0
             format "memory used ~ % KiB\n" (used_end - used_start)
