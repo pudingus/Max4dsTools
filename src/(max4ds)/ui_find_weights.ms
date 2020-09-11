@@ -1,4 +1,12 @@
 (
+
+         
+    local maxver = (maxVersion())[1]     
+    if maxver == 16000 and isProperty skinops #getbonenamebylistid and (::M4dsTools_FindWeights_warned == undefined) do (
+        messageBox "Please install Service Pack 6. \nBone selecting is bugged in 3ds Max 2014 SP0-SP3"
+        ::M4dsTools_FindWeights_warned = true
+    )
+
     local destroyed = false
     if ::FindWeights != undefined and ::FindWeights.isDisplayed do (
         DestroyDialog ::FindWeights

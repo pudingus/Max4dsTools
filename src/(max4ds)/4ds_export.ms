@@ -294,6 +294,9 @@ rollout MafiaTools_4dsExport "" (   --module
                             local handle = boneNode.inode.handle
                             nodeTypes[handle] = #bone
                         )
+                        if obj.parent == undefined then (
+                            throw "Skinned mesh needs a parent bone. Use the 'Convert old skeleton' tool or add a root bone."
+                        )
                         nodeTypes[obj.parent.inode.handle] = #rootBone
                         rootBone[obj.inode.handle] = obj.parent
                     )

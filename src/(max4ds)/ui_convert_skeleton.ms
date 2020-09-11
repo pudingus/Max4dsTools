@@ -67,6 +67,8 @@ undo off (
                             skinOps.unNormalizeVertex skinMod i false
                         )
                     )
+                    
+                    messageBox "Done."
                 )
             )    
             
