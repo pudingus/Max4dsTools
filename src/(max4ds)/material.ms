@@ -132,21 +132,28 @@ remap:#(#(#isAnimatedM,#useMips,#useColoring,#useColorKey,#useAddBlend),#(#anima
     fn GeneratePreview map = (
         local result
         if (map != undefined) and (ClassOf map == Bitmaptexture) then (
-            local tempDir = GetDir #temp
-            tempDir += "\\max4ds\\"
-            local tempExists = makeDir tempDir
-            if tempExists then (
-                local bt = KeyBitmap map.bitmap
-                local filename = tempDir + (getFilenameFile map.filename) + "_key.png"
-                bt.filename = filename
-                SavePng bt
-                close bt
-                free bt
+            local vbitmap
+            try (
+                vbitmap = map.bitmap
+            ) catch ()
+            
+            if vbitmap != undefined then (
+                local tempDir = GetDir #temp
+                tempDir += "\\max4ds\\"
+                local tempExists = makeDir tempDir
+                if tempExists then (
+                    local bt = KeyBitmap vbitmap
+                    local filename = tempDir + (getFilenameFile map.filename) + "_key.png"
+                    bt.filename = filename
+                    SavePng bt
+                    close bt
+                    free bt
 
-                if preview1 == undefined then (
-                    preview1 = bitmaptex()
+                    if preview1 == undefined then (
+                        preview1 = bitmaptex()
+                    )
+                    preview1.filename = filename
                 )
-                preview1.filename = filename
             )
         )
     )

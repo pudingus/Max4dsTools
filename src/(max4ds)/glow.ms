@@ -120,9 +120,10 @@ category:"4ds Max Tools"
                 )
                 
                 if map != undefined then (
-                    bmp = map.bitmap
+                    try (bmp = map.bitmap) catch()
                 )                
             )
+            bmp
         )
         
         fn lstGlows_select sel = (
