@@ -1,4 +1,4 @@
-macroScript Max4ds_ImportExport
+macroScript ImportExport
 category:"4ds Tools"
 internalCategory:"Max4ds"
 buttonText:"4ds Imp/Exp"
@@ -9,7 +9,7 @@ toolTip:"4ds Import Export..."
     )
 )
 
-macroScript Max4ds_ParamEditor
+macroScript ParamEditor
 category:"4ds Tools"
 internalCategory:"Max4ds"
 buttonText:"4ds Params"
@@ -20,7 +20,7 @@ toolTip:"4ds Object Parameters..."
     )
 )
 
-macroScript Max4ds_FindWeights
+macroScript FindWeights
 category:"4ds Tools"
 internalCategory:"Max4ds"
 buttonText:"4ds Weights"
@@ -31,7 +31,7 @@ toolTip:"Find weight conflicts..."
     )
 )
 
-macroScript Max4ds_ConvertSkeleton
+macroScript ConvertSkeleton
 category:"4ds Tools"
 internalCategory:"Max4ds"
 buttonText:"4ds Conv.Skel"
@@ -41,5 +41,3 @@ toolTip:"Convert old skeleton..."
         filein (::MafiaTools_scriptsPath + "ui_convert_skeleton.ms")
     )
 )
-
-
