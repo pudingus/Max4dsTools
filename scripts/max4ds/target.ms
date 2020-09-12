@@ -1,7 +1,7 @@
 plugin Helper Target4ds
 name:"4ds Target"
 classID:#(0x3cbc454, 0x64e73235)
-category:"4ds Max Tools"
+category:"4ds Tools"
 extends:point
 replaceUI:true
 (

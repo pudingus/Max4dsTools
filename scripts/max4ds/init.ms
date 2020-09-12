@@ -19,14 +19,6 @@
         )
         ::MafiaTools_ImpExpSettings = settings()
     )
-    
-    
-    local src = MafiaTools_scriptsPath + "\\max4ds_macros.mcr"
-    local dst = (getdir #usermacros) + "\\max4ds_macros.mcr"
-    deleteFile dst
-    copyFile src dst
-
-    macros.load MafiaTools_scriptsPath
         
     --scriptedPlugins
     filein "material.ms"
@@ -43,23 +35,16 @@
     filein "4ds_import.ms"
     filein "4ds_export.ms"
     
-    filein "ui_utility.ms"  
+    filein "ui_utility.ms"    
 
-    format "4ds Max Tools % loaded\n" MafiaTools_version
+
+    format "Max 4ds Tools % loaded\n" MafiaTools_version
 )
 callbacks.removeScripts #systemPostNew id:#MafiaTools
 callbacks.removeScripts #systemPostReset id:#MafiaTools
-callbacks.removeScripts #postSystemStartup id:#MafiaTools
 callbacks.addScript #systemPostNew "PostReset()" id:#MafiaTools
 callbacks.addScript #systemPostReset "PostReset()" id:#MafiaTools
-callbacks.addScript #postSystemStartup "PostStartup()" id:#MafiaTools
-
 
 fn PostReset = (
     ::MafiaTools_ImpExpSettings.filenameForExport = undefined    
-)
-
-fn PostStartup = (
-    openUtility ::MafiaTools    
-	callbacks.removeScripts #postSystemStartup id:#MafiaTools
 )

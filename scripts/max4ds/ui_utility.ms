@@ -1,11 +1,9 @@
-MafiaTools_reopen = false
 if MafiaTools != undefined and MafiaTools.isDisplayed do (
     setCommandPanelTaskMode #utility   --this is to prevent utility from not closing
     closeUtility MafiaTools
-    MafiaTools_reopen = true
 )
 
-utility MafiaTools "4ds Max Tools"
+utility MafiaTools "Max 4ds Tools"
 (
     button      btnImportExport   "Import/Export..." align:#left
     button      btnParamEditor    "Object parameters..." align:#left
@@ -33,4 +31,4 @@ utility MafiaTools "4ds Max Tools"
         filein (::MafiaTools_scriptsPath + "ui_convert_skeleton.ms")
     )
 )
-if MafiaTools_reopen do openUtility MafiaTools
+openUtility MafiaTools

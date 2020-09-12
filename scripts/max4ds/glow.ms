@@ -6,7 +6,7 @@ fn MatNotification = (
 plugin SimpleObject Glow4ds
 name:"4ds Glow"
 classID:#(0x4ec442f4, 0x6cf47395)
-category:"4ds Max Tools"
+category:"4ds Tools"
 (
     local GlowRoll
     parameters pblock
