@@ -19,6 +19,21 @@
         )
         ::MafiaTools_ImpExpSettings = settings()
     )
+    
+    fn DisableScript file = (
+        if doesFileExist file then (
+            local path = getFilenamePath file
+            local name = filenameFromPath file
+            local success = renameFile file (path + "\\" + name + "__off")            
+        )
+    )
+    
+    local name = "startup_mafia_4ds.ms"
+    local file = (getdir #userStartupScripts) + "\\" + name
+    local file2 = (getdir #startupScripts) + "\\" + name
+    DisableScript file
+    DisableScript file2
+    
         
     --scriptedPlugins
     filein "material.ms"
