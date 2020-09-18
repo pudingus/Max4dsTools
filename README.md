@@ -1,68 +1,46 @@
-## Mafia 4ds Import Export
-[![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/pudingus/mafia-4ds-import-export?include_prereleases)](https://github.com/pudingus/mafia-4ds-import-export/releases)
+## Max 4ds Tools
+[![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/pudingus/Max4dsTools?include_prereleases)](https://github.com/pudingus/Max4dsTools/releases)
 
-Mafia 4ds plugin for 3ds Max. Based on the work by Mr F, but almost everything has been rewritten and a lot of features were added.  
+Max 4ds Tools is a plugin for 3ds Max written in MaxScript that adds support for Mafia 4ds model format.  
+It aims to provide an easy to use set of tools for either editing existing models or for creating them from scratch.  
+It's based on the work by Mr F, but almost everything has been rewritten and a lot of features were added.  
 
-**Work in progress!**  
-
-![3dsmax_2020-06-25_12-15-09](https://user-images.githubusercontent.com/39903631/85701543-c8233680-b6dd-11ea-992c-d84cce7cb50a.jpg)
+![2020-09-18_12-45-39_3dsmax](https://user-images.githubusercontent.com/39903631/93589303-eaf77b00-f9ac-11ea-9d61-91070dae1d4e.png)
 
 ### Features
-- [X] 4ds types
-    - [X] Meshes, lods, instances
-    - [X] Dummies (bounding boxes)
-    - [X] Sectors, portals
-    - [X] Billboards
-    - [X] Skinned meshes, bones
-    - [X] Targets
-    - [X] Glows
-    - [ ] Morphs
-        - [X] Import
-        - [ ] Export
-    - [ ] Mirrors
-        - [X] Import (partial)
-        - [ ] Export
-
-#### 
-- Model features
-    - Lods
-    - Mesh instances
-    - Vertex normals
-        - Smoothing groups
-        - Explicit normals (from modifier)
-    - Correct UV export
-    - Unit scaling
-- Object parameters
-    - Culling flags
-    - Rendering flags
-    - String parameters
-    - Lod fade distance
-    - Billboard rotation mode
-    - Portal ranges
-- Material features
-    - Color (diffuse, ambient, emission)
-    - Maps (diffuse, alpha, environment)
-    - Animation
-    - Environment map flags (Overlay, Multiply, Additive, Y proj, Y detail, Z detail)
-    - Other flags (Mip mapping, 2-sided, Color key ...)    
-    - Color key preview in viewport
+- Meshes, lods, billboarding meshes, instanced meshes
+- Sectors, portals
+- Custom skinned models
+- Editing of scene.4ds
+- Any mafia 4ds file can be opened without errors
+- Editing of object parameters, like lod fade distance, rendering flags...
+- Editing of materials
+- Scaling of geometry into preferred units (centimeters, meters, inches...)
+- Correct export of UVs and normals
+- Editing of glows - lamp glows, lens flare
 
 ### Installation
-[Download here](https://github.com/pudingus/mafia-4ds-import-export/releases)  
-Extract the files in "C:\Program Files\Autodesk\3ds Max 2020\scripts" and restart 3ds Max.
+[Download here](https://github.com/pudingus/Max4dsTools/releases)  
+Run the installer and restart 3ds Max
 
-3ds Max 2009 or newer required. 
+3ds Max 2009 or newer required. 3ds Max 2021 is the most tested version.
 
 ### Usage
-Open command panel and the utility panel, there you should see a "Mafia 4ds Import/Export" rollout.  
+Open command panel and the utility panel, there you should see a "Max 4ds Tools" rollout.  
 To see textures, hit Customize in the top menu > Configure Project Paths > External files. And there add your Mafia "maps" folder.
 
-If you move pivot for an object, you have to reset it before exporting.
-
-See [wiki](https://github.com/pudingus/mafia-4ds-import-export/wiki) for tutorials
+See [wiki](https://github.com/pudingus/Max4dsTools/wiki) for more information and tutorials.
 
 ### Screenshots
 
-![object parameters](https://user-images.githubusercontent.com/39903631/85778105-8668af00-b722-11ea-999c-7ccf81775a53.png)
+![2020-09-18_12-55-46_3dsmax](https://user-images.githubusercontent.com/39903631/93590236-76bdd700-f9ae-11ea-921b-c64724578140.png)
 
 ![material flags](https://user-images.githubusercontent.com/39903631/84805351-67706b80-b004-11ea-846a-2d633223620a.png)
+
+![2020-09-18_13-08-33_chrome](https://user-images.githubusercontent.com/39903631/93591150-1def3e00-f9b0-11ea-8c20-2217ad0c7464.png)
+
+![2020-09-16_18-40-31_3dsmax](https://user-images.githubusercontent.com/39903631/93591254-47a86500-f9b0-11ea-8dc0-637f83c7ce61.png)
+
+models made by huckleberrypie:
+![2020 08 06-09](https://user-images.githubusercontent.com/39903631/93591777-475c9980-f9b1-11ea-8c48-5923f7066cc3.jpg)
+![2020 07 29-11](https://user-images.githubusercontent.com/39903631/93591787-4c214d80-f9b1-11ea-836c-a060ee571d36.jpg)
