@@ -43,4 +43,6 @@ See [wiki](https://github.com/pudingus/Max4dsTools/wiki) for more information an
 
 models made by huckleberrypie:
 ![2020 08 06-09](https://user-images.githubusercontent.com/39903631/93591777-475c9980-f9b1-11ea-8c48-5923f7066cc3.jpg)
-![2020 07 29-11](https://user-images.githubusercontent.com/39903631/93591787-4c214d80-f9b1-11ea-836c-a060ee571d36.jpg)
+![2020 09 19-19 57_02](https://user-images.githubusercontent.com/39903631/93877765-43928500-fcd9-11ea-9c6b-95883e24110f.jpg)
+![2020 09 19-19 39_01](https://user-images.githubusercontent.com/39903631/93877768-45f4df00-fcd9-11ea-9893-484aad95aff9.jpg)
+
