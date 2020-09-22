@@ -872,6 +872,7 @@ rollout MafiaTools_4dsExport "" (   --module
                     setVert lodmesh vertId (vert * otrans)
 
                     --rotate normals
+                    if normals[vertId] == undefined then normals[vertId] = [0,0,1]
                     normals[vertId] = normalize (normals[vertId] * otrans.rotationpart)
                 )
 
