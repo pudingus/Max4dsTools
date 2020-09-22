@@ -1,8 +1,8 @@
 (
-    local set_heapsize = 48 * 1024 * 1024  --48 MiB
+    local set_heapsize = 64 * 1024 * 1024  --64 MiB
     if heapsize < set_heapsize then heapsize = set_heapsize
    
-    global MafiaTools_version = "v0.5.0"
+    global MafiaTools_version = "v0.5.1"
     global MafiaTools_scriptsPath = getFilenamePath (getThisScriptFilename())    
 
     global MafiaTools_ImpExpSettings

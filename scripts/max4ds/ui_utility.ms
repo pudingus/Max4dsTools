@@ -11,7 +11,11 @@ utility MafiaTools "Max 4ds Tools"
     button      btnConvertSkeleton "Convert old skeleton..." align:#left
 
     label       lblAuthor         "by pudingus" offset:[0,20]
-    label       lblVersion        "v0.5.0"
+    label       lblVersion        "version"
+    
+    on MafiaTools open do (
+        lblVersion.text = ::MafiaTools_version
+    )
 
     on btnImportExport pressed do
     (
