@@ -1,156 +1,5 @@
 rollout MafiaTools_4dsParser "" ( --module
     
-    struct T4ds (
-        header,   --THeader
-        materials = #(),  --array of TMaterial
-        objects = #(),   --array of TObject
-        allow5ds = false
-    )   
-    
-    struct THeader (
-        fourcc,
-        version,
-        timestamp
-    )
-
-    struct TMaterial (
-        flags,   --u32
-        ambient,  --color (float[3])
-        diffuse,  --color (=||=)
-        emission,  --color
-        opacity,  --float
-        envMapAmount,  --float
-        envMapName, --pstring
-        diffMapName,    --pstring
-        alphaMapName,   --pstring
-        animFrames, --u32
-        animPeriod  --u32
-    )
-
-    struct TObject (
-        objectType,
-        visualType,
-        renderFlags = 0,
-        renderFlags2 = 0,
-        parentId,
-        offset,
-        scl,
-        rot,
-        cullFlags,
-        name,
-        strParams,
-        definitions = #(),
-
-        fn GetMatrix = (
-            local s = scaleMatrix scl
-            local r = rot as matrix3
-            local t = transMatrix offset
-            (s * r * t)
-        )
-    )    
-
-    struct TMesh (
-        instanceId,
-        lods = #()
-    )
-
-    struct TFacegroup (
-        faceIds = #(),
-        matId
-    )
-    
-    struct TLod (
-        distance,
-        mesh,
-        normals = #(),  --array of point3, count = count of vertices in mesh
-        facegroups = #(),
-        vertOrder
-    )
-
-    struct TSkin (
-        numW0Verts,
-        dmin,
-        dmax,
-        vgroups = #()   --array of TSkinVertexGroup
-    )
-
-    struct TSkinVertexGroup (
-        matrix = #(),  --4x4 matrix
-        numW1Verts,
-        boneId,
-        dmin,
-        dmax,
-        weights = #()   --array of float
-    )
-    
-    struct TMorph (
-        sections = #(),
-        numTargets
-    )
-    
-    struct TMorphSection (
-        vertices = #(),   --array of TMorphVertex
-        vertexLinks = #()
-    )
-    
-    struct TMorphVertex (
-        targets = #()   --array of TMorphTarget
-    )
-    
-    struct TMorphTarget (
-        pos,    --point3
-        normal  --point3
-    )
-    
-    struct TBillboard (
-        rotAxis,
-        rotMode
-    )
-
-    struct TGlow (
-        position,  --screen offset
-        matId
-    )
-
-    struct TMirror (
-        dmin,
-        dmax,
-        unknown = #(),
-        matrix = #(),
-        backColor,
-        drawDistance,
-        mesh
-    )
-
-    struct TDummy (
-        dmin,
-        dmax
-    )
-    
-    struct TSector (
-        mesh,
-        dmin,
-        dmax,
-        portals = #() --array of TPortal
-    )
-
-    struct TPortal (
-        nearRange,
-        farRange,
-        verts = #() --array of point3
-    )
-
-    struct TTarget (
-        unk1,
-        unk2,
-        linkIds = #()
-    )
-
-    struct TBone (
-        matrix = #(), --4x4 matrix
-        boneId
-    )
-
     local ReadMatrix
     local ReadHeader
     local ReadMaterial
@@ -165,7 +14,22 @@ rollout MafiaTools_4dsParser "" ( --module
     local ReadSector
     local ReadTarget
     local ReadBone
-
+    
+    local Write4ds
+    local WriteHeader
+    local WriteMaterial
+    local WriteObject
+    local WriteMesh
+    local WriteSkin
+    local WriteBillboard
+    local WriteSector
+    local WriteDummy
+    local WriteTarget
+    local WriteBone
+    local WriteGlow
+    
+    -------------------------------------------------
+    
     fn ReadText f = (
         local len = ReadByte f #unsigned
 
@@ -180,13 +44,40 @@ rollout MafiaTools_4dsParser "" ( --module
         )
         result
     )
+    
+    fn WriteText f txt = (
+        local count = 0
+        if txt != undefined then count = txt.count
+
+        if count > 255 then (
+            count = 255
+            --messageBox ("String '" + txt + "' is over the maximum of 255 characters!") icon:#warning
+            format "String '%' is over the maximum of 255 characters!\n" txt
+        )
+        WriteByte f count #unsigned
+        for i = 1 to count do (
+            WriteByte f (bit.charasint txt[i])
+        )
+
+        count
+    )
+    
+    -------------------------------------------------
 
     fn ReadPoint3 f = (
         x = ReadFloat f
         y = ReadFloat f
         z = ReadFloat f
         [x, z, y]
-    )
+    )    
+    
+    fn WritePoint3 f p3 = (
+        WriteFloat f p3.x
+        WriteFloat f p3.z
+        WriteFloat f p3.y
+    )    
+    
+    -------------------------------------------------
 
     fn ReadColor f = (
         r = (ReadFloat f) * 255
@@ -195,6 +86,14 @@ rollout MafiaTools_4dsParser "" ( --module
         clr = color r g b
         clr
     )
+    
+    fn WriteColor f clr = (
+        WriteFloat f (clr.r / 255.0)
+        WriteFloat f (clr.g / 255.0)
+        WriteFloat f (clr.b / 255.0)
+    )
+    
+    -------------------------------------------------
     
     fn ReadQuat f = (
         rw = ReadFloat f
@@ -205,19 +104,46 @@ rollout MafiaTools_4dsParser "" ( --module
         inverse qt
     )
     
+    fn WriteQuat f q = (
+        WriteFloat f q.w
+        WriteFloat f q.x
+        WriteFloat f q.z
+        WriteFloat f q.y
+    )
+    
+    -------------------------------------------------
+    
     fn ReadFace f = (
         a = ReadShort f #unsigned
         b = ReadShort f #unsigned
         c = ReadShort f #unsigned
         [a+1, c+1, b+1]       --face vertex indexes are 1-based in 3ds Max
     )
+    
+    fn WriteFace f face = (
+        a = (face[1] - 1) as integer  --vertices are indexed from 0 in 4ds, from 1 in max
+        b = (face[3] - 1) as integer
+        c = (face[2] - 1) as integer
+        WriteShort f a #unsigned
+        WriteShort f b #unsigned
+        WriteShort f c #unsigned
+    )
 
+    -------------------------------------------------
+    
     fn ReadUV f = (
         x = ReadFloat f
         y = ReadFloat f
         [x, 1-y, 0]
     )
+    
+    fn WriteUV f uv = (
+        WriteFloat f uv.x
+        WriteFloat f (1 - uv.y)
+    )
 
+    -------------------------------------------------
+    
     fn ReadMatrix f = (
         local mtr = #()
         for m = 1 to 4 do (
@@ -232,20 +158,28 @@ rollout MafiaTools_4dsParser "" ( --module
 
         matrix3 row1 row2 row3 row4
     )
+    
+    fn WriteMatrix f mat3 = (
+        local rows = #()
+        append rows #(mat3.row1.x, mat3.row1.z, mat3.row1.y, 0)
+        append rows #(mat3.row3.x, mat3.row3.z, mat3.row3.y, 0) -- thanks Duelist
+        append rows #(mat3.row2.x, mat3.row2.z, mat3.row2.y, 0)
+        append rows #(mat3.row4.x, mat3.row4.z, mat3.row4.y, 1)
 
-    fn ReadHeader f = (
-        local mheader
-        local fourcc = ReadLong f #unsigned
-        if fourcc == 5456948 then (  --is 4ds
-            mheader = THeader()
-            mheader.fourcc = fourcc
-            mheader.version = ReadShort f #unsigned
-            mheader.timestamp = ReadLongLong f
+        for row in rows do (
+            for n = 1 to 4 do WriteFloat f row[n]
         )
-
-        mheader
     )
 
+    -------------------------------------------------
+    
+    struct T4ds (
+        header,   --THeader
+        materials = #(),  --array of TMaterial
+        objects = #(),   --array of TObject
+        allow5ds = false
+    )   
+    
     fn Read4ds f = (
         local header = ReadHeader f
 
@@ -265,7 +199,67 @@ rollout MafiaTools_4dsParser "" ( --module
 
         m4ds
     )
+    
+    fn Write4ds f m4ds = (
+        WriteHeader f
 
+        WriteShort f m4ds.materials.count
+        for mmat in m4ds.materials do (
+            WriteMaterial f mmat
+        )
+
+        WriteShort f m4ds.objects.count
+        for mobj in m4ds.objects do (
+            WriteObject f mobj
+        )
+
+        WriteByte f 0
+    )
+    
+    -------------------------------------------------
+    
+    struct THeader (
+        fourcc,
+        version,
+        timestamp
+    )
+    
+    fn ReadHeader f = (
+        local mheader
+        local fourcc = ReadLong f #unsigned
+        if fourcc == 5456948 then (  --is 4ds
+            mheader = THeader()
+            mheader.fourcc = fourcc
+            mheader.version = ReadShort f #unsigned
+            mheader.timestamp = ReadLongLong f
+        )
+
+        mheader
+    )
+    
+    fn WriteHeader f = (
+        WriteLong f 5456948     -- 4DS
+        WriteShort f 29         --format version
+        WriteLong f 343586816   --timestamp
+        WriteLong f 29382754    --timestamp part 2
+    )
+
+    -------------------------------------------------    
+    
+    struct TMaterial (
+        flags,   --u32
+        ambient,  --color (float[3])
+        diffuse,  --color (=||=)
+        emission,  --color
+        opacity,  --float
+        envMapAmount,  --float
+        envMapName, --pstring
+        diffMapName,    --pstring
+        alphaMapName,   --pstring
+        animFrames, --u32
+        animPeriod  --u32
+    )
+    
     fn ReadMaterial f = (
         local mmat = TMaterial()
         mmat.flags = ReadLong f #unsigned
@@ -291,7 +285,58 @@ rollout MafiaTools_4dsParser "" ( --module
         )
         mmat
     )
+    
+    fn WriteMaterial f mmat = (
+        WriteLong f mmat.flags
+        WriteColor f mmat.ambient
+        WriteColor f mmat.diffuse
+        WriteColor f mmat.emission
+        WriteFloat f mmat.opacity
 
+        if bit.get mmat.flags 20 then (     -- env map
+            WriteFloat f mmat.envMapAmount
+            WriteText f mmat.envMapName
+        )
+        local count = WriteText f mmat.diffMapName
+
+        if count > 0 and bit.get mmat.flags 31 then (   -- alpha map
+            WriteText f mmat.alphaMapName
+        )
+
+        if bit.get mmat.flags 27 then (     -- animated
+            WriteLong f mmat.animFrames
+            WriteShort f 0
+            WriteLong f mmat.animPeriod
+            WriteLong f 0
+            WriteLong f 0
+        )
+
+    )
+    
+    -------------------------------------------------    
+    
+    struct TObject (
+        objectType,
+        visualType,
+        renderFlags = 0,
+        renderFlags2 = 0,
+        parentId,
+        offset,
+        scl,
+        rot,
+        cullFlags,
+        name,
+        strParams,
+        definitions = #(),
+
+        fn GetMatrix = (
+            local s = scaleMatrix scl
+            local r = rot as matrix3
+            local t = transMatrix offset
+            (s * r * t)
+        )
+    )    
+    
     fn ReadObject f = (
         local mobj = TObject()
 
@@ -342,7 +387,66 @@ rollout MafiaTools_4dsParser "" ( --module
 
         mobj
     )
+    
+    fn WriteObject f mobj = (
+        WriteByte f mobj.objectType
 
+        if mobj.objectType == 1 then (
+            WriteByte f mobj.visualType
+            WriteByte f mobj.renderFlags
+            WriteByte f mobj.renderFlags2
+        )
+
+        WriteShort f mobj.parentId
+        WritePoint3 f mobj.offset
+        WritePoint3 f mobj.scl
+        WriteQuat f mobj.rot
+        WriteByte f mobj.cullFlags
+        WriteText f mobj.name
+        WriteText f mobj.strParams
+
+        case mobj.objectType of (
+            1: case mobj.visualType of (
+                0: WriteMesh f mobj.definitions[1]
+                2: (
+                    WriteMesh f mobj.definitions[1]
+                    WriteSkin f mobj.definitions[2]
+                )
+                4: (
+                    WriteMesh f mobj.definitions[1]
+                    WriteBillboard f mobj.definitions[2]
+                )
+                6: WriteGlow f mobj.definitions[1]
+                default: throw "invalid visual type"
+            )
+            5: WriteSector f mobj.definitions[1]
+            6: WriteDummy f mobj.definitions[1]
+            7: WriteTarget f mobj.definitions[1]
+            10: WriteBone f mobj.definitions[1]
+            default: throw "invalid object type"
+        )
+    )
+    
+    -------------------------------------------------
+
+    struct TMesh (
+        instanceId,
+        lods = #()
+    )
+    
+    struct TFacegroup (
+        faceIds = #(),
+        matId
+    )
+    
+    struct TLod (
+        distance,
+        mesh,
+        normals = #(),  --array of point3, count = count of vertices in mesh
+        facegroups = #(),
+        vertOrder
+    )
+    
     fn ReadMesh f = (
         local mmesh = TMesh()
         mmesh.instanceId = ReadShort f #unsigned
@@ -405,383 +509,6 @@ rollout MafiaTools_4dsParser "" ( --module
         )
 
         mmesh
-    )
-
-    fn ReadSkin f numlods = (
-
-        local mskins = #()
-
-        for l = 1 to numLods do (
-            local mskin = TSkin()
-
-            local numGroups = ReadByte f #unsigned
-            mskin.numW0Verts = ReadLong f #unsigned
-
-            mskin.dmin = ReadPoint3 f
-            mskin.dmax = ReadPoint3 f
-
-            for i = 0 to numGroups-1 do (
-                local vgroup = TSkinVertexGroup()
-                vgroup.matrix = ReadMatrix f
-
-                vgroup.numW1Verts = ReadLong f #unsigned
-                local numWeights = ReadLong f #unsigned
-                vgroup.boneId = ReadLong f #unsigned
-
-                vgroup.dmin = ReadPoint3 f
-                vgroup.dmax = ReadPoint3 f
-
-                for w = 1 to numWeights do (
-                    append vgroup.weights (ReadFloat f)
-                )
-                append mskin.vgroups vgroup
-            )
-            append mskins mskin
-        )
-
-        mskins
-    )
-
-    fn ReadMorph f = (
-        local mmorph = TMorph()
-        local numTargets = ReadByte f #unsigned
-        mmorph.numTargets = numTargets
-
-        if numTargets > 0 then (
-            local numLayers = ReadByte f #unsigned
-            ReadByte f #unsigned   --unknown
-            for i = 1 to numLayers do   (
-                local ms = TMorphSection()
-                local numVerts = ReadShort f #unsigned
-
-                for v = 1 to numVerts do (
-                    local mv = TMorphVertex()
-
-                    for t = 1 to numTargets do (
-                        local mt = TMorphTarget()
-                        mt.pos = ReadPoint3 f
-                        mt.normal = ReadPoint3 f
-                        append mv.targets mt
-                    )
-                    append ms.vertices mv
-                )
-
-                if (numTargets * numVerts) > 0 then ReadByte f #unsigned  --unknown
-
-                for v = 1 to numVerts do    (
-                    local vertexLink = ReadShort f #unsigned
-                    append ms.vertexLinks vertexLink
-                )
-
-                append mmorph.sections ms
-            )
-
-            local dmin = ReadPoint3 f
-            local dmax = ReadPoint3 f
-
-            for i = 1 to 4 do ReadFloat f   --unknown
-        )
-        mmorph
-    )
-
-    fn ReadBillboard f = (
-        local mbillboard = TBillboard()
-        mbillboard.rotAxis = ReadLong f #unsigned
-        mbillboard.rotMode = ReadByte f #unsigned
-
-        mbillboard
-    )
-
-    fn ReadGlow f = (
-        local glows = #()
-        local numGlows = ReadByte f #unsigned
-
-        for i = 1 to numGlows do (
-            local glow = TGlow()
-            glow.position = ReadFloat f
-            glow.matId = ReadShort f #unsigned
-
-            append glows glow
-        )
-
-        glows
-    )
-
-    fn ReadMirror f = (
-        local mMirror = TMirror()
-
-        mMirror.dmin = ReadPoint3 f
-        mMirror.dmax = ReadPoint3 f
-
-        for i = 1 to 4 do local unknown = ReadFloat f
-        for i = 1 to 16 do local reflectionMatrix = ReadFloat f
-
-        mMirror.backColor = ReadColor f
-        mMirror.drawDistance = ReadFloat f
-
-        local numVerts = ReadLong f #unsigned
-        local numFaces = ReadLong f #unsigned
-
-        local tr = TriMesh()
-        setNumVerts tr numVerts
-        setNumFaces tr numFaces
-
-        for i = 1 to numVerts do (
-            local vert = ReadPoint3 f
-            setVert tr i vert
-        )
-
-        for i = 1 to numFaces do (
-            local face = ReadFace f
-            setFace tr i face
-        )
-
-        mMirror.mesh = tr
-
-        mMirror
-    )
-
-    fn ReadDummy f = (
-        local mDummy = TDummy()
-        mDummy.dmin = ReadPoint3 f
-        mDummy.dmax = ReadPoint3 f
-        mDummy
-    )
-
-    fn ReadSector f = (
-        local msector = TSector()
-
-        ReadLong f #unsigned --always 2049
-        ReadLong f #unsigned --always 0
-
-        local numVerts = ReadLong f #unsigned
-        local numFaces = ReadLong f #unsigned
-
-        local tr = TriMesh()
-        setNumVerts tr numVerts
-        setNumFaces tr numFaces
-
-        for i = 1 to numVerts do (
-            local vert = ReadPoint3 f
-            setVert tr i vert
-        )
-
-        for i = 1 to numFaces do (
-            local face = ReadFace f
-            setFace tr i face
-            setFaceSmoothGroup tr i 0
-        )
-
-        msector.mesh = tr
-        msector.dmin = ReadPoint3 f
-        msector.dmax = ReadPoint3 f
-
-        local numPortals = ReadByte f #unsigned
-
-        for i = 1 to numPortals do (
-            local mportal = TPortal()
-            local numVerts = ReadByte f #unsigned
-            for j = 1 to 5 do ReadLong f #unsigned
-            mportal.nearRange = ReadFloat f
-            mportal.farRange = ReadFloat f
-
-            for v = 1 to numVerts do (
-                local vert = ReadPoint3 f
-                append mportal.verts vert
-            )
-            append msector.portals mportal
-        )
-
-
-        msector
-    )
-
-    -- returns TTarget
-    fn ReadTarget f = (
-        local mTarget = TTarget()
-
-        mTarget.unk1 = ReadByte f #unsigned
-        mTarget.unk2 = ReadByte f #unsigned
-        local numLinks = ReadByte f #unsigned
-
-        for i = 1 to numLinks do (
-            append mTarget.linkIds (ReadShort f #unsigned)
-        )
-
-        mTarget
-    )
-
-    fn ReadBone f = (
-        local mbone = TBone()
-        mbone.matrix = ReadMatrix f
-        mbone.boneId = ReadLong f #unsigned
-        mbone
-    )
-
-    --------------------------------------------------------------
-    local Write4ds
-    local WriteHeader
-    local WriteMaterial
-    local WriteObject
-    local WriteMesh
-    local WriteSkin
-    local WriteBillboard
-    local WriteSector
-    local WriteDummy
-    local WriteTarget
-    local WriteBone
-    local WriteGlow
-
-
-    fn WriteText f txt = (
-        local count = 0
-        if txt != undefined then count = txt.count
-
-        if count > 255 then (
-            count = 255
-            --messageBox ("String '" + txt + "' is over the maximum of 255 characters!") icon:#warning
-            format "String '%' is over the maximum of 255 characters!\n" txt
-        )
-        WriteByte f count #unsigned
-        for i = 1 to count do (
-            WriteByte f (bit.charasint txt[i])
-        )
-
-        count
-    )
-
-    fn WriteColor f clr = (
-        WriteFloat f (clr.r / 255.0)
-        WriteFloat f (clr.g / 255.0)
-        WriteFloat f (clr.b / 255.0)
-    )
-
-    fn WritePoint3 f p3 = (
-        WriteFloat f p3.x
-        WriteFloat f p3.z
-        WriteFloat f p3.y
-    )
-
-    fn WriteQuat f q = (
-        WriteFloat f q.w
-        WriteFloat f q.x
-        WriteFloat f q.z
-        WriteFloat f q.y
-    )
-
-    fn WriteFace f face = (
-        a = (face[1] - 1) as integer  --vertices are indexed from 0 in 4ds, from 1 in max
-        b = (face[3] - 1) as integer
-        c = (face[2] - 1) as integer
-        WriteShort f a #unsigned
-        WriteShort f b #unsigned
-        WriteShort f c #unsigned
-    )
-
-    fn WriteUV f uv = (
-        WriteFloat f uv.x
-        WriteFloat f (1 - uv.y)
-    )
-
-    fn WriteMatrix f mat3 = (
-        local rows = #()
-        append rows #(mat3.row1.x, mat3.row1.z, mat3.row1.y, 0)
-        append rows #(mat3.row3.x, mat3.row3.z, mat3.row3.y, 0) -- thanks Duelist
-        append rows #(mat3.row2.x, mat3.row2.z, mat3.row2.y, 0)
-        append rows #(mat3.row4.x, mat3.row4.z, mat3.row4.y, 1)
-
-        for row in rows do (
-            for n = 1 to 4 do WriteFloat f row[n]
-        )
-    )
-
-    fn Write4ds f m4ds = (
-        WriteHeader f
-
-        WriteShort f m4ds.materials.count
-        for mmat in m4ds.materials do (
-            WriteMaterial f mmat
-        )
-
-        WriteShort f m4ds.objects.count
-        for mobj in m4ds.objects do (
-            WriteObject f mobj
-        )
-
-        WriteByte f 0
-    )
-
-    fn WriteHeader f = (
-        WriteLong f 5456948     -- 4DS
-        WriteShort f 29         --format version
-        WriteLong f 343586816   --timestamp
-        WriteLong f 29382754    --timestamp part 2
-    )
-
-    fn WriteMaterial f mmat = (
-        WriteLong f mmat.flags
-        WriteColor f mmat.ambient
-        WriteColor f mmat.diffuse
-        WriteColor f mmat.emission
-        WriteFloat f mmat.opacity
-
-        if bit.get mmat.flags 20 then (     -- env map
-            WriteFloat f mmat.envMapAmount
-            WriteText f mmat.envMapName
-        )
-        local count = WriteText f mmat.diffMapName
-
-        if count > 0 and bit.get mmat.flags 31 then (   -- alpha map
-            WriteText f mmat.alphaMapName
-        )
-
-        if bit.get mmat.flags 27 then (     -- animated
-            WriteLong f mmat.animFrames
-            WriteShort f 0
-            WriteLong f mmat.animPeriod
-            WriteLong f 0
-            WriteLong f 0
-        )
-
-    )
-
-    fn WriteObject f mobj = (
-        WriteByte f mobj.objectType
-
-        if mobj.objectType == 1 then (
-            WriteByte f mobj.visualType
-            WriteByte f mobj.renderFlags
-            WriteByte f mobj.renderFlags2
-        )
-
-        WriteShort f mobj.parentId
-        WritePoint3 f mobj.offset
-        WritePoint3 f mobj.scl
-        WriteQuat f mobj.rot
-        WriteByte f mobj.cullFlags
-        WriteText f mobj.name
-        WriteText f mobj.strParams
-
-        case mobj.objectType of (
-            1: case mobj.visualType of (
-                0: WriteMesh f mobj.definitions[1]
-                2: (
-                    WriteMesh f mobj.definitions[1]
-                    WriteSkin f mobj.definitions[2]
-                )
-                4: (
-                    WriteMesh f mobj.definitions[1]
-                    WriteBillboard f mobj.definitions[2]
-                )
-                6: WriteGlow f mobj.definitions[1]
-                default: throw "invalid visual type"
-            )
-            5: WriteSector f mobj.definitions[1]
-            6: WriteDummy f mobj.definitions[1]
-            7: WriteTarget f mobj.definitions[1]
-            10: WriteBone f mobj.definitions[1]
-            default: throw "invalid object type"
-        )
     )
 
     fn WriteMesh f mmesh = (
@@ -849,6 +576,59 @@ rollout MafiaTools_4dsParser "" ( --module
             )
         )
     )
+    
+    -------------------------------------------------    
+    
+    struct TSkin (
+        numW0Verts,
+        dmin,
+        dmax,
+        vgroups = #()   --array of TSkinVertexGroup
+    )
+    
+    struct TSkinVertexGroup (
+        matrix = #(),  --4x4 matrix
+        numW1Verts,
+        boneId,
+        dmin,
+        dmax,
+        weights = #()   --array of float
+    )
+    
+    fn ReadSkin f numlods = (
+
+        local mskins = #()
+
+        for l = 1 to numLods do (
+            local mskin = TSkin()
+
+            local numGroups = ReadByte f #unsigned
+            mskin.numW0Verts = ReadLong f #unsigned
+
+            mskin.dmin = ReadPoint3 f
+            mskin.dmax = ReadPoint3 f
+
+            for i = 0 to numGroups-1 do (
+                local vgroup = TSkinVertexGroup()
+                vgroup.matrix = ReadMatrix f
+
+                vgroup.numW1Verts = ReadLong f #unsigned
+                local numWeights = ReadLong f #unsigned
+                vgroup.boneId = ReadLong f #unsigned
+
+                vgroup.dmin = ReadPoint3 f
+                vgroup.dmax = ReadPoint3 f
+
+                for w = 1 to numWeights do (
+                    append vgroup.weights (ReadFloat f)
+                )
+                append mskin.vgroups vgroup
+            )
+            append mskins mskin
+        )
+
+        mskins
+    )
 
     fn WriteSkin f mskins = (
         for mskin in mskins do (
@@ -871,11 +651,248 @@ rollout MafiaTools_4dsParser "" ( --module
         )
     )
 
+    -------------------------------------------------
+    
+    struct TMorph (
+        sections = #(),
+        numTargets
+    )
+    
+    struct TMorphSection (
+        vertices = #(),   --array of TMorphVertex
+        vertexLinks = #()
+    )
+    
+    struct TMorphVertex (
+        targets = #()   --array of TMorphTarget
+    )
+    
+    struct TMorphTarget (
+        pos,    --point3
+        normal  --point3
+    )
+    
+    fn ReadMorph f = (
+        local mmorph = TMorph()
+        local numTargets = ReadByte f #unsigned
+        mmorph.numTargets = numTargets
+
+        if numTargets > 0 then (
+            local numLayers = ReadByte f #unsigned
+            ReadByte f #unsigned   --unknown
+            for i = 1 to numLayers do   (
+                local ms = TMorphSection()
+                local numVerts = ReadShort f #unsigned
+
+                for v = 1 to numVerts do (
+                    local mv = TMorphVertex()
+
+                    for t = 1 to numTargets do (
+                        local mt = TMorphTarget()
+                        mt.pos = ReadPoint3 f
+                        mt.normal = ReadPoint3 f
+                        append mv.targets mt
+                    )
+                    append ms.vertices mv
+                )
+
+                if (numTargets * numVerts) > 0 then ReadByte f #unsigned  --unknown
+
+                for v = 1 to numVerts do    (
+                    local vertexLink = ReadShort f #unsigned
+                    append ms.vertexLinks vertexLink
+                )
+
+                append mmorph.sections ms
+            )
+
+            local dmin = ReadPoint3 f
+            local dmax = ReadPoint3 f
+
+            for i = 1 to 4 do ReadFloat f   --unknown
+        )
+        mmorph
+    )
+    
+    -------------------------------------------------
+    
+    struct TBillboard (
+        rotAxis,
+        rotMode
+    )
+    
+    fn ReadBillboard f = (
+        local mbillboard = TBillboard()
+        mbillboard.rotAxis = ReadLong f #unsigned
+        mbillboard.rotMode = ReadByte f #unsigned
+
+        mbillboard
+    )
+    
     fn WriteBillboard f mbillboard = (
         WriteByte f mbillboard.rotAxis
         WriteLong f mbillboard.rotMode
     )
+    
+    -------------------------------------------------    
 
+    struct TGlow (
+        position,  --screen offset
+        matId
+    )
+    
+    fn ReadGlow f = (
+        local glows = #()
+        local numGlows = ReadByte f #unsigned
+
+        for i = 1 to numGlows do (
+            local glow = TGlow()
+            glow.position = ReadFloat f
+            glow.matId = ReadShort f #unsigned
+
+            append glows glow
+        )
+
+        glows
+    )
+
+    fn WriteGlow f mglows = (
+        WriteByte f mglows.count
+        for mglow in mglows do (
+            WriteFloat f mglow.position
+            WriteShort f mglow.matId
+        )
+    )
+    
+    -------------------------------------------------
+    
+    struct TMirror (
+        dmin,
+        dmax,
+        unknown = #(),
+        matrix,   --matrix3
+        backColor,
+        drawDistance,
+        mesh
+    )
+    
+    fn ReadMirror f = (
+        local mMirror = TMirror()
+
+        mMirror.dmin = ReadPoint3 f
+        mMirror.dmax = ReadPoint3 f
+
+        for i = 1 to 4 do local unknown = ReadFloat f        
+        
+        mMirror.matrix = ReadMatrix f        
+
+        mMirror.backColor = ReadColor f
+        mMirror.drawDistance = ReadFloat f
+
+        local numVerts = ReadLong f #unsigned
+        local numFaces = ReadLong f #unsigned
+
+        local tr = TriMesh()
+        setNumVerts tr numVerts
+        setNumFaces tr numFaces
+
+        for i = 1 to numVerts do (
+            local vert = ReadPoint3 f
+            setVert tr i vert
+        )
+
+        for i = 1 to numFaces do (
+            local face = ReadFace f
+            setFace tr i face
+        )
+
+        mMirror.mesh = tr
+
+        mMirror
+    )
+    
+    -------------------------------------------------
+    
+    struct TDummy (
+        dmin,
+        dmax
+    )
+    
+    fn ReadDummy f = (
+        local mDummy = TDummy()
+        mDummy.dmin = ReadPoint3 f
+        mDummy.dmax = ReadPoint3 f
+        mDummy
+    )
+    
+    fn WriteDummy f mdummy = (
+        WritePoint3 f mdummy.dmin
+        WritePoint3 f mdummy.dmax
+    )
+    
+    -------------------------------------------------
+    
+    struct TSector (
+        mesh,
+        dmin,
+        dmax,
+        portals = #() --array of TPortal
+    )
+
+    struct TPortal (
+        nearRange,
+        farRange,
+        verts = #() --array of point3
+    )
+    
+    fn ReadSector f = (
+        local msector = TSector()
+
+        ReadLong f #unsigned --always 2049
+        ReadLong f #unsigned --always 0
+
+        local numVerts = ReadLong f #unsigned
+        local numFaces = ReadLong f #unsigned
+
+        local tr = TriMesh()
+        setNumVerts tr numVerts
+        setNumFaces tr numFaces
+
+        for i = 1 to numVerts do (
+            local vert = ReadPoint3 f
+            setVert tr i vert
+        )
+
+        for i = 1 to numFaces do (
+            local face = ReadFace f
+            setFace tr i face
+            setFaceSmoothGroup tr i 0
+        )
+
+        msector.mesh = tr
+        msector.dmin = ReadPoint3 f
+        msector.dmax = ReadPoint3 f
+
+        local numPortals = ReadByte f #unsigned
+
+        for i = 1 to numPortals do (
+            local mportal = TPortal()
+            local numVerts = ReadByte f #unsigned
+            for j = 1 to 5 do ReadLong f #unsigned
+            mportal.nearRange = ReadFloat f
+            mportal.farRange = ReadFloat f
+
+            for v = 1 to numVerts do (
+                local vert = ReadPoint3 f
+                append mportal.verts vert
+            )
+            append msector.portals mportal
+        )
+
+
+        msector
+    )
+    
     fn WriteSector f sector = (
         WriteLong f 2049    --unknown
         WriteLong f 0       --unknown
@@ -912,10 +929,27 @@ rollout MafiaTools_4dsParser "" ( --module
             )
         )
     )
+    
+    -------------------------------------------------
 
-    fn WriteDummy f mdummy = (
-        WritePoint3 f mdummy.dmin
-        WritePoint3 f mdummy.dmax
+    struct TTarget (
+        unk1,
+        unk2,
+        linkIds = #()
+    )    
+
+    fn ReadTarget f = (
+        local mTarget = TTarget()
+
+        mTarget.unk1 = ReadByte f #unsigned
+        mTarget.unk2 = ReadByte f #unsigned
+        local numLinks = ReadByte f #unsigned
+
+        for i = 1 to numLinks do (
+            append mTarget.linkIds (ReadShort f #unsigned)
+        )
+
+        mTarget
     )
 
     fn WriteTarget f mtarget = (
@@ -926,21 +960,28 @@ rollout MafiaTools_4dsParser "" ( --module
             WriteShort f linkId
         )
     )
+    
+    -------------------------------------------------    
+    
+    struct TBone (
+        matrix = #(), --4x4 matrix
+        boneId
+    )
+    
+    fn ReadBone f = (
+        local mbone = TBone()
+        mbone.matrix = ReadMatrix f
+        mbone.boneId = ReadLong f #unsigned
+        mbone
+    )
 
     fn WriteBone f mbone = (
         WriteMatrix f mbone.matrix
 
         WriteLong f mbone.boneId
-    )
-
-    fn WriteGlow f mglows = (
-        WriteByte f mglows.count
-        for mglow in mglows do (
-            WriteFloat f mglow.position
-            WriteShort f mglow.matId
-        )
-    )
-
+    )   
+    
+    -------------------------------------------------
 
     fn mtypeof mobj = (
         case mobj.objectType of (
