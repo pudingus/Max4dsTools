@@ -48,8 +48,8 @@
             label       lblSclE         "" align:#right
             checkbox    cbCachedNorm    "Cached normals" checked:true
             checkbox    cbEditNorm      "Edit Normals modifier" checked:true
-            edittext    edtDirectory "Directory:"   align:#left offset:[0,5]  text:""labelOnTop:true
-            edittext    edtFilename  "Filename:"      align:#left  text:"" labelOnTop:true
+            edittext    edtDirectory    "Directory:"   align:#left offset:[0,5]  text:""labelOnTop:true
+            edittext    edtFilename     "Filename:"      align:#left  text:"" labelOnTop:true
             button      btnBrowse       "Browse..." align:#left width:70 across:2 
             button      btnExport       "Export" align:#right width:70
         )
@@ -64,21 +64,21 @@
         on ddlUnits selected sel do ddlUnits_select sel
 
         fn StartImport del:false = (
+            local settings = ::MafiaTools_ImpExpSettings
             local proceed = true
             if del then (
                 proceed = CheckForSave()
             )
 
             if proceed then (
-                local prev_name = MafiaTools_ImpExpSettings.importPath
+                local prev_name = settings.importPath
                 if prev_name == undefined then prev_name = ""
                 local file = getOpenFileName types:"4ds Model (*.4ds)|*.4ds|All files (*.*)|*.*" historyCategory:"4dsImport" filename:prev_name
                 if file != undefined then (
-                    local util = ::MafiaTools_Util
                     local layers = ::MafiaTools_Layers
                     local imp = ::MafiaTools_4dsImport
-                    MafiaTools_ImpExpSettings.importPath = file
-                    MafiaTools_ImpExpSettings.filenameForExport = filenameFromPath file
+                    settings.importPath = file
+                    settings.useImportedFilename = true
                     labelDone.text = "Importing..."
                     if del then (
                         if numsubobjectlevels != undefined then subobjectlevel = 0
@@ -104,23 +104,35 @@
         on btnOpen pressed do (
             StartImport del:true
         )
+        
+        on edtFilename changed val do (
+            local settings = ::MafiaTools_ImpExpSettings
+            settings.useImportedFilename = false
+        )
 
         on btnBrowse pressed do (
-            local filename = edtFilename.text
-            if util.isStringEmpty filename then (
-                filename = settings.filenameForExport
-                if util.isStringEmpty filename then (
-                    filename = getfilenamefile maxFilename
-                    if util.isStringEmpty filename then (
-                        filename = ""
-                    )
-                )
+            local settings = ::MafiaTools_ImpExpSettings
+            
+            local filename            
+            if settings.useImportedFilename and settings.importPath != undefined then (
+                filename = getFilenameFile settings.importPath
             )
+            else (
+                filename = edtFilename.text
+            )            
+            
+            if util.isStringEmpty filename then (
+                filename = getfilenamefile maxFilename
+                if util.isStringEmpty filename then (
+                    filename = ""
+                )
+            )           
         
             local file = getSaveFileName types:"4ds Model (*.4ds)|*.4ds|All files (*.*)|*.*" historyCategory:"4dsExport" filename:filename
             if file != undefined then (
                 edtDirectory.text = getFilenamePath file
                 edtFilename.text = filenameFromPath file
+                settings.useImportedFilename = false
             )
         )
 

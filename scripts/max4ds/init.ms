@@ -15,7 +15,7 @@
             editNorm,
             cachedNorm,
             unitsSel = 4,
-            filenameForExport
+            useImportedFilename = false
         )
         ::MafiaTools_ImpExpSettings = settings()
     )
@@ -61,5 +61,5 @@ callbacks.addScript #systemPostNew "PostReset()" id:#MafiaTools
 callbacks.addScript #systemPostReset "PostReset()" id:#MafiaTools
 
 fn PostReset = (
-    ::MafiaTools_ImpExpSettings.filenameForExport = undefined    
+    ::MafiaTools_ImpExpSettings.useImportedFilename = false
 )
