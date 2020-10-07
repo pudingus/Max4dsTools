@@ -102,48 +102,28 @@ rollout MafiaTools_Util "" (    --module
     )
     
     -------------------
-    
+    fn PrintMatrix mtr = (
+        local ss = StringStream ""
+
+        for m = 1 to 4 do (
+            for n = 1 to 3 do (
+                local val = mtr[m][n]
+                local fmvalue = ""
+
+                if val as string == "0.0" then fmvalue = " 0     "
+                else fmvalue = formattedPrint val format:" .4f"
+
+                format "% " fmvalue to:ss
+            )
+            format "\n" to:ss
+        )
+        --format "\n" to:ss
+        format (ss as string)
+        --ss
+    )
     
     -----------------
-    fn GetNodeType obj = (
-        local gp = custAttributes.get obj MafParams_def baseObject:false
-        if (isKindOf obj BoneGeometry) or (obj.boneEnable) then (
-            #bone
-        )
-        else if isKindOf obj Target4ds then (
-            #target
-        )
-        else if isKindOf obj Glow4ds then (
-            #glow
-        )
-        else if isKindOf obj Dummy then (
-            #dummy
-        )
-        else if IsGeometry obj then (
-            if matchPattern obj.name pattern:"$portal*" then (
-                #portal
-            )
-            else if matchPattern obj.name pattern:"$lod*" then (
-                #lod
-            )
-            else if matchPattern obj.name pattern:"sector*" then (
-                #sector
-            )
-            else if matchPattern obj.name pattern:"$morph*" then (
-                #morph
-            )
-            else if (gp != undefined) and (stricmp gp.objectType "billboard" == 0) then (
-                #billboard
-            )
-            else if GetModByClass obj Skin != undefined then (
-                #singlemesh
-            )
-            else (
-                #mesh
-            )
-        )
-        else #unsupported
-    )        
+          
 )
 
 fn elapsed_since time = (

@@ -14,10 +14,11 @@ undo off (
         
         on btnConvert pressed do (
             local util = ::MafiaTools_util   
+            local exp = ::MafiaTools_4dsExport
     
             local found = false
             for obj in objects while not found do (
-                if obj.parent == undefined and util.GetNodeType obj == #singlemesh then (
+                if obj.parent == undefined and exp.GetNodeType obj == #singlemesh then (
                     found = true
                     local skinMesh = obj
                     local imp = ::MafiaTools_4dsImport
@@ -31,7 +32,7 @@ undo off (
                     local fixBones = #()
                     
                     for child in children do (
-                        if util.GetNodeType child == #bone then (
+                        if exp.GetNodeType child == #bone then (
                             child.parent = rootBone
                             append fixBones child
                         )

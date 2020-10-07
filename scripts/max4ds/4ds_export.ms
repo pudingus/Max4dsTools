@@ -8,7 +8,7 @@ rollout MafiaTools_4dsExport "" (   --module
     local useEditNormals
     local useCachedNormals
 
-
+    local GetNodeType
     
     local boneNodes = #()
     local boneHandleIds = #()
@@ -22,6 +22,7 @@ rollout MafiaTools_4dsExport "" (   --module
         type,
         lods = #(),
         portals = #(),
+        planes = #(),
         rootBone
     )
     
@@ -284,7 +285,7 @@ rollout MafiaTools_4dsExport "" (   --module
         for obj in objects do (
             local type = nodeTypes[obj.inode.handle]
             if type == undefined then (
-                type = util.GetNodeType obj
+                type = GetNodeType obj
 
                 if type == #singlemesh then (
                     if (local skinMod = util.GetModByClass obj Skin) != undefined then (
@@ -342,11 +343,22 @@ rollout MafiaTools_4dsExport "" (   --module
                         mnodeSet.Add obj mnode
                     )
                 )
+                #range: (
+                    -- local mnode = TNode()
+                    -- mnode.baseNode = obj
+                    -- mnode.type = #mesh
+                    -- mnodeSet.Add obj mnode 
+                    
+                    if obj.parent != undefined then (
+                        local parentMnode = mnodeSet.GetByNode obj.parent
+                        append parentMnode.planes obj
+                    )
+                )
                 default: (
                     local mnode = TNode()
                     mnode.baseNode = obj
                     mnode.type = nodeType
-                    mnodeSet.Add obj mnode
+                    mnodeSet.Add obj mnode 
                 )
             )
 
@@ -952,6 +964,68 @@ rollout MafiaTools_4dsExport "" (   --module
         )
         mglows
     )
+    
+    
+    
+    fn ExtractMirror mnode unitscl = (
+        local baseNode = mnode.basenode
+        local mirr = parser.TMirror()        
+        local gp = custAttributes.get mnode.baseNode MafParams_def baseObject:false
+        
+        --thank you Duelist
+        local vertXarr = #()
+        local vertYarr = #()
+        local vertZarr = #()
+        
+        local tr = copy baseNode.mesh
+        mirr.mesh = tr
+        
+        local scl = scaleMatrix [unitscl,unitscl,unitscl]
+        local otrans = baseNode.objectTransform * inverse baseNode.transform * scl
+        
+        for i = 1 to tr.numverts do (
+            local vert = getVert tr i
+            setVert tr i (vert * otrans)
+        )
+        
+        local vmin = getVert tr 1
+        local vmax = getVert tr 1
+        for i = 2 to tr.numverts do (
+            local vert = getVert tr i
+            if vert.x < vmin.x do vmin.x = vert.x
+            if vert.y < vmin.y do vmin.y = vert.y
+            if vert.z < vmin.z do vmin.z = vert.z
+            
+            if vert.x > vmax.x do vmax.x = vert.x
+            if vert.y > vmax.y do vmax.y = vert.y
+            if vert.z > vmax.z do vmax.z = vert.z
+        )
+        
+        
+        
+        -- mirr.dmin = in coordsys local basenode.min
+        -- mirr.dmax = in coordsys local basenode.max
+        mirr.dmin = vmin
+        mirr.dmax = vmax
+        --mirr.matrix = matrix3 1
+        --mirr.matrix = baseNode.transform
+        local pln = mnode.planes[1]
+        if pln == undefined then (
+            mirr.matrix = matrix3 1
+        )
+        else (
+            mirr.matrix = pln.transform
+        )
+        
+        mirr.unknown[1] = gp.mirrorUnk1
+        mirr.unknown[2] = gp.mirrorUnk2
+        mirr.unknown[3] = gp.mirrorUnk3
+        mirr.unknown[4] = gp.mirrorUnk4
+        mirr.backColor = gp.mirrorColor
+        mirr.drawDistance = gp.mirrorDist        
+        
+        mirr
+    )
 
     fn ExtractObjects mnodeSet unitscl = (
         local mobjects = #()
@@ -975,7 +1049,7 @@ rollout MafiaTools_4dsExport "" (   --module
             mobj.name = mnode.baseNode.name
             mobj.parentId = mnodeSet.GetIDByNode mnode.baseNode.parent
 
-            if (baseNode.parent != undefined) and (util.GetNodeType baseNode.parent == #sector) then (
+            if (baseNode.parent != undefined) and (GetNodeType baseNode.parent == #sector) then (
                 in coordsys world
                 (
                     mobj.offset = mnode.baseNode.pos * unitscl
@@ -1051,6 +1125,11 @@ rollout MafiaTools_4dsExport "" (   --module
                     mobj.visualType = 6
                     mobj.definitions[1] = ExtractGlow mnode
                 )
+                #mirror: (
+                    mobj.objectType = 1
+                    mobj.visualType = 8
+                    mobj.definitions[1] = ExtractMirror mnode unitscl
+                )
                 default: (
                     mobj.objectType = 6
                     mobj.definitions[1] = ExtractDummy mnode unitscl
@@ -1062,6 +1141,52 @@ rollout MafiaTools_4dsExport "" (   --module
         )
         mobjects
     )
+    
+    fn GetNodeType obj = (
+        local gp = custAttributes.get obj MafParams_def baseObject:false
+        if (isKindOf obj BoneGeometry) or (obj.boneEnable) then (
+            #bone
+        )
+        else if isKindOf obj Target4ds then (
+            #target
+        )
+        else if isKindOf obj Glow4ds then (
+            #glow
+        )
+        else if isKindOf obj Dummy then (
+            #dummy
+        )
+        else if util.IsGeometry obj then (
+            if matchPattern obj.name pattern:"$portal*" then (
+                #portal
+            )
+            else if matchPattern obj.name pattern:"$lod*" then (
+                #lod
+            )
+            else if matchPattern obj.name pattern:"sector*" then (
+                #sector
+            )
+            else if matchPattern obj.name pattern:"$morph*" then (
+                #morph
+            )
+            else if matchPattern obj.name pattern:"$range*" then (
+                #range
+            )
+            else if (gp != undefined) and (stricmp gp.objectType "billboard" == 0) then (
+                #billboard
+            )
+            else if (gp != undefined) and (stricmp gp.objectType "mirror" == 0) then (
+                #mirror
+            )
+            else if util.GetModByClass obj Skin != undefined then (
+                #singlemesh
+            )
+            else (
+                #mesh
+            )
+        )
+        else #unsupported
+    ) 
 
     fn Export4ds file cachedNorm editNorm unitscl  = (
         

@@ -95,8 +95,7 @@ rollout MafiaTools_4dsImport "" (   --module
 
                 if mmesh.lods.count > 1 then Layers.AddTo lodNode ("Lod"+(lodId as string))
 
-                custAttributes.add lodNode MafParams_def baseObject:false
-                local gp = custAttributes.get lodNode mafParams_def baseObject:false
+                local gp = GetMafParams lodNode
 
                 gp.objectType = "Lod"
                 gp.lodDist = mlod.distance
@@ -183,8 +182,7 @@ rollout MafiaTools_4dsImport "" (   --module
     )
 
     fn CreateBillboard mbillboard nnode = (
-        custAttributes.add nnode MafParams_def baseObject:false
-        local gp = custAttributes.get nnode MafParams_def baseObject:false
+        local gp = GetMafParams nnode
 
         gp.rotAxis = mbillboard.rotAxis + 1
         gp.rotMode = mbillboard.rotMode + 1
@@ -226,17 +224,33 @@ rollout MafiaTools_4dsImport "" (   --module
         nnode
     )
 
-    fn CreateMirror mmirror mobj unitscale = (
-        local msh = mmirror.mesh
+    fn CreateMirror mirr mobj unitscale = (
+        local msh = mirr.mesh
 
         for i = 1 to msh.numverts do (
             local vert = getVert msh i
             setVert msh i (vert * unitscale)
         )
 
-        nnode = mesh mesh:msh
+        local nnode = mesh mesh:msh
         nnode.wirecolor = white
         Layers.AddTo nnode "Mirrors"
+        
+        local gp = GetMafParams nnode
+        gp.mirrorUnk1 = mirr.unknown[1]
+        gp.mirrorUnk2 = mirr.unknown[2]
+        gp.mirrorUnk3 = mirr.unknown[3]
+        gp.mirrorUnk4 = mirr.unknown[4]
+        gp.mirrorColor = mirr.backColor
+        gp.mirrorDist = mirr.drawDistance
+        
+        local pl = dummy boxsize:[2, 2, 2]
+        pl.name = "$range"
+        pl.transform = mirr.matrix
+        pl.parent = nnode
+        
+        local util = ::MafiaTools_Util
+        util.PrintMatrix mirr.matrix
 
         nnode
     )
@@ -283,8 +297,7 @@ rollout MafiaTools_4dsImport "" (   --module
             portalNode.wirecolor = (color 255 0 199)
             portalNode.parent = nodes[1]
 
-            custAttributes.add portalNode MafParams_def baseObject:false
-            local gp = custAttributes.get portalNode MafParams_def baseObject:false
+            local gp = GetMafParams portalNode
 
             gp.objectType = "Portal"
             gp.nearRange = mportal.nearRange
@@ -624,10 +637,12 @@ rollout MafiaTools_4dsImport "" (   --module
             else gp = GetMafParams nnode
 
 
+            --cant set objectType in CreateMesh for singlemeshes, singlemorphs...
             gp.objectType = case mobj.objectType of (
                 1: case mobj.visualType of (
                     6: "Dummy"
                     4: "Billboard"
+                    8: "Mirror"
                     default: "Mesh"
                 )
                 5: "Sector"

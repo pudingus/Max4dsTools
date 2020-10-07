@@ -4,7 +4,7 @@ version:2
 remap:#(#(#userParams), #(#strParams))
 (
     parameters main
-    (
+    (        
         objectType type:#string default:""
 
 
@@ -27,5 +27,15 @@ remap:#(#(#userParams), #(#strParams))
         --Billboard
         rotAxis type:#integer default:1
         rotMode type:#integer default:1
+        
+        
+        --Mirror
+        mirrorUnk1 type:#float default:0.0
+        mirrorUnk2 type:#float default:0.0
+        mirrorUnk3 type:#float default:0.0
+        mirrorUnk4 type:#float default:0.0
+        mirrorColor type:#color
+        mirrorDist type:#float default:100.0
+        
     )
 )

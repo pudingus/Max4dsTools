@@ -27,6 +27,7 @@ rollout MafiaTools_4dsParser "" ( --module
     local WriteTarget
     local WriteBone
     local WriteGlow
+    local WriteMirror
     
     -------------------------------------------------
     
@@ -417,6 +418,7 @@ rollout MafiaTools_4dsParser "" ( --module
                     WriteBillboard f mobj.definitions[2]
                 )
                 6: WriteGlow f mobj.definitions[1]
+                8: WriteMirror f mobj.definitions[1]
                 default: throw "invalid visual type"
             )
             5: WriteSector f mobj.definitions[1]
@@ -767,12 +769,12 @@ rollout MafiaTools_4dsParser "" ( --module
     -------------------------------------------------
     
     struct TMirror (
-        dmin,
-        dmax,
-        unknown = #(),
+        dmin,  --p3
+        dmax,  --p3
+        unknown = #(), --float[4]
         matrix,   --matrix3
-        backColor,
-        drawDistance,
+        backColor,  --float[3]
+        drawDistance,  --float
         mesh
     )
     
@@ -782,7 +784,7 @@ rollout MafiaTools_4dsParser "" ( --module
         mMirror.dmin = ReadPoint3 f
         mMirror.dmax = ReadPoint3 f
 
-        for i = 1 to 4 do local unknown = ReadFloat f        
+        for i = 1 to 4 do mMirror.unknown[i] = ReadFloat f        
         
         mMirror.matrix = ReadMatrix f        
 
@@ -810,6 +812,32 @@ rollout MafiaTools_4dsParser "" ( --module
 
         mMirror
     )
+    
+    fn WriteMirror f mmirror = (
+        WritePoint3 f mmirror.dmin
+        WritePoint3 f mmirror.dmax
+        
+        for i = 1 to 4 do WriteFloat f mmirror.unknown[i]
+        
+        WriteMatrix f mmirror.matrix
+        WriteColor f mmirror.backColor
+        WriteFloat f mmirror.drawDistance
+        
+        local tr = mmirror.mesh
+        WriteLong f tr.numverts
+        WriteLong f tr.numfaces
+        
+        for i = 1 to tr.numverts do (
+            local vert = getVert tr i
+            WritePoint3 f vert
+        )
+        
+        for i = 1 to tr.numfaces do (
+            local face = getFace tr i
+            WriteFace f face
+        )
+    )
+    
     
     -------------------------------------------------
     
