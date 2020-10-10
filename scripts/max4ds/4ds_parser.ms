@@ -28,6 +28,7 @@ rollout MafiaTools_4dsParser "" ( --module
     local WriteBone
     local WriteGlow
     local WriteMirror
+    local WriteMorph
     
     -------------------------------------------------
     
@@ -413,9 +414,18 @@ rollout MafiaTools_4dsParser "" ( --module
                     WriteMesh f mobj.definitions[1]
                     WriteSkin f mobj.definitions[2]
                 )
+                -- 3: (
+                --     WriteMesh f mobj.definitions[1]
+                --     WriteSkin f mobj.definitions[2]
+                --     WriteMorph f mobj.definitions[3]
+                -- )
                 4: (
                     WriteMesh f mobj.definitions[1]
                     WriteBillboard f mobj.definitions[2]
+                )
+                5: (
+                    WriteMesh f mobj.definitions[1]
+                    WriteMorph f mobj.definitions[2]
                 )
                 6: WriteGlow f mobj.definitions[1]
                 8: WriteMirror f mobj.definitions[1]
@@ -542,6 +552,7 @@ rollout MafiaTools_4dsParser "" ( --module
                     )
                 )
                 else (
+                   -- for vo in lod.vertOrder do print vo                    
                     for i = 1 to lod.mesh.numverts do (
                         local corrVertId = lod.vertOrder[i]
 
@@ -656,64 +667,98 @@ rollout MafiaTools_4dsParser "" ( --module
     -------------------------------------------------
     
     struct TMorph (
-        sections = #(),
-        numTargets
+        layers = #(),   --array of TMorphLayer
+        numTargets,    --num targets per layer
+        dmin,
+        dmax,
+        center,
+        dist 
     )
     
-    struct TMorphSection (
-        vertices = #(),   --array of TMorphVertex
-        vertexLinks = #()
+    struct TMorphLayer (
+        vertices = #()--,   --array of TMorphVertex
+        --vertexLinks = #()  --array of u8, there has to be as many links as vertices
     )
     
     struct TMorphVertex (
-        targets = #()   --array of TMorphTarget
+        points = #(),   --array of TMorphedPoint, count=TMorph.numTargets
+        index --vertex index, u8
     )
     
-    struct TMorphTarget (
+    struct TMorphedPoint (
         pos,    --point3
         normal  --point3
     )
     
     fn ReadMorph f = (
-        local mmorph = TMorph()
+        local morph = TMorph()
         local numTargets = ReadByte f #unsigned
-        mmorph.numTargets = numTargets
+        morph.numTargets = numTargets
 
         if numTargets > 0 then (
             local numLayers = ReadByte f #unsigned
             ReadByte f #unsigned   --unknown
             for i = 1 to numLayers do   (
-                local ms = TMorphSection()
+                local layer = TMorphLayer()
                 local numVerts = ReadShort f #unsigned
 
                 for v = 1 to numVerts do (
-                    local mv = TMorphVertex()
+                    local vert = TMorphVertex()
 
                     for t = 1 to numTargets do (
-                        local mt = TMorphTarget()
-                        mt.pos = ReadPoint3 f
-                        mt.normal = ReadPoint3 f
-                        append mv.targets mt
+                        local point = TMorphedPoint()
+                        point.pos = ReadPoint3 f
+                        point.normal = ReadPoint3 f
+                        append vert.points point
                     )
-                    append ms.vertices mv
+                    append layer.vertices vert
                 )
 
                 if (numTargets * numVerts) > 0 then ReadByte f #unsigned  --unknown
 
-                for v = 1 to numVerts do    (
-                    local vertexLink = ReadShort f #unsigned
-                    append ms.vertexLinks vertexLink
+                for v = 1 to numVerts do (
+                    layer.vertices[v].index = ReadShort f #unsigned
                 )
 
-                append mmorph.sections ms
+                append morph.layers layer
             )
 
-            local dmin = ReadPoint3 f
-            local dmax = ReadPoint3 f
-
-            for i = 1 to 4 do ReadFloat f   --unknown
+            morph.dmin = ReadPoint3 f
+            morph.dmax = ReadPoint3 f
+            morph.center = ReadPoint3 f
+            morph.dist = ReadFloat f
         )
-        mmorph
+        morph
+    )
+    
+    fn WriteMorph f morph = (
+        WriteByte f morph.numTargets
+        
+        --check if target count is zero?
+        
+        WriteByte f morph.layers.count
+        WriteByte f 1 --unknown
+        
+        for layer in morph.layers do (
+            WriteShort f layer.vertices.count
+            for vert in layer.vertices do (
+                if vert.points.count != morph.numTargets then throw "numTargets and points.count mismatch"
+                for point in vert.points do (
+                    WritePoint3 f point.pos
+                    WritePoint3 f point.normal
+                )                
+            )            
+            if layer.vertices.count * morph.numTargets > 0 do WriteByte f 1 --unknown
+            
+            for vert in layer.vertices do (
+                WriteShort f vert.index
+            )
+        )
+        
+        WritePoint3 f morph.dmin
+        WritePoint3 f morph.dmax
+        WritePoint3 f morph.center
+        WriteFloat f morph.dist
     )
     
     -------------------------------------------------

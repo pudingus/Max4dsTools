@@ -122,21 +122,20 @@ rollout MafiaTools_4dsImport "" (   --module
         local baseMesh = mmesh.lods[1].mesh
         local meshes = #()
 
-        for chan in mmorph.sections do (
+        for layer in mmorph.layers do (
             local sectionMeshes = #()
 
             for i = 1 to mmorph.numTargets do (
                 sectionMeshes[i] = copy baseMesh
             )
 
-            for i = 1 to chan.vertices.count do (
-                local vertId = chan.vertexLinks[i] + 1
-                local mvert = chan.vertices[i]
+            for vert in layer.vertices do (
+                local vertId = vert.index + 1
 
-                for j = 1 to mvert.targets.count do (
-                    local target = mvert.targets[j]
-                    local vert = target.pos * unitscale
-                    setVert sectionMeshes[j] vertId vert
+                for j = 1 to vert.points.count do (
+                    local point = vert.points[j]
+                    local pos = point.pos * unitscale
+                    setVert sectionMeshes[j] vertId pos
                 )
             )
             append meshes sectionMeshes
@@ -150,16 +149,14 @@ rollout MafiaTools_4dsImport "" (   --module
             select nnode
         )
 
-
-        local sectionNames = #("A", "B", "C")
-        local layerNames = #("layer A", "layer B", "layer C")
+        local letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
         local sectionId = 1
         local marker = 1
 
         for sectMesh in meshes do (
-            local sectionName = sectionNames[sectionId]
-            WM3_CreateMarker tmod marker layerNames[sectionId]
+            local layerLetter = letters[sectionId]
+            WM3_CreateMarker tmod marker ("layer " + layerLetter)
 
             local targetId = 1
 
@@ -168,7 +165,7 @@ rollout MafiaTools_4dsImport "" (   --module
                 local finalId = (marker + targetId - 1)
 
                 WM3_MC_BuildFromNode tmod finalId tnode
-                WM3_MC_SetName tmod finalId (sectionName + " " + (targetId as string))
+                WM3_MC_SetName tmod finalId (layerLetter + " " + (targetId as string))
 
                 delete tnode
 
