@@ -676,13 +676,12 @@ rollout MafiaTools_4dsParser "" ( --module
     )
     
     struct TMorphLayer (
-        vertices = #()--,   --array of TMorphVertex
-        --vertexLinks = #()  --array of u8, there has to be as many links as vertices
+        vertices = #()      --array of TMorphVertex
     )
     
     struct TMorphVertex (
         points = #(),   --array of TMorphedPoint, count=TMorph.numTargets
-        index --vertex index, u8
+        index   --vertex index, u16
     )
     
     struct TMorphedPoint (

@@ -241,10 +241,10 @@ rollout MafiaTools_4dsImport "" (   --module
         gp.mirrorColor = mirr.backColor
         gp.mirrorDist = mirr.drawDistance
         
-        local pl = dummy boxsize:[2, 2, 2]
-        pl.name = "$range"
-        pl.transform = mirr.matrix
-        pl.parent = nnode
+        local volume = dummy boxsize:[2, 2, 2]
+        volume.name = "$volume"
+        volume.transform = mirr.matrix
+        volume.parent = nnode
         
         local util = ::MafiaTools_Util
         util.PrintMatrix mirr.matrix

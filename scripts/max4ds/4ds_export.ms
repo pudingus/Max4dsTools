@@ -22,7 +22,7 @@ rollout MafiaTools_4dsExport "" (   --module
         type,
         lods = #(),
         portals = #(),
-        planes = #(),
+        volume,   --rendered volume for mirrors
         rootBone
     )
     
@@ -367,7 +367,7 @@ rollout MafiaTools_4dsExport "" (   --module
                         mnodeSet.Add obj mnode
                     )
                 )
-                #range: (
+                #volume: (
                     -- local mnode = TNode()
                     -- mnode.baseNode = obj
                     -- mnode.type = #mesh
@@ -375,7 +375,7 @@ rollout MafiaTools_4dsExport "" (   --module
                     
                     if obj.parent != undefined then (
                         local parentMnode = mnodeSet.GetByNode obj.parent
-                        append parentMnode.planes obj
+                        parentMnode.volume = obj
                     )
                 )
                 default: (
@@ -750,20 +750,172 @@ rollout MafiaTools_4dsExport "" (   --module
 
         #(mesh, normals, weights, uvs)
     )
+    
+    fn GetMainInstance obj = (
+        local instances
+        local count = InstanceMgr.GetInstances obj &instances
+        
+        instances[count]
+    )
+    
+    fn ExtractCachedNormals cmod = (
+        local faceVertNormals = #()
+        
+        for nface in cmod.normalFaces do (
+            local rnormals = #()
+            for v = 1 to 3 do (
+                local normalId = nface[v]
+                rnormals[v] = cmod.normals[normalId]
+            )
+            append faceVertNormals rnormals
+        )
+        
+        faceVertNormals
+    )
+    
+    fn ExtractEditNormals normMod obj = (
+        local faceVertNormals = #()
+        max modify mode
+        modpanel.setcurrentobject normMod node:obj
+
+        for i = 1 to lodmesh.numfaces do (
+            local rnormals = #()
+            for v = 1 to 3 do (
+                local normId = normMod.getnormalid i v
+                rnormals[v] = normMod.getnormal normId
+            )
+            append faceVertNormals rnormals
+        )
+        
+        faceVertNormals
+    )
+    
+    fn ExtractSGroupNormals lodmesh = (
+        local faceVertNormals = #()
+        for i = 1 to lodmesh.numfaces do (
+            local rnormals = meshop.getFaceRNormals lodmesh i
+            append faceVertNormals rnormals
+        )
+        
+        faceVertNormals
+    )
+    
+    fn ExtractNormals lodnode lodmesh = ( 
+        local faceVertNormals = #()
+        
+        local normMod
+        if useEditNormals then normMod = util.GetModByClass lodnode Edit_Normals
+
+        if normMod != undefined then (
+            faceVertNormals = ExtractEditNormals normMod lodnode
+        )
+        else (
+            local cmod
+            if useCachedNormals then cmod = util.GetModByClass lodnode CachedNormals
+
+            if cmod != undefined then (
+                faceVertNormals = ExtractCachedNormals cmod
+            )
+            else (
+                faceVertNormals = ExtractSGroupNormals lodmesh
+            )
+        )
+        
+        faceVertNormals
+    )
+    
+    fn ExtractLod mnode lodnode weights unitscl = (
+        local mlod = parser.TLod()
+        local lodMesh = copy lodnode.mesh
+        local gp = custAttributes.get lodnode MafParams_def baseObject:false
+        
+        if gp != undefined then (
+            mlod.distance = gp.lodDist
+        )
+        else (
+            if lodnode == lodnodes[lodnodes.count] then mlod.distance = 0.0
+            else mlod.distance = prevDist + 100.0
+        )
+
+        prevDist = mlod.distance
+
+        local faceVertNormals = ExtractNormals lodnode lodmesh
+
+        local normals = #()
+        local uvs = #()
+        local spl = SplitVertices lodmesh faceVertNormals weights
+        lodmesh = spl[1]
+        normals = spl[2]
+        weights = spl[3]
+        uvs = spl[4]
+        
+        -----apply per vertex uvs to mesh map channel
+        --format "uvs count % \n" uvs.count
+        setNumTVerts lodmesh uvs.count
+        for i = 1 to uvs.count do (
+            local uv = uvs[i]
+            if uv == undefined then uv = [0,0,0]
+
+            setTVert lodmesh i uv
+        )
+        ------------------------------------
+
+        ---sort weighted vertices
+        if weights != undefined then (
+            qsort weights CompareWeights
+
+            mlod.vertOrder = for wv in weights collect wv.vertid
+        )
+        -------------------
+
+
+        ---apply unit scale and object offset transform
+        local scl = scaleMatrix [unitscl,unitscl,unitscl]
+        local otrans = lodnode.objectTransform * inverse lodnode.transform * scl
+
+        if mnode.rootBone != undefined then (
+            local offsetTrans = lodnode.objectTransform * inverse lodnode.transform
+            otrans = offsetTrans * (lodnode.transform * inverse mnode.rootbone.transform) * scl
+        )
+        for vertId = 1 to lodmesh.numverts do (
+            local vert = getVert lodmesh vertId
+            setVert lodmesh vertId (vert * otrans)
+
+            --rotate normals
+            if normals[vertId] == undefined then normals[vertId] = [0,0,1]
+            normals[vertId] = normalize (normals[vertId] * otrans.rotationpart)
+        )
+
+
+        ----------------------
+
+
+        mlod.mesh = lodmesh
+        mlod.normals = normals
+
+        local fcgrpSet = TFacegroupSet()
+
+        for i = 1 to lodmesh.numfaces do (
+            local matid = getFaceMatID lodmesh i
+            local mafMatId = matset.GetMafiaMatId lodnode.mat matid
+
+            local facegroup = fcgrpSet.GetByMatId mafMatId
+            append facegroup.faceIds i
+        )
+
+        mlod.facegroups = fcgrpSet.facegroups
+        
+        mlod
+    )
+    
 
     fn ExtractMesh mnode mnodeSet &lodWeights unitscl = (
         local mmesh = parser.TMesh()
 
-        local instances
-        local count = InstanceMgr.GetInstances mnode.baseNode &instances
-        local masterInstance = instances[count]
+        local masterInstance = GetMainInstance mnode.baseNode
 
-        if masterInstance != mnode.baseNode then (  --search for instance id
-            mmesh.instanceId = mnodeSet.GetIDByNode masterInstance
-        )
-        else mmesh.instanceId = 0
-
-        if mmesh.instanceId == 0 then ( --is master instance
+        if masterInstance == mnode.baseNode then ( --is master instance
+            mmesh.instanceId = 0   
             local lodnodes = copy mnode.lods #noMap
             insertItem mnode.baseNode lodnodes 1
 
@@ -774,169 +926,14 @@ rollout MafiaTools_4dsExport "" (   --module
                 local weights
                 if lodweights != undefined then weights = lodWeights[l]
 
-                local mlod = parser.TLod()
-
-                local lodMesh = copy lodnode.mesh
-
-                local gp = custAttributes.get lodnode MafParams_def baseObject:false
-
-                if gp != undefined then (
-                    mlod.distance = gp.lodDist
-                )
-                else (
-                    if lodnode == lodnodes[lodnodes.count] then mlod.distance = 0.0
-                    else mlod.distance = prevDist + 100.0
-                )
-
-                prevDist = mlod.distance
-
-                local split = true
-
-                local normMod
-
-                if useEditNormals then normMod = util.GetModByClass lodnode Edit_Normals
-
-                local faceVertNormals = #()
-
-                if normMod != undefined then (
-                    max modify mode
-                    modpanel.setcurrentobject normMod node:lodnode
-
-                    for i = 1 to lodmesh.numfaces do (
-                        local rnormals = #()
-                        for v = 1 to 3 do (
-                            local normId = normMod.getnormalid i v
-                            rnormals[v] = normMod.getnormal normId
-                        )
-                        append faceVertNormals rnormals
-                    )
-                )
-                else (
-                    local cmod
-                    if useCachedNormals then cmod = util.GetModByClass lodnode CachedNormals
-
-                    if cmod != undefined then (
-                        for i = 1 to lodmesh.numfaces do (
-                            local nface = cmod.normalFaces[i]
-                            local rnormals = #()
-                            for v = 1 to 3 do (
-                                local normalId = nface[v]
-                                rnormals[v] = cmod.normals[normalId]
-                            )
-                            append faceVertNormals rnormals
-                        )
-                    )
-                    else (
-                        for i = 1 to lodmesh.numfaces do (
-                            local rnormals = meshop.getFaceRNormals lodmesh i
-                            append faceVertNormals rnormals
-                        )
-                    )
-                )
-
-
-
-
-
-                local normals = #()
-                local uvs = #()
-                if split then (
-                    local spl = SplitVertices lodmesh faceVertNormals weights
-                    lodmesh = spl[1]
-                    normals = spl[2]
-                    weights = spl[3]
-                    uvs = spl[4]
-                )
-                else (
-                    for i = 1 to lodmesh.numfaces do (
-                        local vertIds = getFace lodmesh i
-                        local rnormals = faceVertNormals[i]
-                        for v = 1 to 3 do (
-                            local vertId = vertIds[v]
-                            normals[vertId] = rnormals[v]
-                        )
-                    )
-
-                    uvs[lodmesh.numverts] = undefined
-                    if meshop.getMapSupport lodmesh 1 then (
-                        for i = 1 to lodmesh.numfaces do (
-                            local tface = getTVFace lodmesh i
-                            local face = getFace lodmesh i
-
-                            for v = 1 to 3 do (
-                                uvs[face[v]] = gettvert lodmesh tface[v]
-                            )
-                        )
-                    )
-                )
-
-                -----apply per vertex uvs to mesh map channel
-                --format "uvs count % \n" uvs.count
-                setNumTVerts lodmesh uvs.count
-                for i = 1 to uvs.count do (
-                    local uv = uvs[i]
-                    if uv == undefined then uv = [0,0,0]
-
-                    setTVert lodmesh i uv
-                )
-                ------------------------------------
-
-                ---sort weighted vertices
-                if weights != undefined then (
-                    qsort weights CompareWeights
-
-                    local vertOrder = #()
-                    for wv in weights do (
-                        append vertOrder wv.vertId
-                    )
-
-                    mlod.vertOrder = vertOrder
-                )
-                -------------------
-
-
-                ---apply unit scale and object offset transform
-                local scl = scaleMatrix [unitscl,unitscl,unitscl]
-                local otrans = lodnode.objectTransform * inverse lodnode.transform * scl
-
-                if mnode.rootBone != undefined then (
-                    local offsetTrans = lodnode.objectTransform * inverse lodnode.transform
-                    otrans = offsetTrans * (lodnode.transform * inverse mnode.rootbone.transform) * scl
-                )
-                for vertId = 1 to lodmesh.numverts do (
-                    local vert = getVert lodmesh vertId
-                    setVert lodmesh vertId (vert * otrans)
-
-                    --rotate normals
-                    if normals[vertId] == undefined then normals[vertId] = [0,0,1]
-                    normals[vertId] = normalize (normals[vertId] * otrans.rotationpart)
-                )
-
-
-                ----------------------
-
-
-                mlod.mesh = lodmesh
-                mlod.normals = normals
-
-                local fcgrpSet = TFacegroupSet()
-
-                for i = 1 to lodmesh.numfaces do (
-                    local matid = getFaceMatID lodmesh i
-                    local mafMatId = matset.GetMafiaMatId lodnode.mat matid
-
-                    local facegroup = fcgrpSet.GetByMatId mafMatId
-                    append facegroup.faceIds i
-
-
-
-                    --append mlod.matIds mafMatId
-                )
-
-                mlod.facegroups = fcgrpSet.facegroups
+                local mlod = ExtractLod mnode lodnode weights unitscl
+                
 
                 append mmesh.lods mlod
             )
+        )
+        else (
+            mmesh.instanceId = mnodeSet.GetIDByNode masterInstance
         )
         mmesh
     )
@@ -1023,22 +1020,17 @@ rollout MafiaTools_4dsExport "" (   --module
             if vert.x > vmax.x do vmax.x = vert.x
             if vert.y > vmax.y do vmax.y = vert.y
             if vert.z > vmax.z do vmax.z = vert.z
-        )
+        )        
         
-        
-        
-        -- mirr.dmin = in coordsys local basenode.min
-        -- mirr.dmax = in coordsys local basenode.max
         mirr.dmin = vmin
         mirr.dmax = vmax
-        --mirr.matrix = matrix3 1
-        --mirr.matrix = baseNode.transform
-        local pln = mnode.planes[1]
-        if pln == undefined then (
+        
+        local volume = mnode.volume
+        if volume == undefined then (
             mirr.matrix = matrix3 1
         )
         else (
-            mirr.matrix = pln.transform
+            mirr.matrix = volume.transform
         )
         
         mirr.unknown[1] = gp.mirrorUnk1
@@ -1084,10 +1076,12 @@ rollout MafiaTools_4dsExport "" (   --module
         local baseMesh = copy basenode.mesh        
         local layers = #()
         
+        local channelsPerLayer = 10
+        
         for i = 1 to 10 do (
             local layerInfo = TLayer()
-            for j = 1 to 10 do (
-                local chanId = ((i - 1) * 10) + j
+            for j = 1 to channelsPerLayer do (
+                local chanId = ((i - 1) * channelsPerLayer) + j
                 local hasData = WM3_MC_HasData mrph chanId 
                 
                 if hasData then (
@@ -1132,7 +1126,7 @@ rollout MafiaTools_4dsExport "" (   --module
                 local corrId = vertId - 1
                 local mvert = parser.TMorphVertex index:corrId
                 for j = 1 to numTargets do (
-                    local chanId = ((i - 1) * 10) + j 
+                    local chanId = ((i - 1) * channelsPerLayer) + j 
                     
                     local pt
                     local hasData = WM3_MC_HasData mrph chanId                    
@@ -1349,8 +1343,8 @@ rollout MafiaTools_4dsExport "" (   --module
             else if matchPattern obj.name pattern:"$morph*" then (
                 #morph
             )
-            else if matchPattern obj.name pattern:"$range*" then (
-                #range
+            else if matchPattern obj.name pattern:"$volume*" then (
+                #volume
             )
             else if (gp != undefined) and (stricmp gp.objectType "billboard" == 0) then (
                 #billboard
