@@ -322,7 +322,7 @@ rollout MafiaTools_4dsParser "" ( --module
         visualType,
         renderFlags = 0,
         renderFlags2 = 0,
-        parentId,
+        parentId,    -- 0 == no parent, 1..N == parent obj id
         offset,
         scl,
         rot,
@@ -414,11 +414,11 @@ rollout MafiaTools_4dsParser "" ( --module
                     WriteMesh f mobj.definitions[1]
                     WriteSkin f mobj.definitions[2]
                 )
-                -- 3: (
-                --     WriteMesh f mobj.definitions[1]
-                --     WriteSkin f mobj.definitions[2]
-                --     WriteMorph f mobj.definitions[3]
-                -- )
+                3: (
+                    WriteMesh f mobj.definitions[1]
+                    WriteSkin f mobj.definitions[2]
+                    WriteMorph f mobj.definitions[3]
+                )
                 4: (
                     WriteMesh f mobj.definitions[1]
                     WriteBillboard f mobj.definitions[2]
@@ -442,13 +442,13 @@ rollout MafiaTools_4dsParser "" ( --module
     -------------------------------------------------
 
     struct TMesh (
-        instanceId,
+        instanceId,    -- 0 == this mesh is unique, 1..N == id of obj to instance
         lods = #()
     )
     
     struct TFacegroup (
-        faceIds = #(),
-        matId
+        faceIds = #(),   -- array of 1-based ids
+        matId   -- 0 == no material, 1..N == material
     )
     
     struct TLod (
@@ -456,7 +456,7 @@ rollout MafiaTools_4dsParser "" ( --module
         mesh,
         normals = #(),  --array of point3, count = count of vertices in mesh
         facegroups = #(),
-        vertOrder
+        vertOrder   --array of 1-based ids
     )
     
     fn ReadMesh f = (
@@ -602,7 +602,7 @@ rollout MafiaTools_4dsParser "" ( --module
     struct TSkinVertexGroup (
         matrix = #(),  --4x4 matrix
         numW1Verts,
-        boneId,
+        boneId,   -- 0-based, TODO: make this 1-based to be consistent
         dmin,
         dmax,
         weights = #()   --array of float
@@ -681,7 +681,7 @@ rollout MafiaTools_4dsParser "" ( --module
     
     struct TMorphVertex (
         points = #(),   --array of TMorphedPoint, count=TMorph.numTargets
-        index   --vertex index, u16
+        index   --vertex index, 1-based, u16
     )
     
     struct TMorphedPoint (
@@ -716,7 +716,7 @@ rollout MafiaTools_4dsParser "" ( --module
                 if (numTargets * numVerts) > 0 then ReadByte f #unsigned  --unknown
 
                 for v = 1 to numVerts do (
-                    layer.vertices[v].index = ReadShort f #unsigned
+                    layer.vertices[v].index = (ReadShort f #unsigned) + 1
                 )
 
                 append morph.layers layer
@@ -750,7 +750,7 @@ rollout MafiaTools_4dsParser "" ( --module
             if layer.vertices.count * morph.numTargets > 0 do WriteByte f 1 --unknown
             
             for vert in layer.vertices do (
-                WriteShort f vert.index
+                WriteShort f (vert.index - 1)
             )
         )
         
@@ -763,28 +763,31 @@ rollout MafiaTools_4dsParser "" ( --module
     -------------------------------------------------
     
     struct TBillboard (
-        rotAxis,
-        rotMode
+        rotAxis,   -- u8, 1-based
+        rotMode   -- u32, 1-based
     )
     
     fn ReadBillboard f = (
         local mbillboard = TBillboard()
-        mbillboard.rotAxis = ReadLong f #unsigned
-        mbillboard.rotMode = ReadByte f #unsigned
+        mbillboard.rotAxis = (ReadLong f #unsigned) + 1
+        mbillboard.rotMode = (ReadByte f #unsigned) + 1
 
         mbillboard
     )
     
     fn WriteBillboard f mbillboard = (
-        WriteByte f mbillboard.rotAxis
-        WriteLong f mbillboard.rotMode
+        WriteByte f (mbillboard.rotAxis - 1)
+        WriteLong f (mbillboard.rotMode - 1)
     )
     
     -------------------------------------------------    
 
     struct TGlow (
-        position,  --screen offset
-        matId
+        position,  --float, screen offset
+        
+        -- u16, 0 == no_texture, 1..N == materials
+        -- zero is invalid here, crashes the game
+        matId  
     )
     
     fn ReadGlow f = (
@@ -807,6 +810,7 @@ rollout MafiaTools_4dsParser "" ( --module
         for mglow in mglows do (
             WriteFloat f mglow.position
             WriteShort f mglow.matId
+            if mglow.matId == 0 do throw "TGlow.matId cannot be zero"
         )
     )
     
@@ -1007,7 +1011,7 @@ rollout MafiaTools_4dsParser "" ( --module
     struct TTarget (
         unk1,
         unk2,
-        linkIds = #()
+        linkIds = #()   --array of u16, 1-based ids
     )    
 
     fn ReadTarget f = (
@@ -1037,7 +1041,7 @@ rollout MafiaTools_4dsParser "" ( --module
     
     struct TBone (
         matrix = #(), --4x4 matrix
-        boneId
+        boneId   --0-based,  --TODO: make this 1-based to be consistent
     )
     
     fn ReadBone f = (

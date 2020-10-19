@@ -130,7 +130,7 @@ rollout MafiaTools_4dsImport "" (   --module
             )
 
             for vert in layer.vertices do (
-                local vertId = vert.index + 1
+                local vertId = vert.index
 
                 for j = 1 to vert.points.count do (
                     local point = vert.points[j]
@@ -144,10 +144,10 @@ rollout MafiaTools_4dsImport "" (   --module
         local tmod = Morpher()
         addModifier nnode tmod
         local maxver = (maxversion())[1]
-        if maxver < 22000 then (
+        --if maxver < 22000 then (
             max modify mode
             select nnode
-        )
+        --)
 
         local letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
@@ -181,8 +181,8 @@ rollout MafiaTools_4dsImport "" (   --module
     fn CreateBillboard mbillboard nnode = (
         local gp = GetMafParams nnode
 
-        gp.rotAxis = mbillboard.rotAxis + 1
-        gp.rotMode = mbillboard.rotMode + 1
+        gp.rotAxis = mbillboard.rotAxis
+        gp.rotMode = mbillboard.rotMode
     )
 
     fn CreateGlow mglows mobj unitscale materials = (
@@ -435,14 +435,14 @@ rollout MafiaTools_4dsImport "" (   --module
                 )
  
 
-                for i = 1 to boneNodes.count do (
-                    skinOps.AddBone oskin boneNodes[i] 0
+                for boneId = 1 to boneNodes.count do (
+                    skinOps.AddBone oskin boneNodes[boneId] 0
                 )
 
                 --clear weights
                 for vertId = 1 to nnode.numverts do (
-                    for bnId = 1 to boneNodes.count do (
-                        skinOps.ReplaceVertexWeights oskin vertId bnId 0.0
+                    for boneId = 1 to boneNodes.count do (
+                        skinOps.ReplaceVertexWeights oskin vertId boneId 0.0
                     )
                 )
                 ---------
@@ -471,10 +471,14 @@ rollout MafiaTools_4dsImport "" (   --module
                     )
                 )
 
-                for i = 1 to mskin.numW0Verts do (
+                (
                     local weight = 1.0
-                    skin_setVertexWeight xskin vertId 1 weight
-                    vertid += 1
+                    local boneId = 1
+                        
+                    for i = 1 to mskin.numW0Verts do (                        
+                        skin_setVertexWeight xskin vertId boneId weight
+                        vertId += 1
+                    )
                 )
             )
         )

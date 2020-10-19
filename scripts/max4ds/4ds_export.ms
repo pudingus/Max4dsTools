@@ -303,21 +303,22 @@ rollout MafiaTools_4dsExport "" (   --module
                     )
                 )
                 
-                -- if type == #singlemorph then (
-                --     if (local skinMod = util.GetModByClass obj Skin) != undefined then (
-                --         local bns = util.GetBoneNodes skinMod
+                ------TODO: improve this
+                if type == #singlemorph then (
+                    if (local skinMod = util.GetModByClass obj Skin) != undefined then (
+                        local bns = util.GetBoneNodes skinMod
 
-                --         for boneNode in bns do (
-                --             local handle = boneNode.inode.handle
-                --             nodeTypes[handle] = #bone
-                --         )
-                --         if obj.parent == undefined then (
-                --             throw "Skinned mesh needs a parent bone. Use the 'Convert old skeleton' tool or add a root bone."
-                --         )
-                --         nodeTypes[obj.parent.inode.handle] = #rootBone
-                --         rootBone[obj.inode.handle] = obj.parent
-                --     )
-                -- )
+                        for boneNode in bns do (
+                            local handle = boneNode.inode.handle
+                            nodeTypes[handle] = #bone
+                        )
+                        if obj.parent == undefined then (
+                            throw "Skinned mesh needs a parent bone. Use the 'Convert old skeleton' tool or add a root bone."
+                        )
+                        nodeTypes[obj.parent.inode.handle] = #rootBone
+                        rootBone[obj.inode.handle] = obj.parent
+                    )
+                )
 
                 nodeTypes[obj.inode.handle] = type
             )
@@ -350,20 +351,20 @@ rollout MafiaTools_4dsExport "" (   --module
                     mnodeSet.mnodes[id].baseNode = obj
                     mnodeSet.AddPointer obj id
                 )
-                -- #singlemorph: (
-                --     local id = mnodeSet.GetIdByNode rootBone[obj.inode.handle]
-                --     print (id as string)
+                #singlemorph: (
+                    local id = mnodeSet.GetIdByNode rootBone[obj.inode.handle]
+                    print (id as string)
 
-                --     mnodeSet.mnodes[id].baseNode = obj
-                --     mnodeSet.AddPointer obj id
-                -- )
+                    mnodeSet.mnodes[id].baseNode = obj
+                    mnodeSet.AddPointer obj id
+                )
                 #rootbone: (
                     local mnode = mnodeSet.GetByNode obj
                     if mnode == undefined then (
                         mnode = TNode()
                         mnode.rootBone = obj
-                        -- mnode.type = #singlemorph  ---FIX THIS!!!!!
-                        mnode.type = #singlemesh
+                        mnode.type = #singlemesh  ---FIX THIS!!!!!
+                        --mnode.type = #singlemesh
                         mnodeSet.Add obj mnode
                     )
                 )
@@ -824,18 +825,9 @@ rollout MafiaTools_4dsExport "" (   --module
         faceVertNormals
     )
     
-    fn ExtractLod mnode lodnode weights unitscl = (
+    fn ExtractLod mnode lodnode &weights unitscl = (
         local mlod = parser.TLod()
         local lodMesh = copy lodnode.mesh
-        local gp = custAttributes.get lodnode MafParams_def baseObject:false
-        
-        if gp != undefined then (
-            mlod.distance = gp.lodDist
-        )
-        else (
-            if lodnode == lodnodes[lodnodes.count] then mlod.distance = 0.0
-            else mlod.distance = prevDist + 100.0
-        )
 
         prevDist = mlod.distance
 
@@ -865,6 +857,8 @@ rollout MafiaTools_4dsExport "" (   --module
             qsort weights CompareWeights
 
             mlod.vertOrder = for wv in weights collect wv.vertid
+            
+            --print mlod.vertOrder
         )
         -------------------
 
@@ -923,10 +917,24 @@ rollout MafiaTools_4dsExport "" (   --module
 
             for l = 1 to lodnodes.count do (
                 local lodnode = lodnodes[l]
-                local weights
-                if lodweights != undefined then weights = lodWeights[l]
+                local weights = 
+                    if lodweights != undefined then lodWeights[l]
+                    else undefined
+                
 
-                local mlod = ExtractLod mnode lodnode weights unitscl
+                local mlod = ExtractLod mnode lodnode &weights unitscl
+                if lodweights != undefined then lodWeights[l] = weights
+                    
+                local gp = custAttributes.get lodnode MafParams_def baseObject:false
+        
+                if gp != undefined then (
+                    mlod.distance = gp.lodDist
+                )
+                else (
+                    if lodnode == lodnodes[lodnodes.count] then mlod.distance = 0.0
+                    else mlod.distance = prevDist + 100.0
+                )
+
                 
 
                 append mmesh.lods mlod
@@ -941,8 +949,8 @@ rollout MafiaTools_4dsExport "" (   --module
     fn ExtractBillboard mnode = (
         local mbillboard = parser.TBillboard()
         local gp = custAttributes.get mnode.baseNode MafParams_def baseObject:false
-        mbillboard.rotAxis = gp.rotAxis - 1
-        mbillboard.rotMode = gp.rotMode - 1
+        mbillboard.rotAxis = gp.rotAxis
+        mbillboard.rotMode = gp.rotMode
         mbillboard
     )
 
@@ -1067,8 +1075,7 @@ rollout MafiaTools_4dsExport "" (   --module
         biggest
     )
     
-    fn ExtractMorph mnode mmesh = (
-        --local vertOrder = mmesh.lods[1].vertOrder
+    fn ExtractMorph mnode vertOrder = (
         --local basenode = mnode
         local basenode = mnode.basenode
         local mrph = util.GetModByClass basenode Morpher            
@@ -1090,6 +1097,7 @@ rollout MafiaTools_4dsExport "" (   --module
                     
                     local numpts = WM3_MC_NumPts mrph chanId                    
                     for vertId = 1 to numpts do (
+                                                
                         local pt = WM3_MC_GetMorphPoint mrph chanId (vertId-1)
                         local vert = getVert baseMesh vertId
             
@@ -1121,9 +1129,15 @@ rollout MafiaTools_4dsExport "" (   --module
             local layerInfo = layers[i]            
             local mlayer = parser.TMorphLayer()            
             
-            for vertId in layerInfo.usedVerts do (
-                --local corrId = vertOrder[vertId] - 1
-                local corrId = vertId - 1
+            format "layer %:\n" i
+            for vertId in layerInfo.usedVerts do (   
+                
+                format "%\n" vertId
+                             
+                local corrId = 
+                    if (vertOrder != undefined) then vertId = vertOrder[vertId]
+                    else vertId
+                    
                 local mvert = parser.TMorphVertex index:corrId
                 for j = 1 to numTargets do (
                     local chanId = ((i - 1) * channelsPerLayer) + j 
@@ -1238,34 +1252,34 @@ rollout MafiaTools_4dsExport "" (   --module
                         mobj.rot = mnode.rootBone.rotation
                     )
                 )
-                -- #singlemorph: (
-                --     mobj.objectType = 1
-                --     mobj.visualType = 3
-                --     local lodWeights = ExtractWeights mnode
-                --     local mmesh = ExtractMesh mnode mnodeSet &lodWeights unitscl
-                --     local mskins = ExtractSkin mnode lodWeights unitscl
-                --     local mmorph = ExtractMorph mnode mmesh
+                #singlemorph: (
+                    mobj.objectType = 1
+                    mobj.visualType = 3
+                    local lodWeights = ExtractWeights mnode
+                    local mmesh = ExtractMesh mnode mnodeSet &lodWeights unitscl
+                    local mskins = ExtractSkin mnode lodWeights unitscl
+                    local mmorph = ExtractMorph mnode mmesh.lods[1].vertOrder
 
-                --     mobj.definitions[1] = mmesh
-                --     mobj.definitions[2] = mskins
-                --     mobj.definitions[3] = mmorph
+                    mobj.definitions[1] = mmesh
+                    mobj.definitions[2] = mskins
+                    mobj.definitions[3] = mmorph
 
-                --     mobj.name = mnode.rootBone.name
+                    mobj.name = mnode.rootBone.name
 
-                --     mobj.parentId = mnodeSet.GetIDByNode mnode.rootBone.parent
+                    mobj.parentId = mnodeSet.GetIDByNode mnode.rootBone.parent
 
-                --     in coordsys parent
-                --     (
-                --         mobj.offset = mnode.rootBone.pos * unitscl
-                --         mobj.scl = mnode.rootBone.scale
-                --         mobj.rot = mnode.rootBone.rotation
-                --     )
-                -- )
+                    in coordsys parent
+                    (
+                        mobj.offset = mnode.rootBone.pos * unitscl
+                        mobj.scl = mnode.rootBone.scale
+                        mobj.rot = mnode.rootBone.rotation
+                    )
+                )
                 #morphmesh: (
                     mobj.objectType = 1
                     mobj.visualType = 5
                     mobj.definitions[1] = ExtractMesh mnode mnodeSet undefined unitscl
-                    mobj.definitions[2] = ExtractMorph mnode mmesh
+                    mobj.definitions[2] = ExtractMorph mnode undefined
                 )
                 #billboard: (
                     mobj.objectType = 1
@@ -1353,12 +1367,10 @@ rollout MafiaTools_4dsExport "" (   --module
                 #mirror
             )            
             else if util.HasMod obj Skin then (
-                -- if util.HasMod obj Morpher then (
-                --     #singlemorph
-                -- )
-                -- else #singlemesh   
-                
-                #singlemesh
+                if util.HasMod obj Morpher then (
+                    #singlemorph
+                )
+                else #singlemesh
             )
             else if util.HasMod obj Morpher then (
                 #morphmesh
