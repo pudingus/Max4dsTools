@@ -22,28 +22,26 @@ rollout MafiaTools_4dsImport "" (   --module
             local lodId = 0
             for mlod in mmesh.lods do (
                 local msh = mlod.mesh
-
+                local normals = #()                
+                
                 for i = 1 to msh.numverts do (
                     local vert = getVert msh i
                     setVert msh i (vert * unitscale)
-                )
-
+                    append normals (getNormal msh i)
+                )                
+                
                 local lodNode = mesh mesh:msh
                 lodNode.wirecolor = color 0 0 0
 
-
                 local usedMats = #{}
-
                 for fcgrp in mlod.facegroups do (
                     if fcgrp.matId != 0 then (
                         usedMats[fcgrp.matId] = true
                     )
                 )
-
                 usedMats = usedMats as array
 
                 local indices = #()
-
                 if usedMats.count == 1 then (
                     local matId = usedMats[1]
                     if matId != 0 then (
@@ -68,7 +66,6 @@ rollout MafiaTools_4dsImport "" (   --module
                         i += 1
                     )
 
-
                     lodnode.material = multimat
                 )
 
@@ -85,7 +82,7 @@ rollout MafiaTools_4dsImport "" (   --module
                         setFaceMatID lodnode faceId matId
                     )
                 )
-
+                
 
                 if lodId > 0 then (
                     lodNode.name = "$lod" + (lodId as string) + "__" + name
@@ -103,7 +100,7 @@ rollout MafiaTools_4dsImport "" (   --module
                 append nodes lodNode
 
                 local cmod = CachedNormals()
-                cmod.normals = mlod.normals
+                cmod.normals = normals
 
                 for i = 1 to lodnode.numfaces do (
                     append cmod.normalFaces (getFace lodnode i)

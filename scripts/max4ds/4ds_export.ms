@@ -5,8 +5,8 @@ rollout MafiaTools_4dsExport "" (   --module
     local util = ::MafiaTools_Util
     ---------------------
 
-    local useEditNormals
-    local useCachedNormals
+    local USE_EDIT_NORMALS
+    local USE_CACHED_NORMALS
 
     local GetNodeType
     
@@ -649,6 +649,7 @@ rollout MafiaTools_4dsExport "" (   --module
 
     */
 
+    --splits 
     fn SplitVertices mesh faceVertNormals weights = (
         local numverts = mesh.numverts
         local normals = #()   -- min. count = count of vertices, normals for duplicated verts are appended to the end
@@ -748,8 +749,28 @@ rollout MafiaTools_4dsExport "" (   --module
         for fixFace in fixFaces do (
             setFace mesh fixFace[1] fixFace[2]
         )
+        
+        
+        -----apply per vertex uvs to mesh map channel
+        --format "uvs count % \n" uvs.count
+        setNumTVerts mesh uvs.count
+        for i = 1 to uvs.count do (
+            local uv = uvs[i]
+            if uv == undefined then uv = [0,0,0]
 
-        #(mesh, normals, weights, uvs)
+            setTVert mesh i uv
+        )
+        ------------------------------------
+        
+        
+        for i = 1 to normals.count do (
+            local normal = normals[i]
+            if normal == undefined then normal = [0,0,1]
+            
+            setNormal mesh i normal
+        )
+
+        weights
     )
     
     fn GetMainInstance obj = (
@@ -801,18 +822,19 @@ rollout MafiaTools_4dsExport "" (   --module
         faceVertNormals
     )
     
+    --extracts per face vertex normals from mesh into array
     fn ExtractNormals lodnode lodmesh = ( 
         local faceVertNormals = #()
         
         local normMod
-        if useEditNormals then normMod = util.GetModByClass lodnode Edit_Normals
+        if USE_EDIT_NORMALS then normMod = util.GetModByClass lodnode Edit_Normals
 
         if normMod != undefined then (
             faceVertNormals = ExtractEditNormals normMod lodnode
         )
         else (
             local cmod
-            if useCachedNormals then cmod = util.GetModByClass lodnode CachedNormals
+            if USE_CACHED_NORMALS then cmod = util.GetModByClass lodnode CachedNormals
 
             if cmod != undefined then (
                 faceVertNormals = ExtractCachedNormals cmod
@@ -834,23 +856,7 @@ rollout MafiaTools_4dsExport "" (   --module
         local faceVertNormals = ExtractNormals lodnode lodmesh
 
         local normals = #()
-        local uvs = #()
-        local spl = SplitVertices lodmesh faceVertNormals weights
-        lodmesh = spl[1]
-        normals = spl[2]
-        weights = spl[3]
-        uvs = spl[4]
-        
-        -----apply per vertex uvs to mesh map channel
-        --format "uvs count % \n" uvs.count
-        setNumTVerts lodmesh uvs.count
-        for i = 1 to uvs.count do (
-            local uv = uvs[i]
-            if uv == undefined then uv = [0,0,0]
-
-            setTVert lodmesh i uv
-        )
-        ------------------------------------
+        weights = SplitVertices lodmesh faceVertNormals weights
 
         ---sort weighted vertices
         if weights != undefined then (
@@ -871,21 +877,19 @@ rollout MafiaTools_4dsExport "" (   --module
             local offsetTrans = lodnode.objectTransform * inverse lodnode.transform
             otrans = offsetTrans * (lodnode.transform * inverse mnode.rootbone.transform) * scl
         )
+        
+        --apply transformation
         for vertId = 1 to lodmesh.numverts do (
             local vert = getVert lodmesh vertId
             setVert lodmesh vertId (vert * otrans)
 
-            --rotate normals
-            if normals[vertId] == undefined then normals[vertId] = [0,0,1]
-            normals[vertId] = normalize (normals[vertId] * otrans.rotationpart)
+            --rotate normals            
+            local normal = getNormal lodmesh vertId
+            setNormal lodmesh vertId (normal * otrans.rotationpart)
         )
-
-
         ----------------------
 
-
         mlod.mesh = lodmesh
-        mlod.normals = normals
 
         local fcgrpSet = TFacegroupSet()
 
@@ -1384,8 +1388,8 @@ rollout MafiaTools_4dsExport "" (   --module
 
     fn Export4ds file cachedNorm editNorm unitscl  = (
         
-        useCachedNormals = cachedNorm
-        useEditNormals = editNorm
+        USE_CACHED_NORMALS = cachedNorm
+        USE_EDIT_NORMALS = editNorm
         
         local dur = 0.0
         

@@ -454,10 +454,9 @@ rollout MafiaTools_4dsParser "" ( --module
     struct TLod (
         distance,
         mesh,
-        normals = #(),  --array of point3, count = count of vertices in mesh
         facegroups = #(),
         vertOrder   --array of 1-based ids
-    )
+    )    
     
     fn ReadMesh f = (
         local mmesh = TMesh()
@@ -467,50 +466,54 @@ rollout MafiaTools_4dsParser "" ( --module
             local numlods = ReadByte f #unsigned
 
             if numlods > 0 then (
+                struct TVert (pos, normal, uv)
+                
                 for lodId = 0 to numlods - 1 do (
                     local mlod = TLod()
                     mlod.distance = ReadFloat f
                     local numVerts = ReadShort f #unsigned
-                    local tr = TriMesh()
-                    setNumVerts tr numverts
-                    setNumTVerts tr numverts
 
-
-                    for i = 1 to numVerts do (
+                    local verts = for i = 1 to numVerts collect (
                         local vert = ReadPoint3 f
                         local normal = ReadPoint3 f
                         local uv = ReadUV f
-
-                        append mlod.normals normal
-                        setVert tr i vert
-                        setTVert tr i uv
-                    )
-
-                    local numFacegroups = ReadByte f #unsigned
-
+                        
+                        TVert pos:vert normal:normal uv:uv
+                    )                    
+                    
+                    local faces = #()
+                    local prevTotal = 0
+                    local numFacegroups = ReadByte f #unsigned                   
                     for i = 1 to numFacegroups do (
                         local fcgrp = TFacegroup()
-
-                        local grpNumFaces = ReadShort f #unsigned   --number of faces in this facegroup
-                        local prevTotal = getNumFaces tr    --get number of faces written in total so far - from previous facegroup
-
-                        local keepTopology = true
-                        setNumFaces tr (prevTotal + grpNumFaces) keepTopology   --increase face buffer to accomodate this facegroup
-
-                        for j = 1 to grpNumFaces do (
-                            local face = ReadFace f
-                            local faceId = prevTotal+j
-                            setFace tr faceId face
+                        local grpNumFaces = ReadShort f #unsigned   --number of faces in this facegroup                                         
+                        
+                        for j = 1 to grpNumFaces do (                                                        
+                            append faces (ReadFace f)     
+                            local faceId = prevTotal + j                       
                             append fcgrp.faceIds faceId
                         )
                         fcgrp.matId = ReadShort f #unsigned
 
-                        append mlod.facegroups fcgrp
+                        append mlod.facegroups fcgrp    
+                        prevTotal = prevTotal + grpNumFaces
+                    )                  
+                    
+                    
+                    local tr = TriMesh()
+                    setNumVerts tr numverts
+                    setNumTVerts tr numverts  
+                    setNumFaces tr faces.count
+                    for i = 1 to numverts do (
+                        setVert tr i verts[i].pos
+                        setTVert tr i verts[i].uv
+                        setNormal tr i verts[i].normal
                     )
-
+                    
                     buildTVFaces tr
-                    for i = 1 to tr.numfaces do (
-                        setTVFace tr i (getFace tr i)
+                    for i = 1 to faces.count do (
+                        setFace tr i faces[i]                        
+                        setTVFace tr i faces[i]
                         for v = 1 to 3 do setEdgeVis tr i v true
                     )
 
@@ -534,11 +537,8 @@ rollout MafiaTools_4dsParser "" ( --module
 
                 if lod.vertOrder == undefined then (
                     for i = 1 to lod.mesh.numverts do (
-                        local vert = getVert lod.mesh i
-                        WritePoint3 f vert
-                        local normal = lod.normals[i]
-                        if normal == undefined then normal = [0,0,1]
-                        WritePoint3 f normal
+                        WritePoint3 f (getVert lod.mesh i)
+                        WritePoint3 f (getNormal lod.mesh i)
                         WriteUV f (getTVert lod.mesh i)
                     )
 
@@ -556,11 +556,8 @@ rollout MafiaTools_4dsParser "" ( --module
                     for i = 1 to lod.mesh.numverts do (
                         local corrVertId = lod.vertOrder[i]
 
-                        local vert = getVert lod.mesh corrVertId
-                        WritePoint3 f vert
-                        local normal = lod.normals[corrVertId]
-                        if normal == undefined then normal = [0,0,1]
-                        WritePoint3 f normal
+                        WritePoint3 f (getVert lod.mesh corrVertId)
+                        WritePoint3 f (getNormal lod.mesh corrVertId)
                         WriteUV f (getTVert lod.mesh corrVertId)
                     )
 
