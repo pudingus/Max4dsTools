@@ -455,7 +455,7 @@ rollout MafiaTools_4dsParser "" ( --module
         distance,
         mesh,
         facegroups = #(),
-        vertOrder   --array of 1-based ids
+        vertOrder   --array of 1-based ids, value is the old vertex id
     )    
     
     fn ReadMesh f = (
