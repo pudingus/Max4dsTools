@@ -1121,14 +1121,6 @@ rollout MafiaTools_4dsExport "" (   --module
         local vmin
         local vmax
         
-        local rev = #()
-        if vertOrder != undefined then (            
-            for i = 1 to vertOrder.count do (
-                local vertId = vertOrder[i]
-                rev[vertId] = i
-            )
-        )
-        
         for i = 1 to layers.count do (
             local layerInfo = layers[i]            
             local mlayer = parser.TMorphLayer()            
@@ -1136,7 +1128,7 @@ rollout MafiaTools_4dsExport "" (   --module
             for vertId in layerInfo.usedVerts do (               
                              
                 local corrId = 
-                    if (vertOrder != undefined) then rev[vertId]
+                    if (vertOrder != undefined) then vertOrder[vertId]
                     else vertId
                     
                 local mvert = parser.TMorphVertex index:corrId
@@ -1204,11 +1196,49 @@ rollout MafiaTools_4dsExport "" (   --module
                 append weights wv
                 
                 newVertId += 1
-            )                        
-            
-            -- sort weighted vertices
+            )
+        )
+    )
+    
+    -- returns vertOrderLods, where value is the new vertex id
+    fn SortWeights lodWeights = (
+        for weights in lodWeights collect (
             qsort weights CompareWeights
-            mlod.vertOrder = for wv in weights collect wv.vertid
+            local vertOrder = #()
+            vertOrder[weights.count] = undefined
+                        
+            for i = 1 to weights.count do (
+                vertOrder[weights[i].vertid] = i
+            ) 
+            vertOrder
+        )
+    )
+    
+    fn SortMesh mmesh vertOrderLods = (
+        for l = 1 to mmesh.lods.count do (
+            local lod = mmesh.lods[l]
+            local vertOrder = vertOrderLods[l]
+            local tr = lod.mesh
+            local newtr = TriMesh()
+            newtr.numverts = tr.numverts
+            newtr.numtverts = tr.numtverts
+            newtr.numfaces = tr.numfaces
+            
+            for oldId = 1 to tr.numverts do (
+                local newId = vertOrder[oldId]
+                setVert newtr newId (getVert tr oldId)
+                setTVert newtr newId (getTVert tr oldId)
+                setNormal newtr newId (getNormal tr oldId)
+            )
+            
+            for faceId = 1 to tr.numfaces do (
+                local face = getFace tr faceId
+                for v = 1 to 3 do (
+                    face[v] = vertOrder[face[v]]
+                )
+                setFace newtr faceId face
+            )
+            lod.mesh = newtr
         )
     )
     
@@ -1267,7 +1297,8 @@ rollout MafiaTools_4dsExport "" (   --module
                     local extraVertsLods = ret[2]                    
                     
                     SplitWeights mmesh lodWeights extraVertsLods 
-                                        
+                    local vertOrderLods = SortWeights lodWeights
+                    SortMesh mmesh vertOrderLods
                     local mskins = ExtractSkin mnode lodWeights unitscl
 
                     mobj.definitions[1] = mmesh
@@ -1294,10 +1325,11 @@ rollout MafiaTools_4dsExport "" (   --module
                     local extraVertsLods = ret[2]                    
                     
                     SplitWeights mmesh lodWeights extraVertsLods 
-                                        
+                    local vertOrderLods = SortWeights lodWeights
+                    SortMesh mmesh vertOrderLods                    
                     local mskins = ExtractSkin mnode lodWeights unitscl
                     
-                    local mmorph = ExtractMorph mnode mmesh.lods[1].vertOrder
+                    local mmorph = ExtractMorph mnode vertOrderLods[1]
 
                     mobj.definitions[1] = mmesh
                     mobj.definitions[2] = mskins

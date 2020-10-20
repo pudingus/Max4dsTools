@@ -454,8 +454,7 @@ rollout MafiaTools_4dsParser "" ( --module
     struct TLod (
         distance,
         mesh,
-        facegroups = #(),
-        vertOrder   --array of 1-based ids, value is the old vertex id
+        facegroups = #()
     )    
     
     fn ReadMesh f = (
@@ -535,54 +534,20 @@ rollout MafiaTools_4dsParser "" ( --module
                 WriteFloat f lod.distance
                 WriteShort f lod.mesh.numverts
 
-                if lod.vertOrder == undefined then (
-                    for i = 1 to lod.mesh.numverts do (
-                        WritePoint3 f (getVert lod.mesh i)
-                        WritePoint3 f (getNormal lod.mesh i)
-                        WriteUV f (getTVert lod.mesh i)
-                    )
-
-                    WriteByte f lod.facegroups.count
-                    for facegroup in lod.facegroups do (
-                        WriteShort f facegroup.faceIds.count
-                        for faceId in facegroup.faceIds do (
-                            WriteFace f (getFace lod.mesh faceId)
-                        )
-                        WriteShort f (facegroup.matId - 1)
-                    )
-                )
-                else (
-                   -- for vo in lod.vertOrder do print vo                    
-                    for i = 1 to lod.mesh.numverts do (
-                        local corrVertId = lod.vertOrder[i]
-
-                        WritePoint3 f (getVert lod.mesh corrVertId)
-                        WritePoint3 f (getNormal lod.mesh corrVertId)
-                        WriteUV f (getTVert lod.mesh corrVertId)
-                    )
-
-                    local rev = #()
-                    for i = 1 to lod.vertOrder.count do (
-                        local vertId = lod.vertOrder[i]
-                        rev[vertId] = i
-                    )
-
-                    WriteByte f lod.facegroups.count
-                    for facegroup in lod.facegroups do (
-                        WriteShort f facegroup.faceIds.count
-                        for faceId in facegroup.faceIds do (
-                            local vertIds = getFace lod.mesh faceId
-
-                            for v = 1 to 3 do (
-                                local vertId = vertIds[v]
-                                vertIds[v] = rev[vertId]
-                            )
-                            WriteFace f vertIds
-                        )
-                        WriteShort f (facegroup.matId - 1)
-                    )
+                for i = 1 to lod.mesh.numverts do (
+                    WritePoint3 f (getVert lod.mesh i)
+                    WritePoint3 f (getNormal lod.mesh i)
+                    WriteUV f (getTVert lod.mesh i)
                 )
 
+                WriteByte f lod.facegroups.count
+                for facegroup in lod.facegroups do (
+                    WriteShort f facegroup.faceIds.count
+                    for faceId in facegroup.faceIds do (
+                        WriteFace f (getFace lod.mesh faceId)
+                    )
+                    WriteShort f (facegroup.matId - 1)
+                )
             )
         )
     )
