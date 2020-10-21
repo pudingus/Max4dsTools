@@ -1047,9 +1047,10 @@ rollout MafiaTools_4dsExport "" (   --module
         mirr
     )
     
-    struct TLayer (
+    struct TLayerInfo (
         usedChannels = #{},
-        usedVerts = #{}
+        usedVerts = #{},
+        channels = #()
     )
     
     --trims trailing unused layers (keeps the leading)
@@ -1071,7 +1072,29 @@ rollout MafiaTools_4dsExport "" (   --module
         biggest
     )
     
-    fn ExtractMorph mnode vertOrder normalMesh = (
+    fn SplitMorphVertices layers extraVerts = (
+        for layerInfo in layers do (
+            for chanId in layerInfo.usedChannels do (
+                local chanMesh = layerInfo.channels[chanId]
+                local numverts = chanMesh.numverts
+                
+                setNumVerts chanMesh (numverts + extraVerts.count) true
+                
+                local newVertId = numverts + 1
+                
+                for vertId in extraVerts do (
+                    setVert chanMesh newVertId (getVert chanMesh vertId)
+                    newVertId += 1
+                )
+            )
+        )
+    )
+    
+    fn ExtractMorph mnode vertOrder normalMesh extraVerts unitscl = (
+        
+        if vertOrder == undefined then (
+            vertOrder = for i = 1 to normalMesh.numverts collect i
+        )
         
         --local basenode = mnode
         local basenode = mnode.basenode
@@ -1081,28 +1104,39 @@ rollout MafiaTools_4dsExport "" (   --module
         local layers = #()
         
         local channelsPerLayer = 10
+        local maxLayers = ( (WM3_NumberOfChannels mrph) / channelsPerLayer ) as integer
         
-        for i = 1 to 10 do (
-            local layerInfo = TLayer()
+        local scl = scaleMatrix [unitscl,unitscl,unitscl]
+        
+        local otrans = basenode.objectTransform * inverse basenode.transform * scl
+
+        if mnode.rootBone != undefined then (
+            local offsetTrans = basenode.objectTransform * inverse basenode.transform
+            otrans = offsetTrans * (basenode.transform * inverse mnode.rootbone.transform) * scl
+        )
+        
+        
+        --collect morph meshes
+        for i = 1 to maxLayers do (
+            local layerInfo = TLayerInfo()
             for j = 1 to channelsPerLayer do (
                 local chanId = ((i - 1) * channelsPerLayer) + j
                 local hasData = WM3_MC_HasData mrph chanId 
+                local isActive = WM3_MC_IsActive mrph chanId 
                 
-                if hasData then (
+                local chanMesh
+                if hasData and isActive then (
                     layerInfo.usedChannels[j] = true
-                    -- find actually morphed verts
                     
-                    local numpts = WM3_MC_NumPts mrph chanId                    
-                    for vertId = 1 to numpts do (
-                                                
-                        local pt = WM3_MC_GetMorphPoint mrph chanId (vertId-1)
-                        local vert = getVert baseMesh vertId
-            
-                        if not close_enough_p3 vert pt 50 then (
-                            layerInfo.usedVerts[vertId] = true                            
-                        )
+                    local numpts = WM3_MC_NumPts mrph chanId  
+                    chanMesh = TriMesh()
+                    chanMesh.numverts = numpts                  
+                    for vertId = 1 to numpts do (                                                                        
+                        local pt = WM3_MC_GetMorphPoint mrph chanId (vertId-1)  
+                        setVert chanMesh vertId (pt * otrans)
                     )
                 )
+                append layerInfo.channels chanMesh
             )
             append layers layerInfo
         )
@@ -1110,6 +1144,30 @@ rollout MafiaTools_4dsExport "" (   --module
         --trim unused layers
         TrimUnused layers
         
+        
+        
+        --split vertices
+        if extraVerts != undefined then (            
+            SplitMorphVertices layers extraVerts
+        )
+        
+        
+        --find changed verts
+        for layerInfo in layers do (
+            for chanId in layerInfo.usedChannels do (
+                local chanMesh = layerInfo.channels[chanId]
+                
+                for vertId = 1 to chanMesh.numverts do (
+                    local baseVert = getVert normalMesh vertOrder[vertId]
+                    local chanVert = getVert chanMesh vertId
+        
+                    if not close_enough_p3 baseVert chanVert 50 then (
+                        layerInfo.usedVerts[vertId] = true                            
+                    )
+                )                
+            )
+        )             
+                
         local numTargets = FindBiggestChannelId layers
 
         
@@ -1128,27 +1186,24 @@ rollout MafiaTools_4dsExport "" (   --module
             
             for vertId in layerInfo.usedVerts do (               
                              
-                local corrId = 
-                    if (vertOrder != undefined) then vertOrder[vertId]
-                    else vertId
+                local corrId = vertOrder[vertId]
                     
                 local mvert = parser.TMorphVertex index:corrId
                 for j = 1 to numTargets do (
-                    local chanId = ((i - 1) * channelsPerLayer) + j 
+                    local chanMesh = layerInfo.channels[j]
                     
-                    local pt
-                    local hasData = WM3_MC_HasData mrph chanId                    
-                    if hasData then (
-                        pt = WM3_MC_GetMorphPoint mrph chanId (vertId-1)                         
+                    local pt                  
+                    if chanMesh != undefined then (
+                        pt = getVert chanMesh vertId                         
                     )
                     else (
-                        pt = getVert baseMesh vertId
+                        pt = getVert normalMesh corrId
                     )
                     
                     local normal = getNormal normalMesh corrId
                     
                     if vmin == undefined and vmax == undefined then (
-                        -- to avoid assigning the same reference to vmin and vmax
+                        -- so that vmin and vmax don't share the same reference between each other
                         vmin = copy pt
                         vmax = copy pt
                     )
@@ -1332,7 +1387,7 @@ rollout MafiaTools_4dsExport "" (   --module
                     SortMesh mmesh vertOrderLods                    
                     local mskins = ExtractSkin mnode lodWeights unitscl
                     
-                    local mmorph = ExtractMorph mnode vertOrderLods[1] mmesh.lods[1].mesh
+                    local mmorph = ExtractMorph mnode vertOrderLods[1] mmesh.lods[1].mesh extraVertsLods[1] unitscl
 
                     mobj.definitions[1] = mmesh
                     mobj.definitions[2] = mskins
@@ -1353,7 +1408,7 @@ rollout MafiaTools_4dsExport "" (   --module
                     mobj.objectType = 1
                     mobj.visualType = 5
                     mobj.definitions[1] = (ExtractMesh mnode mnodeSet unitscl)[1]
-                    mobj.definitions[2] = ExtractMorph mnode undefined mobj.definitions[1].lods[1].mesh
+                    mobj.definitions[2] = ExtractMorph mnode undefined mobj.definitions[1].lods[1].mesh undefined unitscl
                 )
                 #billboard: (
                     mobj.objectType = 1
