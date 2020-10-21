@@ -22,28 +22,26 @@ rollout MafiaTools_4dsImport "" (   --module
             local lodId = 0
             for mlod in mmesh.lods do (
                 local msh = mlod.mesh
-
+                local normals = #()                
+                
                 for i = 1 to msh.numverts do (
                     local vert = getVert msh i
                     setVert msh i (vert * unitscale)
-                )
-
+                    append normals (getNormal msh i)
+                )                
+                
                 local lodNode = mesh mesh:msh
                 lodNode.wirecolor = color 0 0 0
 
-
                 local usedMats = #{}
-
                 for fcgrp in mlod.facegroups do (
                     if fcgrp.matId != 0 then (
                         usedMats[fcgrp.matId] = true
                     )
                 )
-
                 usedMats = usedMats as array
 
                 local indices = #()
-
                 if usedMats.count == 1 then (
                     local matId = usedMats[1]
                     if matId != 0 then (
@@ -68,7 +66,6 @@ rollout MafiaTools_4dsImport "" (   --module
                         i += 1
                     )
 
-
                     lodnode.material = multimat
                 )
 
@@ -85,7 +82,7 @@ rollout MafiaTools_4dsImport "" (   --module
                         setFaceMatID lodnode faceId matId
                     )
                 )
-
+                
 
                 if lodId > 0 then (
                     lodNode.name = "$lod" + (lodId as string) + "__" + name
@@ -103,7 +100,7 @@ rollout MafiaTools_4dsImport "" (   --module
                 append nodes lodNode
 
                 local cmod = CachedNormals()
-                cmod.normals = mlod.normals
+                cmod.normals = normals
 
                 for i = 1 to lodnode.numfaces do (
                     append cmod.normalFaces (getFace lodnode i)
@@ -130,7 +127,7 @@ rollout MafiaTools_4dsImport "" (   --module
             )
 
             for vert in layer.vertices do (
-                local vertId = vert.index + 1
+                local vertId = vert.index
 
                 for j = 1 to vert.points.count do (
                     local point = vert.points[j]
@@ -143,17 +140,21 @@ rollout MafiaTools_4dsImport "" (   --module
 
         local tmod = Morpher()
         addModifier nnode tmod
-        local maxver = (maxversion())[1]
-        if maxver < 22000 then (
-            max modify mode
-            select nnode
-        )
+        -- local maxver = (maxversion())[1]
+        -- if maxver < 22000 then (
+        --     max modify mode
+        --     select nnode
+        -- )
 
         local letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
         local sectionId = 1
         local marker = 1
 
+        -- Keep this! For some reason BuildFromNode builds data only after
+        -- certain morpher function is called first (SetName, IsActive, HasData and maybe other)
+        WM3_MC_HasData tmod 1
+        
         for sectMesh in meshes do (
             local layerLetter = letters[sectionId]
             WM3_CreateMarker tmod marker ("layer " + layerLetter)
@@ -166,11 +167,12 @@ rollout MafiaTools_4dsImport "" (   --module
 
                 WM3_MC_BuildFromNode tmod finalId tnode
                 WM3_MC_SetName tmod finalId (layerLetter + " " + (targetId as string))
-
+                
                 delete tnode
 
                 targetId += 1
-            )
+            )            
+            
             marker = (sectionId * 10 + 1)
             sectionId += 1
         )
@@ -181,8 +183,8 @@ rollout MafiaTools_4dsImport "" (   --module
     fn CreateBillboard mbillboard nnode = (
         local gp = GetMafParams nnode
 
-        gp.rotAxis = mbillboard.rotAxis + 1
-        gp.rotMode = mbillboard.rotMode + 1
+        gp.rotAxis = mbillboard.rotAxis
+        gp.rotMode = mbillboard.rotMode
     )
 
     fn CreateGlow mglows mobj unitscale materials = (
@@ -241,10 +243,10 @@ rollout MafiaTools_4dsImport "" (   --module
         gp.mirrorColor = mirr.backColor
         gp.mirrorDist = mirr.drawDistance
         
-        local pl = dummy boxsize:[2, 2, 2]
-        pl.name = "$range"
-        pl.transform = mirr.matrix
-        pl.parent = nnode
+        local volume = dummy boxsize:[2, 2, 2]
+        volume.name = "$volume"
+        volume.transform = mirr.matrix
+        volume.parent = nnode
         
         local util = ::MafiaTools_Util
         util.PrintMatrix mirr.matrix
@@ -435,14 +437,14 @@ rollout MafiaTools_4dsImport "" (   --module
                 )
  
 
-                for i = 1 to boneNodes.count do (
-                    skinOps.AddBone oskin boneNodes[i] 0
+                for boneId = 1 to boneNodes.count do (
+                    skinOps.AddBone oskin boneNodes[boneId] 0
                 )
 
                 --clear weights
                 for vertId = 1 to nnode.numverts do (
-                    for bnId = 1 to boneNodes.count do (
-                        skinOps.ReplaceVertexWeights oskin vertId bnId 0.0
+                    for boneId = 1 to boneNodes.count do (
+                        skinOps.ReplaceVertexWeights oskin vertId boneId 0.0
                     )
                 )
                 ---------
@@ -471,10 +473,14 @@ rollout MafiaTools_4dsImport "" (   --module
                     )
                 )
 
-                for i = 1 to mskin.numW0Verts do (
+                (
                     local weight = 1.0
-                    skin_setVertexWeight xskin vertId 1 weight
-                    vertid += 1
+                    local boneId = 1
+                        
+                    for i = 1 to mskin.numW0Verts do (                        
+                        skin_setVertexWeight xskin vertId boneId weight
+                        vertId += 1
+                    )
                 )
             )
         )
