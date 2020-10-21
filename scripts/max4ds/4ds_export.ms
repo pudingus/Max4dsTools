@@ -1071,7 +1071,8 @@ rollout MafiaTools_4dsExport "" (   --module
         biggest
     )
     
-    fn ExtractMorph mnode vertOrder = (
+    fn ExtractMorph mnode vertOrder normalMesh = (
+        
         --local basenode = mnode
         local basenode = mnode.basenode
         local mrph = util.GetModByClass basenode Morpher            
@@ -1144,6 +1145,8 @@ rollout MafiaTools_4dsExport "" (   --module
                         pt = getVert baseMesh vertId
                     )
                     
+                    local normal = getNormal normalMesh corrId
+                    
                     if vmin == undefined and vmax == undefined then (
                         -- to avoid assigning the same reference to vmin and vmax
                         vmin = copy pt
@@ -1159,7 +1162,7 @@ rollout MafiaTools_4dsExport "" (   --module
                         if pt.z > vmax.z do vmax.z = pt.z
                     )                    
                     
-                    local mpoint = parser.TMorphedPoint pos:pt normal:[0,1,0]
+                    local mpoint = parser.TMorphedPoint pos:pt normal:normal
                     append mvert.points mpoint
                 )
                 append mlayer.vertices mvert
@@ -1329,7 +1332,7 @@ rollout MafiaTools_4dsExport "" (   --module
                     SortMesh mmesh vertOrderLods                    
                     local mskins = ExtractSkin mnode lodWeights unitscl
                     
-                    local mmorph = ExtractMorph mnode vertOrderLods[1]
+                    local mmorph = ExtractMorph mnode vertOrderLods[1] mmesh.lods[1].mesh
 
                     mobj.definitions[1] = mmesh
                     mobj.definitions[2] = mskins
@@ -1350,7 +1353,7 @@ rollout MafiaTools_4dsExport "" (   --module
                     mobj.objectType = 1
                     mobj.visualType = 5
                     mobj.definitions[1] = (ExtractMesh mnode mnodeSet unitscl)[1]
-                    mobj.definitions[2] = ExtractMorph mnode undefined
+                    mobj.definitions[2] = ExtractMorph mnode undefined mobj.definitions[1].lods[1].mesh
                 )
                 #billboard: (
                     mobj.objectType = 1

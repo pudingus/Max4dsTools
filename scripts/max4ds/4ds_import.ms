@@ -140,17 +140,21 @@ rollout MafiaTools_4dsImport "" (   --module
 
         local tmod = Morpher()
         addModifier nnode tmod
-        local maxver = (maxversion())[1]
-        --if maxver < 22000 then (
-            max modify mode
-            select nnode
-        --)
+        -- local maxver = (maxversion())[1]
+        -- if maxver < 22000 then (
+        --     max modify mode
+        --     select nnode
+        -- )
 
         local letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
         local sectionId = 1
         local marker = 1
 
+        -- Keep this! For some reason BuildFromNode builds data only after
+        -- certain morpher function is called first (SetName, IsActive, HasData and maybe other)
+        WM3_MC_HasData tmod 1
+        
         for sectMesh in meshes do (
             local layerLetter = letters[sectionId]
             WM3_CreateMarker tmod marker ("layer " + layerLetter)
@@ -163,11 +167,12 @@ rollout MafiaTools_4dsImport "" (   --module
 
                 WM3_MC_BuildFromNode tmod finalId tnode
                 WM3_MC_SetName tmod finalId (layerLetter + " " + (targetId as string))
-
+                
                 delete tnode
 
                 targetId += 1
-            )
+            )            
+            
             marker = (sectionId * 10 + 1)
             sectionId += 1
         )
