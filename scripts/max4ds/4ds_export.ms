@@ -11,8 +11,6 @@ rollout MafiaTools_4dsExport "" (   --module
     local GetNodeType
 
     local BONE_NODES = #()   -- global list of bone nodes
-    local BONE_HANDLE_IDS = #()    --for bone node handle returns global bone id
-    local PARENT_BONE_IDS = #()   --for global bone id, returns its parent global bone id, zero if no parent
     local nodeTypes = #()
     local rootBone = #()
     local matset
@@ -381,17 +379,6 @@ rollout MafiaTools_4dsExport "" (   --module
 
             if nodeType == #bone or nodeType == #rootBone then (
                 append BONE_NODES obj
-                local handle = obj.inode.handle
-                BONE_HANDLE_IDS[handle] = BONE_NODES.count
-
-                local parentId
-                if obj.parent != undefined then (
-                    local parentHandle = obj.parent.inode.handle
-                    parentId = BONE_HANDLE_IDS[parentHandle]
-                )
-                if parentId == undefined then parentId = 0
-
-                append PARENT_BONE_IDS parentId
             )
         )
 
@@ -554,6 +541,16 @@ rollout MafiaTools_4dsExport "" (   --module
         local lodnodes = #(mnode.baseNode) + mnode.lods
 
         local mskins = #()
+        
+        --for global bone id, returns its parent global bone id, zero if no parent
+        local parentBoneIds = for boneNode in BONE_NODES collect (            
+            local parentId
+            if boneNode.parent != undefined then (
+                parentId = findItem BONE_NODES boneNode.parent
+            )
+            if parentId == undefined then parentId = 0
+            parentId
+        )
 
         for l = 1 to lodnodes.count do (
             local lodnode = lodnodes[l]
@@ -617,7 +614,7 @@ rollout MafiaTools_4dsExport "" (   --module
                 local grp = groups[i]
 
                 if (grp.numW1Verts > 0) or (grp.weights.count > 0) then (
-                    grp.boneid = PARENT_BONE_IDS[i+1]-1
+                    grp.boneid = parentBoneIds[i+1]-1
                 )
             )
 
@@ -947,7 +944,7 @@ rollout MafiaTools_4dsExport "" (   --module
         mbone = parser.TBone()
         --mbone.boneId = mnode.baseNode.boneId
         local handle = mnode.baseNode.inode.handle
-        mbone.boneId = BONE_HANDLE_IDS[handle] - 2
+        mbone.boneId = (findItem BONE_NODES mnode.baseNode) - 2
 
         mbone.matrix = matrix3 1
 
@@ -1514,8 +1511,6 @@ rollout MafiaTools_4dsExport "" (   --module
         )
         else (
             BONE_NODES = #()
-            BONE_HANDLE_IDS = #()
-            PARENT_BONE_IDS = #()
             nodeTypes = #()
             rootBone = #()
 
