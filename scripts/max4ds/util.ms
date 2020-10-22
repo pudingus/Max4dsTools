@@ -45,10 +45,11 @@ rollout MafiaTools_Util "" (    --module
         local weight = GetBoneVertexWeight skinMod vertid oldid
         
         local existingWeight = GetBoneVertexWeight skinMod vertid newId
+        if existingWeight == undefined then existingWeight = 0.0
 
         if weight != undefined then (
-            skin_SetVertexWeights xskin vertid oldid 0.0
-            skin_SetVertexWeights xskin vertid newid (weight + existingWeight)
+            skin_setVertexWeight xskin vertid oldid 0.0
+            skin_setVertexWeight xskin vertid newid (weight + existingWeight)
         )
     )
     ------------------
