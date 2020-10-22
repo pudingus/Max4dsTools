@@ -453,21 +453,15 @@ global MafParamEditor
                 #dummy:         items = #("Dummy")
                 #target:        items = #("Target")
                 #glow:          items = #("Glow")
-                #morph_target: (
-                    DisabledMode()
-                    MafParamEditor.addParams.enabled = false
-                )
                 #bone:          items = #("Bone")
                 #mirror:        items = #("Mesh", "Billboard", "Mirror")
                 default:        items = #("Dummy")
             )
             MafParamEditor.objectType.items = items
 
-
-
             gp = custAttributes.get obj MafParams_def baseObject:false
 
-            if gp != undefined and nodeType != #morph_target then (
+            if gp != undefined then (
                 local items = MafParamEditor.objectType.items
                 --format "gp.objectType: %\n" gp.objectType
                 if findItem items gp.objectType == 0 then gp.objectType = items[1]
@@ -490,10 +484,8 @@ global MafParamEditor
 
             )
             else (  --no custom attributes
-                if nodeType != #morph_target then (
-                    DisabledMode()
-                    MafParamEditor.addParams.enabled = true
-                )
+                DisabledMode()
+                MafParamEditor.addParams.enabled = true                
             )
         )
 

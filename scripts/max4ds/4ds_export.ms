@@ -302,6 +302,17 @@ rollout MafiaTools_4dsExport "" (   --module
                         rootBone[obj.inode.handle] = obj.parent
                     )
                 )
+                
+                if type == #singlemorph or type == #morph then (
+                    if (local mrph = util.GetModByClass obj Morpher) != undefined then (
+                        local nodes = util.GetDependingNodes mrph
+                        
+                        for node in nodes do (
+                            local handle = node.inode.handle
+                            nodeTypes[handle] = #morph_target
+                        )
+                    )
+                )
 
                 nodeTypes[obj.inode.handle] = type
             )
@@ -357,6 +368,7 @@ rollout MafiaTools_4dsExport "" (   --module
                         parentMnode.volume = obj
                     )
                 )
+                #morph_target: ()
                 default: (
                     local mnode = TNode()
                     mnode.baseNode = obj
@@ -1460,9 +1472,6 @@ rollout MafiaTools_4dsExport "" (   --module
             )
             else if matchPattern obj.name pattern:"sector*" then (
                 #sector
-            )
-            else if matchPattern obj.name pattern:"$morph*" then (
-                #morph_target
             )
             else if matchPattern obj.name pattern:"$volume*" then (
                 #volume

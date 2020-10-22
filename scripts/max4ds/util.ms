@@ -17,11 +17,15 @@ rollout MafiaTools_Util "" (    --module
     fn HasMod obj mclass = (
         GetModByClass obj mclass != undefined
     )
+    
+    fn GetDependingNodes mod = (
+        for k in (refs.dependsOn mod) where (isValidNode k) collect k
+    )
     ----------
     
     
     ---skin ops-------
-    fn GetBoneNodes skinMod = (
+    fn GetBoneNodes skinMod = (   --delete this
         for k in (refs.dependsOn skinMod) where (isValidNode k) collect k
     )
     
