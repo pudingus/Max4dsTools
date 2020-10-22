@@ -18,7 +18,8 @@ undo off (
     
             local found = false
             for obj in objects while not found do (
-                if obj.parent == undefined and exp.GetNodeType obj == #singlemesh then (
+                local type = exp.GetNodeType obj
+                if obj.parent == undefined and (type == #singlemesh or type == #singlemorph) then (
                     found = true
                     local skinMesh = obj
                     local imp = ::MafiaTools_4dsImport

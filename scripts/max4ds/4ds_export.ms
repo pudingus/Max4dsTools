@@ -9,7 +9,7 @@ rollout MafiaTools_4dsExport "" (   --module
     local USE_CACHED_NORMALS
 
     local GetNodeType
-    
+
     local boneNodes = #()
     local boneHandleIds = #()
     local parentBoneIds = #()
@@ -25,7 +25,7 @@ rollout MafiaTools_4dsExport "" (   --module
         volume,   --rendered volume for mirrors
         rootBone
     )
-    
+
     struct TNodeSet (
         mnodes = #(),       --list of objects as they are about to be exported
         mnode_ids = #(),        --key = node handle, value = id in mnodes
@@ -84,11 +84,11 @@ rollout MafiaTools_4dsExport "" (   --module
             facegroups[grp_id]
         )
     )
-    
+
     struct TMatSet (
         mafia_materials = #(),
         mat_map = #(),
-        
+
         fn AddToMafiaMaterials mat = (
             local handle = GetHandleByAnim mat
 
@@ -97,23 +97,23 @@ rollout MafiaTools_4dsExport "" (   --module
                 mat_map[handle] = mafia_materials.count
             )
         ),
-        
+
         fn GetMafiaMatId mat matid = (
             local mid = 0
             if isKindOf mat MultiMaterial then (
                 mat = mat[matid]
             )
-    
+
             if mat != undefined then (
                 local handle = getHandleByAnim mat
                 mid = mat_map[handle]
                 if mid == undefined then mid = 0
             )
-    
+
             mid
-        )        
+        )
     )
-    
+
     struct WeightedVertex (
         boneid,
         weight,
@@ -123,9 +123,9 @@ rollout MafiaTools_4dsExport "" (   --module
     struct VertBone (
         boneid,
         weight
-    )    
+    )
 
-    fn CompareNodesByName obj1 obj2 = stricmp obj1.name obj2.name    
+    fn CompareNodesByName obj1 obj2 = stricmp obj1.name obj2.name
 
     fn ConvertStandardMaterial mat = (
         local cm = Mat4ds()
@@ -184,10 +184,10 @@ rollout MafiaTools_4dsExport "" (   --module
 
         cm
     )
-    
+
     fn CollectMaterials = (
-        matset = TMatSet() 
-        
+        matset = TMatSet()
+
         for mat in sceneMaterials do (
             if isKindOf mat MultiMaterial then (
                 for submat in mat.materialList where submat != undefined do (
@@ -205,7 +205,7 @@ rollout MafiaTools_4dsExport "" (   --module
         )
         matset.mafia_materials
     )
-    
+
     fn ExtractMaterials mafia_materials = (
         local mmaterials = #()
 
@@ -278,7 +278,7 @@ rollout MafiaTools_4dsExport "" (   --module
             )
         )
         mmaterials
-    )    
+    )
 
     fn CollectNodes = (
         local util = ::MafiaTools_util
@@ -287,24 +287,7 @@ rollout MafiaTools_4dsExport "" (   --module
             if type == undefined then (
                 type = GetNodeType obj
 
-                if type == #singlemesh then (
-                    if (local skinMod = util.GetModByClass obj Skin) != undefined then (
-                        local bns = util.GetBoneNodes skinMod
-
-                        for boneNode in bns do (
-                            local handle = boneNode.inode.handle
-                            nodeTypes[handle] = #bone
-                        )
-                        if obj.parent == undefined then (
-                            throw "Skinned mesh needs a parent bone. Use the 'Convert old skeleton' tool or add a root bone."
-                        )
-                        nodeTypes[obj.parent.inode.handle] = #rootBone
-                        rootBone[obj.inode.handle] = obj.parent
-                    )
-                )
-                
-                ------TODO: improve this
-                if type == #singlemorph then (
+                if type == #singlemesh or type == #singlemorph then (
                     if (local skinMod = util.GetModByClass obj Skin) != undefined then (
                         local bns = util.GetBoneNodes skinMod
 
@@ -349,6 +332,7 @@ rollout MafiaTools_4dsExport "" (   --module
                     print (id as string)
 
                     mnodeSet.mnodes[id].baseNode = obj
+                    mnodeSet.mnodes[id].type = #singlemesh
                     mnodeSet.AddPointer obj id
                 )
                 #singlemorph: (
@@ -356,6 +340,7 @@ rollout MafiaTools_4dsExport "" (   --module
                     print (id as string)
 
                     mnodeSet.mnodes[id].baseNode = obj
+                    mnodeSet.mnodes[id].type = #singlemorph
                     mnodeSet.AddPointer obj id
                 )
                 #rootbone: (
@@ -363,17 +348,10 @@ rollout MafiaTools_4dsExport "" (   --module
                     if mnode == undefined then (
                         mnode = TNode()
                         mnode.rootBone = obj
-                        mnode.type = #singlemorph  ---FIX THIS!!!!!
-                        --mnode.type = #singlemesh
                         mnodeSet.Add obj mnode
                     )
                 )
                 #volume: (
-                    -- local mnode = TNode()
-                    -- mnode.baseNode = obj
-                    -- mnode.type = #mesh
-                    -- mnodeSet.Add obj mnode 
-                    
                     if obj.parent != undefined then (
                         local parentMnode = mnodeSet.GetByNode obj.parent
                         parentMnode.volume = obj
@@ -383,7 +361,7 @@ rollout MafiaTools_4dsExport "" (   --module
                     local mnode = TNode()
                     mnode.baseNode = obj
                     mnode.type = nodeType
-                    mnodeSet.Add obj mnode 
+                    mnodeSet.Add obj mnode
                 )
             )
 
@@ -454,7 +432,7 @@ rollout MafiaTools_4dsExport "" (   --module
         mdummy.dmax = in coordsys local mnode.baseNode.max * unitscl
         mdummy
     )
-    
+
     fn CompareWeights v1 v2 = (
         if v1.boneid > v2.boneid then 1
         else if v1.boneid < v2.boneid then -1
@@ -478,18 +456,18 @@ rollout MafiaTools_4dsExport "" (   --module
         local lodnodes = copy mnode.lods #noMap
         insertItem mnode.baseNode lodnodes 1
 
-        local lodWeights = #() 
+        local lodWeights = #()
 
         for lodnode in lodnodes do (
             local bskin = util.GetModByClass lodnode Skin
 
             max modify mode
-            modPanel.setCurrentObject bskin            
+            modPanel.setCurrentObject bskin
 
             local xskin = skin_makeCache bskin
-            
-            local skinBoneIds = #()            
-            local skinBones = util.GetBoneNodes bskin            
+
+            local skinBoneIds = #()
+            local skinBones = util.GetBoneNodes bskin
             for i = 1 to skinBones.count do (
                 local globBoneId = findItem boneNodes skinBones[i]
                 skinBoneIds[i] = globBoneId
@@ -649,7 +627,7 @@ rollout MafiaTools_4dsExport "" (   --module
 
     */
 
-    --splits 
+    --splits
     fn SplitVertices mesh faceVertNormals = (
         local numverts = mesh.numverts
         local normals = #()   -- min. count = count of vertices, normals for duplicated verts are appended to the end
@@ -687,20 +665,20 @@ rollout MafiaTools_4dsExport "" (   --module
                 if tface != undefined then (
                     uv = getTVert mesh (tface[v] as integer)
                 )
-                
+
                 --if data for existing vert is empty, assign it
                 if normals[vertId] == undefined and uvs[vertId] == undefined then (
                     normals[vertId] = normal
                     uvs[vertId] = uv
                 )
-                else (  --data is not empty, we need to check if 
+                else (  --data is not empty, we need to check if
                     local dupedVerts = #(vertId)
                     if splitVerts[vertid] != undefined then dupedVerts += splitVerts[vertId]
-                    
+
                     -- id of vertex where the same data was found,
                     -- -1 if the data differs, new vert has to be created
-                    local foundId = -1  
-                    
+                    local foundId = -1
+
                     for dupVertId in dupedVerts while foundId == -1 do (
                         if close_enough_p3 normals[dupVertId] normal 6 then (
                             if close_enough_p3 uvs[dupVertId] uv 6 then (
@@ -724,7 +702,7 @@ rollout MafiaTools_4dsExport "" (   --module
 
                         newVertIds[v] = newVertId
                     )
-                    else if foundId != vertId then (  --if data is the same, 
+                    else if foundId != vertId then (  --if data is the same,
                         --just repoint face
                         newVertIds[v] = foundId
                     )
@@ -735,8 +713,8 @@ rollout MafiaTools_4dsExport "" (   --module
                 append fixFaces #(i, newVertIds)
             )
         )
-        
-        
+
+
         --------APPLY CHANGES TO THE MESH------------
 
         --format "%\n" fixFaces
@@ -754,8 +732,8 @@ rollout MafiaTools_4dsExport "" (   --module
         for fixFace in fixFaces do (
             setFace mesh fixFace[1] fixFace[2]
         )
-        
-        
+
+
         -----apply per vertex uvs to mesh map channel
         --format "uvs count % \n" uvs.count
         setNumTVerts mesh uvs.count
@@ -766,28 +744,28 @@ rollout MafiaTools_4dsExport "" (   --module
             setTVert mesh i uv
         )
         ------------------------------------
-        
-        
+
+
         for i = 1 to normals.count do (
             local normal = normals[i]
             if normal == undefined then normal = [0,0,1]
-            
+
             setNormal mesh i normal
         )
 
         extraVerts
     )
-    
+
     fn GetMainInstance obj = (
         local instances
         local count = InstanceMgr.GetInstances obj &instances
-        
+
         instances[count]
     )
-    
+
     fn ExtractCachedNormals cmod = (
         local faceVertNormals = #()
-        
+
         for nface in cmod.normalFaces do (
             local rnormals = #()
             for v = 1 to 3 do (
@@ -796,10 +774,10 @@ rollout MafiaTools_4dsExport "" (   --module
             )
             append faceVertNormals rnormals
         )
-        
+
         faceVertNormals
     )
-    
+
     fn ExtractEditNormals normMod obj = (
         local faceVertNormals = #()
         max modify mode
@@ -813,24 +791,24 @@ rollout MafiaTools_4dsExport "" (   --module
             )
             append faceVertNormals rnormals
         )
-        
+
         faceVertNormals
     )
-    
+
     fn ExtractSGroupNormals lodmesh = (
         local faceVertNormals = #()
         for i = 1 to lodmesh.numfaces do (
             local rnormals = meshop.getFaceRNormals lodmesh i
             append faceVertNormals rnormals
         )
-        
+
         faceVertNormals
     )
-    
+
     --extracts per face vertex normals from mesh into array
-    fn ExtractNormals lodnode lodmesh = ( 
+    fn ExtractNormals lodnode lodmesh = (
         local faceVertNormals = #()
-        
+
         local normMod
         if USE_EDIT_NORMALS then normMod = util.GetModByClass lodnode Edit_Normals
 
@@ -848,10 +826,10 @@ rollout MafiaTools_4dsExport "" (   --module
                 faceVertNormals = ExtractSGroupNormals lodmesh
             )
         )
-        
+
         faceVertNormals
     )
-    
+
     fn ExtractLod mnode lodnode unitscl = (
         local mlod = parser.TLod()
         local lodMesh = copy lodnode.mesh
@@ -872,13 +850,13 @@ rollout MafiaTools_4dsExport "" (   --module
             local offsetTrans = lodnode.objectTransform * inverse lodnode.transform
             otrans = offsetTrans * (lodnode.transform * inverse mnode.rootbone.transform) * scl
         )
-        
+
         --apply transformation
         for vertId = 1 to lodmesh.numverts do (
             local vert = getVert lodmesh vertId
             setVert lodmesh vertId (vert * otrans)
 
-            --rotate normals            
+            --rotate normals
             local normal = getNormal lodmesh vertId
             setNormal lodmesh vertId (normal * otrans.rotationpart)
         )
@@ -897,19 +875,19 @@ rollout MafiaTools_4dsExport "" (   --module
         )
 
         mlod.facegroups = fcgrpSet.facegroups
-        
+
         #(mlod, extraVerts)
     )
-    
+
 
     fn ExtractMesh mnode mnodeSet unitscl = (
         local mmesh = parser.TMesh()
         local extraVertsLods = #()
 
-        local masterInstance = GetMainInstance mnode.baseNode       
+        local masterInstance = GetMainInstance mnode.baseNode
 
         if masterInstance == mnode.baseNode then ( --is master instance
-            mmesh.instanceId = 0   
+            mmesh.instanceId = 0
             local lodnodes = copy mnode.lods #noMap
             insertItem mnode.baseNode lodnodes 1
 
@@ -917,13 +895,13 @@ rollout MafiaTools_4dsExport "" (   --module
 
             for l = 1 to lodnodes.count do (
                 local lodnode = lodnodes[l]
-                
+
                 local ret = ExtractLod mnode lodnode unitscl
                 local mlod = ret[1]
                 local extraVerts = ret[2]
-                    
+
                 local gp = custAttributes.get lodnode MafParams_def baseObject:false
-        
+
                 if gp != undefined then (
                     mlod.distance = gp.lodDist
                 )
@@ -931,7 +909,7 @@ rollout MafiaTools_4dsExport "" (   --module
                     if lodnode == lodnodes[lodnodes.count] then mlod.distance = 0.0
                     else mlod.distance = prevDist + 100.0
                 )
-                
+
                 append extraVertsLods extraVerts
                 append mmesh.lods mlod
             )
@@ -989,30 +967,30 @@ rollout MafiaTools_4dsExport "" (   --module
         )
         mglows
     )
-    
-    
-    
+
+
+
     fn ExtractMirror mnode unitscl = (
         local baseNode = mnode.basenode
-        local mirr = parser.TMirror()        
+        local mirr = parser.TMirror()
         local gp = custAttributes.get baseNode MafParams_def baseObject:false
-        
+
         --thank you Duelist
         local vertXarr = #()
         local vertYarr = #()
         local vertZarr = #()
-        
+
         local tr = copy baseNode.mesh
         mirr.mesh = tr
-        
+
         local scl = scaleMatrix [unitscl,unitscl,unitscl]
         local otrans = baseNode.objectTransform * inverse baseNode.transform * scl
-        
+
         for i = 1 to tr.numverts do (
             local vert = getVert tr i
             setVert tr i (vert * otrans)
         )
-        
+
         local vmin = getVert tr 1
         local vmax = getVert tr 1
         for i = 2 to tr.numverts do (
@@ -1020,15 +998,15 @@ rollout MafiaTools_4dsExport "" (   --module
             if vert.x < vmin.x do vmin.x = vert.x
             if vert.y < vmin.y do vmin.y = vert.y
             if vert.z < vmin.z do vmin.z = vert.z
-            
+
             if vert.x > vmax.x do vmax.x = vert.x
             if vert.y > vmax.y do vmax.y = vert.y
             if vert.z > vmax.z do vmax.z = vert.z
-        )        
-        
+        )
+
         mirr.dmin = vmin
         mirr.dmax = vmax
-        
+
         local volume = mnode.volume
         if volume == undefined then (
             mirr.matrix = matrix3 1
@@ -1036,23 +1014,23 @@ rollout MafiaTools_4dsExport "" (   --module
         else (
             mirr.matrix = volume.transform
         )
-        
+
         mirr.unknown[1] = gp.mirrorUnk1
         mirr.unknown[2] = gp.mirrorUnk2
         mirr.unknown[3] = gp.mirrorUnk3
         mirr.unknown[4] = gp.mirrorUnk4
         mirr.backColor = gp.mirrorColor
-        mirr.drawDistance = gp.mirrorDist        
-        
+        mirr.drawDistance = gp.mirrorDist
+
         mirr
     )
-    
+
     struct TLayerInfo (
         usedChannels = #{},
         usedVerts = #{},
         channels = #()
     )
-    
+
     --trims trailing unused layers (keeps the leading)
     fn TrimUnused layers = (
         for i = layers.count to 1 by -1 do (
@@ -1061,27 +1039,27 @@ rollout MafiaTools_4dsExport "" (   --module
             )
         )
     )
-    
+
     fn FindBiggestChannelId layers = (
         local biggest = 0
         for layerInfo in layers do (
-            local largestIndex = layerInfo.usedChannels.count 
+            local largestIndex = layerInfo.usedChannels.count
             if largestIndex > biggest then biggest = largestIndex
         )
-        
+
         biggest
     )
-    
+
     fn SplitMorphVertices layers extraVerts = (
         for layerInfo in layers do (
             for chanId in layerInfo.usedChannels do (
                 local chanMesh = layerInfo.channels[chanId]
                 local numverts = chanMesh.numverts
-                
+
                 setNumVerts chanMesh (numverts + extraVerts.count) true
-                
+
                 local newVertId = numverts + 1
-                
+
                 for vertId in extraVerts do (
                     setVert chanMesh newVertId (getVert chanMesh vertId)
                     newVertId += 1
@@ -1089,50 +1067,50 @@ rollout MafiaTools_4dsExport "" (   --module
             )
         )
     )
-    
+
     fn ExtractMorph mnode vertOrder normalMesh extraVerts unitscl = (
-        
+
         if vertOrder == undefined then (
             vertOrder = for i = 1 to normalMesh.numverts collect i
         )
-        
+
         --local basenode = mnode
         local basenode = mnode.basenode
-        local mrph = util.GetModByClass basenode Morpher            
-        
-        local baseMesh = copy basenode.mesh        
+        local mrph = util.GetModByClass basenode Morpher
+
+        local baseMesh = copy basenode.mesh
         local layers = #()
-        
+
         local channelsPerLayer = 10
         local maxLayers = ( (WM3_NumberOfChannels mrph) / channelsPerLayer ) as integer
-        
+
         local scl = scaleMatrix [unitscl,unitscl,unitscl]
-        
+
         local otrans = basenode.objectTransform * inverse basenode.transform * scl
 
         if mnode.rootBone != undefined then (
             local offsetTrans = basenode.objectTransform * inverse basenode.transform
             otrans = offsetTrans * (basenode.transform * inverse mnode.rootbone.transform) * scl
         )
-        
-        
+
+
         --collect morph meshes
         for i = 1 to maxLayers do (
             local layerInfo = TLayerInfo()
             for j = 1 to channelsPerLayer do (
                 local chanId = ((i - 1) * channelsPerLayer) + j
-                local hasData = WM3_MC_HasData mrph chanId 
-                local isActive = WM3_MC_IsActive mrph chanId 
-                
+                local hasData = WM3_MC_HasData mrph chanId
+                local isActive = WM3_MC_IsActive mrph chanId
+
                 local chanMesh
                 if hasData and isActive then (
                     layerInfo.usedChannels[j] = true
-                    
-                    local numpts = WM3_MC_NumPts mrph chanId  
+
+                    local numpts = WM3_MC_NumPts mrph chanId
                     chanMesh = TriMesh()
-                    chanMesh.numverts = numpts                  
-                    for vertId = 1 to numpts do (                                                                        
-                        local pt = WM3_MC_GetMorphPoint mrph chanId (vertId-1)  
+                    chanMesh.numverts = numpts
+                    for vertId = 1 to numpts do (
+                        local pt = WM3_MC_GetMorphPoint mrph chanId (vertId-1)
                         setVert chanMesh vertId (pt * otrans)
                     )
                 )
@@ -1140,68 +1118,68 @@ rollout MafiaTools_4dsExport "" (   --module
             )
             append layers layerInfo
         )
-        
+
         --trim unused layers
         TrimUnused layers
-        
-        
-        
+
+
+
         --split vertices
-        if extraVerts != undefined then (            
+        if extraVerts != undefined then (
             SplitMorphVertices layers extraVerts
         )
-        
-        
+
+
         --find changed verts
         for layerInfo in layers do (
             for chanId in layerInfo.usedChannels do (
                 local chanMesh = layerInfo.channels[chanId]
-                
+
                 for vertId = 1 to chanMesh.numverts do (
                     local baseVert = getVert normalMesh vertOrder[vertId]
                     local chanVert = getVert chanMesh vertId
-        
+
                     if not close_enough_p3 baseVert chanVert 50 then (
-                        layerInfo.usedVerts[vertId] = true                            
+                        layerInfo.usedVerts[vertId] = true
                     )
-                )                
+                )
             )
-        )             
-                
+        )
+
         local numTargets = FindBiggestChannelId layers
 
-        
+
         -- if num targets zero?
-        
-        
+
+
         local mmorph = parser.TMorph()
         mmorph.numTargets = numTargets
-        
+
         local vmin
         local vmax
-        
+
         for i = 1 to layers.count do (
-            local layerInfo = layers[i]            
-            local mlayer = parser.TMorphLayer()            
-            
-            for vertId in layerInfo.usedVerts do (               
-                             
+            local layerInfo = layers[i]
+            local mlayer = parser.TMorphLayer()
+
+            for vertId in layerInfo.usedVerts do (
+
                 local corrId = vertOrder[vertId]
-                    
+
                 local mvert = parser.TMorphVertex index:corrId
                 for j = 1 to numTargets do (
                     local chanMesh = layerInfo.channels[j]
-                    
-                    local pt                  
+
+                    local pt
                     if chanMesh != undefined then (
-                        pt = getVert chanMesh vertId                         
+                        pt = getVert chanMesh vertId
                     )
                     else (
                         pt = getVert normalMesh corrId
                     )
-                    
+
                     local normal = getNormal normalMesh corrId
-                    
+
                     if vmin == undefined and vmax == undefined then (
                         -- so that vmin and vmax don't share the same reference between each other
                         vmin = copy pt
@@ -1211,67 +1189,67 @@ rollout MafiaTools_4dsExport "" (   --module
                         if pt.x < vmin.x do vmin.x = pt.x
                         if pt.y < vmin.y do vmin.y = pt.y
                         if pt.z < vmin.z do vmin.z = pt.z
-                            
+
                         if pt.x > vmax.x do vmax.x = pt.x
                         if pt.y > vmax.y do vmax.y = pt.y
                         if pt.z > vmax.z do vmax.z = pt.z
-                    )                    
-                    
+                    )
+
                     local mpoint = parser.TMorphedPoint pos:pt normal:normal
                     append mvert.points mpoint
                 )
                 append mlayer.vertices mvert
-            )                        
+            )
             append mmorph.layers mlayer
         )
-        
+
         print vmin
         print vmax
-        
+
         -- thanks Duelist
         mmorph.dmin = vmin
         mmorph.dmax = vmax
         mmorph.center = (vmin + vmax) / 2
         mmorph.dist = (distance vmin vmax) / 2
-        
+
         mmorph
     )
 
     fn SplitWeights mmesh lodWeights extraVertsLods = (
-        for i = 1 to lodWeights.count do ( 
+        for i = 1 to lodWeights.count do (
             local weights = lodWeights[i]
             local mlod = mmesh.lods[i]
             local extraVerts = extraVertsLods[i]
-            
+
             -- split weights
             local newVertId = weights.count + 1
-            for vertId in extraVerts do (                            
+            for vertId in extraVerts do (
                 local wv = WeightedVertex()
                 wv.boneid = weights[vertId].boneid
                 wv.weight = weights[vertId].weight
                 wv.vertId = newVertId
-                
+
                 append weights wv
-                
+
                 newVertId += 1
             )
         )
     )
-    
+
     -- returns vertOrderLods, where value is the new vertex id
     fn SortWeights lodWeights = (
         for weights in lodWeights collect (
             qsort weights CompareWeights
             local vertOrder = #()
             vertOrder[weights.count] = undefined
-                        
+
             for i = 1 to weights.count do (
                 vertOrder[weights[i].vertid] = i
-            ) 
+            )
             vertOrder
         )
     )
-    
+
     fn SortMesh mmesh vertOrderLods = (
         for l = 1 to mmesh.lods.count do (
             local lod = mmesh.lods[l]
@@ -1281,14 +1259,14 @@ rollout MafiaTools_4dsExport "" (   --module
             newtr.numverts = tr.numverts
             newtr.numtverts = tr.numtverts
             newtr.numfaces = tr.numfaces
-            
+
             for oldId = 1 to tr.numverts do (
                 local newId = vertOrder[oldId]
                 setVert newtr newId (getVert tr oldId)
                 setTVert newtr newId (getTVert tr oldId)
                 setNormal newtr newId (getNormal tr oldId)
             )
-            
+
             for faceId = 1 to tr.numfaces do (
                 local face = getFace tr faceId
                 for v = 1 to 3 do (
@@ -1299,7 +1277,7 @@ rollout MafiaTools_4dsExport "" (   --module
             lod.mesh = newtr
         )
     )
-    
+
     fn ExtractObjects mnodeSet unitscl = (
         local mobjects = #()
 
@@ -1349,12 +1327,12 @@ rollout MafiaTools_4dsExport "" (   --module
                     mobj.objectType = 1
                     mobj.visualType = 2
                     local lodWeights = ExtractWeights mnode
-                    
+
                     local ret = ExtractMesh mnode mnodeSet unitscl
                     local mmesh = ret[1]
-                    local extraVertsLods = ret[2]                    
-                    
-                    SplitWeights mmesh lodWeights extraVertsLods 
+                    local extraVertsLods = ret[2]
+
+                    SplitWeights mmesh lodWeights extraVertsLods
                     local vertOrderLods = SortWeights lodWeights
                     SortMesh mmesh vertOrderLods
                     local mskins = ExtractSkin mnode lodWeights unitscl
@@ -1377,16 +1355,16 @@ rollout MafiaTools_4dsExport "" (   --module
                     mobj.objectType = 1
                     mobj.visualType = 3
                     local lodWeights = ExtractWeights mnode
-                    
+
                     local ret = ExtractMesh mnode mnodeSet unitscl
                     local mmesh = ret[1]
-                    local extraVertsLods = ret[2]                    
-                    
-                    SplitWeights mmesh lodWeights extraVertsLods 
+                    local extraVertsLods = ret[2]
+
+                    SplitWeights mmesh lodWeights extraVertsLods
                     local vertOrderLods = SortWeights lodWeights
-                    SortMesh mmesh vertOrderLods                    
+                    SortMesh mmesh vertOrderLods
                     local mskins = ExtractSkin mnode lodWeights unitscl
-                    
+
                     local mmorph = ExtractMorph mnode vertOrderLods[1] mmesh.lods[1].mesh extraVertsLods[1] unitscl
 
                     mobj.definitions[1] = mmesh
@@ -1404,7 +1382,7 @@ rollout MafiaTools_4dsExport "" (   --module
                         mobj.rot = mnode.rootBone.rotation
                     )
                 )
-                #morphmesh: (
+                #morph: (
                     mobj.objectType = 1
                     mobj.visualType = 5
                     mobj.definitions[1] = (ExtractMesh mnode mnodeSet unitscl)[1]
@@ -1458,7 +1436,7 @@ rollout MafiaTools_4dsExport "" (   --module
         )
         mobjects
     )
-    
+
     fn GetNodeType obj = (
         local gp = custAttributes.get obj MafParams_def baseObject:false
         if (isKindOf obj BoneGeometry) or (obj.boneEnable) then (
@@ -1484,7 +1462,7 @@ rollout MafiaTools_4dsExport "" (   --module
                 #sector
             )
             else if matchPattern obj.name pattern:"$morph*" then (
-                #morph
+                #morph_target
             )
             else if matchPattern obj.name pattern:"$volume*" then (
                 #volume
@@ -1494,7 +1472,7 @@ rollout MafiaTools_4dsExport "" (   --module
             )
             else if (gp != undefined) and (stricmp gp.objectType "mirror" == 0) then (
                 #mirror
-            )            
+            )
             else if util.HasMod obj Skin then (
                 if util.HasMod obj Morpher then (
                     #singlemorph
@@ -1502,25 +1480,25 @@ rollout MafiaTools_4dsExport "" (   --module
                 else #singlemesh
             )
             else if util.HasMod obj Morpher then (
-                #morphmesh
+                #morph
             )
             else (
                 #mesh
             )
         )
         else #unsupported
-    ) 
+    )
 
     fn Export4ds file cachedNorm editNorm unitscl  = (
-        
+
         USE_CACHED_NORMALS = cachedNorm
         USE_EDIT_NORMALS = editNorm
-        
+
         local dur = 0.0
-        
+
         local f = fopen file "wb"
         if f == undefined then (
-            messageBox "Error. Could not write to file."   
+            messageBox "Error. Could not write to file."
         )
         else (
             boneNodes = #()
@@ -1528,36 +1506,36 @@ rollout MafiaTools_4dsExport "" (   --module
             parentBoneIds = #()
             nodeTypes = #()
             rootBone = #()
-            
+
             format "exporting: %\n" file
-    
+
             local st = timestamp()
-    
+
             gc light:true
-    
+
             local used_start = (heapsize - heapfree) / 1024.0
-    
+
             local m4ds = parser.T4ds()
             local mmmm = CollectMaterials()
-            
+
             m4ds.materials = ExtractMaterials mmmm
             local mnodeSet = CollectNodes()
             m4ds.objects = ExtractObjects mnodeSet unitscl
-    
-            
+
+
             parser.Write4ds f m4ds
             fclose f
-    
+
             dur = elapsed_since(st) / 1000.0
-    
+
             local used_end = (heapsize - heapfree) / 1024.0
             format "memory used ~ % KiB\n" (used_end - used_start)
-    
+
             gc light:true
-    
+
             format "Exporting took % seconds\n" dur
             --messageBox ("Exporting took " + (dur as string) + " seconds")
-        )      
+        )
 
 
         dur

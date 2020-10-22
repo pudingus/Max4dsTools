@@ -3,8 +3,6 @@ global OnSelectionChanged
 global floater
 global MafParamEditor
 (
-    --include "util.ms"
-
     --imports
     local util = ::MafiaTools_Util
     local containsItem = util.containsItem
@@ -179,36 +177,36 @@ global MafParamEditor
             gp.rotAxis = i
         )
     )
-    
+
     rollout rltMirror ""
     (
-        spinner spnUnk1 "Unknown 1: " range:[-9000000000,9000000000,0] type:#float align:#left 
-        spinner spnUnk2 "Unknown 2: " range:[-9000000000,9000000000,0] type:#float align:#left 
-        spinner spnUnk3 "Unknown 3: " range:[-9000000000,9000000000,0] type:#float align:#left 
-        spinner spnUnk4 "Unknown 4: " range:[-9000000000,9000000000,0] type:#float align:#left 
-        colorpicker cpColor "Background color: " align:#left 
-        spinner spnDistance "Active range:" range:[-9000000000,9000000000,0] type:#float align:#left  
-        
+        spinner spnUnk1 "Unknown 1: " range:[-9000000000,9000000000,0] type:#float align:#left
+        spinner spnUnk2 "Unknown 2: " range:[-9000000000,9000000000,0] type:#float align:#left
+        spinner spnUnk3 "Unknown 3: " range:[-9000000000,9000000000,0] type:#float align:#left
+        spinner spnUnk4 "Unknown 4: " range:[-9000000000,9000000000,0] type:#float align:#left
+        colorpicker cpColor "Background color: " align:#left
+        spinner spnDistance "Active range:" range:[-9000000000,9000000000,0] type:#float align:#left
+
         on spnUnk1 changed val do (
             gp.mirrorUnk1 = val
         )
-        
+
         on spnUnk2 changed val do (
             gp.mirrorUnk2 = val
         )
-        
+
         on spnUnk3 changed val do (
             gp.mirrorUnk3 = val
         )
-        
+
         on spnUnk4 changed val do (
             gp.mirrorUnk4 = val
         )
-        
+
         on cpColor changed val do (
             gp.mirrorColor = val
         )
-        
+
         on spnDistance changed val do (
             gp.mirrorDist = val
         )
@@ -225,9 +223,9 @@ global MafParamEditor
     local availableRlts = #(rltLod, rltPortal, rltBbrd, rltMirror)
 
 --     struct TView (
---         
+--
 --     )
-    
+
 
     fn AddAndRemoveRlts floater addRlts removeRlts = (
         for rlt in removeRlts do (
@@ -236,7 +234,7 @@ global MafParamEditor
 
         for rlt in addRlts do (
             addRollout rlt floater
-        ) 
+        )
     )
 
     fn GetDisplayedRlts rlts = (
@@ -248,10 +246,10 @@ global MafParamEditor
             ctrl.enabled = false
         )
     )
-    
+
     fn SetNonVisual = (
         DisableControls #(
-            rltObject.renderFlags, 
+            rltObject.renderFlags,
             rltObject.renderFlags2,
             rltObject.depthBias,
             rltObject.shadowed,
@@ -259,14 +257,14 @@ global MafParamEditor
             rltObject.noFog
         )
     )
-    
+
     fn EnableControls controls = (
         for ctrl in controls do (
             ctrl.enabled = true
         )
-    )  
-    
-    
+    )
+
+
     fn OpenSelection strsel = (
 
         local requestedRlts = #()
@@ -328,7 +326,7 @@ global MafParamEditor
         for rlt in requestedRlts do (
             if not containsItem displayedRlts rlt then append rltsToAdd rlt
         )
-        
+
         AddAndRemoveRlts floater rltsToAdd rltsToRemove
 
         if rltObject.isDisplayed then (
@@ -361,7 +359,7 @@ global MafParamEditor
             rltBbrd.rotMode.state = gp.rotMode
             rltBbrd.rotAxis.selection = gp.rotAxis
         )
-        
+
         if rltMirror.isDisplayed then (
             rltMirror.spnUnk1.value = gp.mirrorUnk1
             rltMirror.spnUnk2.value = gp.mirrorUnk2
@@ -370,7 +368,7 @@ global MafParamEditor
             rltMirror.cpColor.color = gp.mirrorColor
             rltMirror.spnDistance.value = gp.mirrorDist
         )
-    ) 
+    )
 
     fn SetSelectionStr sel = (
         local items = MafParamEditor.objectType.items
@@ -441,34 +439,35 @@ global MafParamEditor
             MafParamEditor.objectName.text = obj.name
 
             local items = #()
-                        
-            local nodeType = exp.GetNodeType obj            
+
+            local nodeType = exp.GetNodeType obj
             case nodeType of (
-                #sector:    items = #("Sector")
-                #portal:    items = #("Portal")
-                #lod:       items = #("Lod")
-                #mesh:      items = #("Mesh", "Billboard", "Mirror")
-                #billboard: items = #("Mesh", "Billboard", "Mirror")
-                #singlemesh: items = #("Mesh")                
-                #dummy:     items = #("Dummy")
-                #target:    items = #("Target")                
-                #glow:      items = #("Glow")                
-                #morph: (
+                #sector:        items = #("Sector")
+                #portal:        items = #("Portal")
+                #lod:           items = #("Lod")
+                #mesh:          items = #("Mesh", "Billboard", "Mirror")
+                #billboard:     items = #("Mesh", "Billboard", "Mirror")
+                #singlemesh:    items = #("Mesh")
+                #singlemorph:   items = #("Mesh")
+                #morph:         items = #("Mesh")
+                #dummy:         items = #("Dummy")
+                #target:        items = #("Target")
+                #glow:          items = #("Glow")
+                #morph_target: (
                     DisabledMode()
                     MafParamEditor.addParams.enabled = false
-                   -- items = #("")
                 )
-                #bone:      items = #("Bone")
-                #mirror:    items = #("Mesh", "Billboard", "Mirror")
-                default:    items = #("Dummy")
+                #bone:          items = #("Bone")
+                #mirror:        items = #("Mesh", "Billboard", "Mirror")
+                default:        items = #("Dummy")
             )
             MafParamEditor.objectType.items = items
-            
+
 
 
             gp = custAttributes.get obj MafParams_def baseObject:false
 
-            if gp != undefined and nodeType != #morph then (
+            if gp != undefined and nodeType != #morph_target then (
                 local items = MafParamEditor.objectType.items
                 --format "gp.objectType: %\n" gp.objectType
                 if findItem items gp.objectType == 0 then gp.objectType = items[1]
@@ -491,7 +490,7 @@ global MafParamEditor
 
             )
             else (  --no custom attributes
-                if nodeType != #morph then (
+                if nodeType != #morph_target then (
                     DisabledMode()
                     MafParamEditor.addParams.enabled = true
                 )
