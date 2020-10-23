@@ -10,10 +10,8 @@ rollout MafiaTools_4dsExport "" (   --module
 
     local GetNodeType
 
-    local BONE_NODES = #()   -- global list of bone nodes
-    local nodeTypes = #()
-    local rootBone = #()
-    local matset
+    local BONE_NODES = #()   -- global list of bone nodes    
+    local MAT_SET
 
     struct TNode (
         baseNode,
@@ -184,24 +182,24 @@ rollout MafiaTools_4dsExport "" (   --module
     )
 
     fn CollectMaterials = (
-        matset = TMatSet()
+        MAT_SET = TMatSet()
 
         for mat in sceneMaterials do (
             if isKindOf mat MultiMaterial then (
                 for submat in mat.materialList where submat != undefined do (
 
                     if util.containsItem #(Standard, Physical_Material, Mat4ds) (classOf subMat) then (
-                        matset.AddToMafiaMaterials submat
+                        MAT_SET.AddToMafiaMaterials submat
                     )
                 )
             )
             else (
                 if util.containsItem #(Standard, Physical_Material, Mat4ds) (classOf mat) then (
-                    matset.AddToMafiaMaterials mat
+                    MAT_SET.AddToMafiaMaterials mat
                 )
             )
         )
-        matset.mafia_materials
+        MAT_SET.mafia_materials
     )
 
     fn ExtractMaterials mafia_materials = (
@@ -280,6 +278,8 @@ rollout MafiaTools_4dsExport "" (   --module
 
     fn CollectNodes = (
         local util = ::MafiaTools_util
+        local nodeTypes = #()
+        local rootBones = #()
         for obj in objects do (
             local type = nodeTypes[obj.inode.handle]
             if type == undefined then (
@@ -297,7 +297,7 @@ rollout MafiaTools_4dsExport "" (   --module
                             throw "Skinned mesh needs a parent bone. Use the 'Convert old skeleton' tool or add a root bone."
                         )
                         nodeTypes[obj.parent.inode.handle] = #rootBone
-                        rootBone[obj.inode.handle] = obj.parent
+                        rootBones[obj.inode.handle] = obj.parent
                     )
                 )
                 
@@ -337,7 +337,7 @@ rollout MafiaTools_4dsExport "" (   --module
                     )
                 )
                 #singlemesh: (
-                    local id = mnodeSet.GetIdByNode rootBone[obj.inode.handle]
+                    local id = mnodeSet.GetIdByNode rootBones[obj.inode.handle]
                     print (id as string)
 
                     mnodeSet.mnodes[id].baseNode = obj
@@ -345,7 +345,7 @@ rollout MafiaTools_4dsExport "" (   --module
                     mnodeSet.AddPointer obj id
                 )
                 #singlemorph: (
-                    local id = mnodeSet.GetIdByNode rootBone[obj.inode.handle]
+                    local id = mnodeSet.GetIdByNode rootBones[obj.inode.handle]
                     print (id as string)
 
                     mnodeSet.mnodes[id].baseNode = obj
@@ -881,7 +881,7 @@ rollout MafiaTools_4dsExport "" (   --module
 
         for i = 1 to lodmesh.numfaces do (
             local matid = getFaceMatID lodmesh i
-            local mafMatId = matset.GetMafiaMatId lodnode.mat matid
+            local mafMatId = MAT_SET.GetMafiaMatId lodnode.mat matid
 
             local facegroup = fcgrpSet.GetByMatId mafMatId
             append facegroup.faceIds i
@@ -969,7 +969,7 @@ rollout MafiaTools_4dsExport "" (   --module
             local matId = basenode.matids[i]
             local pos = basenode.positions[i]
 
-            local mafMatId = matset.GetMafiaMatId basenode.mat matId
+            local mafMatId = MAT_SET.GetMafiaMatId basenode.mat matId
 
             if mafMatId != 0 then (
                 local mglow = parser.TGlow matId:mafMatId position:pos
@@ -1511,8 +1511,6 @@ rollout MafiaTools_4dsExport "" (   --module
         )
         else (
             BONE_NODES = #()
-            nodeTypes = #()
-            rootBone = #()
 
             format "exporting: %\n" file
 

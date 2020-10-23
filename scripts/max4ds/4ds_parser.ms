@@ -1002,7 +1002,7 @@ rollout MafiaTools_4dsParser "" ( --module
     -------------------------------------------------    
     
     struct TBone (
-        matrix = #(), --4x4 matrix
+        matrix,
         boneId   --0-based,  --TODO: make this 1-based to be consistent
     )
     
