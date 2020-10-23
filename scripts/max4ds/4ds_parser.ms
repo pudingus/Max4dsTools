@@ -223,7 +223,7 @@ rollout MafiaTools_4dsParser "" ( --module
     struct THeader (
         fourcc,
         version,
-        timestamp
+        filetime
     )
     
     fn ReadHeader f = (
@@ -233,7 +233,7 @@ rollout MafiaTools_4dsParser "" ( --module
             mheader = THeader()
             mheader.fourcc = fourcc
             mheader.version = ReadShort f #unsigned
-            mheader.timestamp = ReadLongLong f
+            mheader.filetime = ReadLongLong f #unsigned
         )
 
         mheader
@@ -242,8 +242,11 @@ rollout MafiaTools_4dsParser "" ( --module
     fn WriteHeader f = (
         WriteLong f 5456948     -- 4DS
         WriteShort f 29         --format version
-        WriteLong f 343586816   --timestamp
-        WriteLong f 29382754    --timestamp part 2
+        
+        local DateTime = dotNetClass "DateTime"
+        local filetime = DateTime.UtcNow.ToFiletime()
+        
+        WriteLongLong f filetime
     )
 
     -------------------------------------------------    
