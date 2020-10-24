@@ -728,7 +728,7 @@ rollout MafiaTools_4dsImport "" (   --module
                 setCommandPanelTaskMode savedMode
             )
 
-            dur
+            #(dur, m4ds.allow5ds)
         )
     )
 )

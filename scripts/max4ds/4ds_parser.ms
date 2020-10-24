@@ -179,14 +179,14 @@ rollout MafiaTools_4dsParser "" ( --module
         header,   --THeader
         materials = #(),  --array of TMaterial
         objects = #(),   --array of TObject
-        allow5ds = false
+        allow5ds   --bool
     )   
     
     fn Read4ds f = (
+        local m4ds
         local header = ReadHeader f
-
         if header != undefined and (header.version == 29 or header.version == 27) then (
-            local m4ds = T4ds()
+            m4ds = T4ds()
             m4ds.header = header
             local numMats = ReadShort f #unsigned
             for i = 1 to numMats do (
@@ -197,6 +197,8 @@ rollout MafiaTools_4dsParser "" ( --module
             for i = 1 to numObjects do (
                 append m4ds.objects (ReadObject f)
             )
+            
+            m4ds.allow5ds = (ReadByte f #unsigned) > 0
         )
 
         m4ds
@@ -215,7 +217,7 @@ rollout MafiaTools_4dsParser "" ( --module
             WriteObject f mobj
         )
 
-        WriteByte f 0
+        WriteByte f (m4ds.allow5ds as integer)
     )
     
     -------------------------------------------------
@@ -1031,7 +1033,7 @@ rollout MafiaTools_4dsParser "" ( --module
                 2: #singlemesh
                 3: #singlemorph
                 4: #billboard
-                5: #morphedMesh
+                5: #morph
                 6: #glow
                 8: #mirror
             )

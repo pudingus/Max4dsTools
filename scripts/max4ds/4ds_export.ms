@@ -1498,7 +1498,7 @@ rollout MafiaTools_4dsExport "" (   --module
         else #unsupported
     )
 
-    fn Export4ds file cachedNorm editNorm unitscl  = (
+    fn Export4ds file cachedNorm editNorm unitscl allow5ds  = (
 
         USE_CACHED_NORMALS = cachedNorm
         USE_EDIT_NORMALS = editNorm
@@ -1526,7 +1526,7 @@ rollout MafiaTools_4dsExport "" (   --module
             m4ds.materials = ExtractMaterials mmmm
             local mnodeSet = CollectNodes()
             m4ds.objects = ExtractObjects mnodeSet unitscl
-
+            m4ds.allow5ds = allow5ds
 
             parser.Write4ds f m4ds
             fclose f

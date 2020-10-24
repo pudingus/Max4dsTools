@@ -43,11 +43,12 @@
             button      btnOpen         "Open..." align:#right width:70
         )
 
-        group "Export" (
+        group "Export" (            
             label       lblUnitSclE     "Scale factor:" align:#left across:2
             label       lblSclE         "" align:#right
             checkbox    cbCachedNorm    "Cached normals" checked:true
             checkbox    cbEditNorm      "Edit Normals modifier" checked:true
+            checkbox    cbAllow5ds      "Has animation file" align:#left offset:[0,5]
             edittext    edtDirectory    "Directory:"   align:#left offset:[0,5]  text:""labelOnTop:true
             edittext    edtFilename     "Filename:"      align:#left  text:"" labelOnTop:true
             button      btnBrowse       "Browse..." align:#left width:70 across:2 
@@ -89,7 +90,16 @@
                     )
                     local sel = ddlUnits.selection
                     local unitscl = 1 / unitMeterRatios[sel]
-                    local dur = imp.Import4ds file unitscl
+                    local result = imp.Import4ds file unitscl
+                    local dur = result[1]
+                    local allow5ds = result[2]
+                    
+                    if del then (
+                        cbAllow5ds.checked = allow5ds
+                    )
+                    else (
+                        if cbAllow5ds.checked == false then cbAllow5ds.checked = allow5ds
+                    )
 
                     labelDone.text = "Done in " + (dur as string) + " seconds"
                     clock.active = true
@@ -159,7 +169,7 @@
                     labelDone.text = "Exporting..."
                     local sel = ddlUnits.selection
                     local unitscl = unitMeterRatios[sel]
-                    local dur = exp.Export4ds filepath cbCachedNorm.checked cbEditNorm.checked unitscl
+                    local dur = exp.Export4ds filepath cbCachedNorm.checked cbEditNorm.checked unitscl cbAllow5ds.checked
                     labelDone.text = "Done in " + (dur as string) + " seconds"
                     clock.active = true
                 )
@@ -191,6 +201,9 @@
             if settings.editNorm != undefined then (
                 cbEditNorm.checked = settings.editNorm
             )
+            if settings.allow5ds != undefined then (
+                cbAllow5ds.checked = settings.allow5ds
+            )
             ddlUnits_select settings.unitsSel
         )
 
@@ -203,6 +216,7 @@
             settings.cachedNorm = cbCachedNorm.checked
             settings.editNorm = cbEditNorm.checked
             settings.unitsSel = ddlUnits.selection	
+            settings.allow5ds = cbAllow5ds.checked
         )
     )
 
@@ -210,7 +224,7 @@
         local pos = ::MafiaTools_ImpExpSettings.position
         local style = #(#style_titlebar, #style_border, #style_sysmenu)
         local w = 200
-        local h = 335
+        local h = 355
         if pos != undefined then (
             CreateDialog ImpExp w h pos.x pos.y style:style
         )
