@@ -105,7 +105,12 @@ rollout MafiaTools_Util "" (    --module
     fn isStringEmpty str = (
         str == undefined or str.count == 0
     )
+    -----------------
     
+    fn ToBoxsize dmin dmax = (
+        [abs (dmin.x-dmax.x), abs (dmin.y-dmax.y), abs (dmin.z-dmax.z)]
+    )
+
     -------------------
     fn PrintMatrix mtr = (
         local ss = StringStream ""

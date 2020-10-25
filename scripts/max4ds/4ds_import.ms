@@ -243,22 +243,29 @@ rollout MafiaTools_4dsImport "" (   --module
         gp.mirrorColor = mirr.backColor
         gp.mirrorDist = mirr.drawDistance
         
-        local volume = dummy boxsize:[2, 2, 2]
+        local size = 2 * unitscale
+        
+        local volume = dummy boxsize:[size, size, size]
         volume.name = "$volume"
-        volume.transform = mirr.matrix
+        local mtr = mirr.matrix
+        local s = scaleMatrix mtr.scalepart
+        local r = mtr.rotationpart as matrix3
+        local t = transMatrix (mtr.translationpart * unitscale)
+        volume.transform = s * r * t
         volume.parent = nnode
         
         local util = ::MafiaTools_Util
         util.PrintMatrix mirr.matrix
 
         nnode
-    )
+    )  
 
     fn CreateDummy mdummy mobj unitscale = (
         local dmin = mdummy.dmin * unitscale
         local dmax = mdummy.dmax * unitscale
         local nnode = dummy()
-        nnode.boxsize = [(abs (dmin.x-dmax.x)), (abs (dmin.y-dmax.y)), (abs (dmin.z-dmax.z))]
+        local util = ::MafiaTools_Util
+        nnode.boxsize = util.ToBoxsize dmin dmax
 
         hide nnode
 

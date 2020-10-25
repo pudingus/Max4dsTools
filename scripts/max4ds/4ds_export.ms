@@ -640,7 +640,6 @@ rollout MafiaTools_4dsExport "" (   --module
 
     */
 
-    --splits
     fn SplitVertices mesh faceVertNormals = (
         local numverts = mesh.numverts
         local normals = #()   -- min. count = count of vertices, normals for duplicated verts are appended to the end
@@ -892,7 +891,6 @@ rollout MafiaTools_4dsExport "" (   --module
         #(mlod, extraVerts)
     )
 
-
     fn ExtractMesh mnode mnodeSet unitscl = (
         local mmesh = parser.TMesh()
         local extraVertsLods = #()
@@ -980,8 +978,6 @@ rollout MafiaTools_4dsExport "" (   --module
         mglows
     )
 
-
-
     fn ExtractMirror mnode unitscl = (
         local baseNode = mnode.basenode
         local mirr = parser.TMirror()
@@ -1024,7 +1020,15 @@ rollout MafiaTools_4dsExport "" (   --module
             mirr.matrix = matrix3 1
         )
         else (
-            mirr.matrix = volume.transform
+            local dmin = in coordsys local volume.min
+            local dmax = in coordsys local volume.max
+            local boxsize = util.ToBoxsize dmin dmax
+            boxsize = (boxsize * unitscl) / 2
+            local mtr = volume.transform
+            local s = scaleMatrix (mtr.scalepart * boxsize)
+            local r = mtr.rotationpart as matrix3
+            local t = transMatrix (mtr.translationpart * unitscl)            
+            mirr.matrix = s * r * t
         )
 
         mirr.unknown[1] = gp.mirrorUnk1
@@ -1460,6 +1464,9 @@ rollout MafiaTools_4dsExport "" (   --module
         else if isKindOf obj Glow4ds then (
             #glow
         )
+        else if matchPattern obj.name pattern:"$volume*" then (
+            #volume
+        )
         else if isKindOf obj Dummy then (
             #dummy
         )
@@ -1472,10 +1479,7 @@ rollout MafiaTools_4dsExport "" (   --module
             )
             else if matchPattern obj.name pattern:"sector*" then (
                 #sector
-            )
-            else if matchPattern obj.name pattern:"$volume*" then (
-                #volume
-            )
+            )            
             else if (gp != undefined) and (stricmp gp.objectType "billboard" == 0) then (
                 #billboard
             )
