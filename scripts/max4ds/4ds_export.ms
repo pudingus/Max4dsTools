@@ -536,8 +536,18 @@ rollout MafiaTools_4dsExport "" (   --module
 
         lodWeights
     )
+    
+    fn MinMax dmin dmax vert = (
+        if vert.x < dmin.x do dmin.x = vert.x
+        if vert.y < dmin.y do dmin.y = vert.y
+        if vert.z < dmin.z do dmin.z = vert.z
+        
+        if vert.x > dmax.x do dmax.x = vert.x
+        if vert.y > dmax.y do dmax.y = vert.y
+        if vert.z > dmax.z do dmax.z = vert.z
+    )
 
-    fn ExtractSkin mnode lodWeights unitscl = (        
+    fn ExtractSkin mnode lodWeights mmesh unitscl = (        
         local lodnodes = #(mnode.baseNode) + mnode.lods
 
         local mskins = #()
@@ -551,6 +561,8 @@ rollout MafiaTools_4dsExport "" (   --module
             if parentId == undefined then parentId = 0
             parentId
         )
+        
+        local size = 10.0 ^ 16    --this value is used in original 4ds files
 
         for l = 1 to lodnodes.count do (
             local lodnode = lodnodes[l]
@@ -558,9 +570,8 @@ rollout MafiaTools_4dsExport "" (   --module
 
             local mskin = parser.TSkin()
             mskin.numW0Verts = 0
-            local range = 0.2
-            mskin.dmin = [-range, -range, -range]
-            mskin.dmax = [range, range, range]
+            mskin.dmin = [size, size, size]
+            mskin.dmax = [-size, -size, -size]
 
             local groups = #()
 
@@ -568,10 +579,9 @@ rollout MafiaTools_4dsExport "" (   --module
                 local boneNode = BONE_NODES[i]
                 local grp = parser.TSkinVertexGroup()
                 grp.numW1Verts = 0
-
-                local range = 0.2
-                grp.dmin = [-range, -range, -range]
-                grp.dmax = [range, range, range]
+                
+                grp.dmin = [size, size, size]
+                grp.dmax = [-size, -size, -size]
                 grp.boneid = 0
 
                 local boneTF = boneNode.transform
@@ -594,20 +604,31 @@ rollout MafiaTools_4dsExport "" (   --module
 
                 append groups grp
             )
+            
+            local vertId = 1
 
             for weight in weights do (
                 if weight.boneid == 9999 then (   --this is at the end
                     mskin.numW0Verts += 1
+                    
+                    local vert = getVert mmesh.lods[l].mesh vertid
+                    
+                    MinMax mskin.dmin mskin.dmax vert
                 )
                 else (
                     local id = weight.boneid
                     local grp = groups[id]
+
+                    local vert = (getVert mmesh.lods[l].mesh vertid) * grp.matrix
+                    
+                    MinMax grp.dmin grp.dmax vert
 
                     if weight.weight == 1.0 then grp.numW1Verts += 1
                     else (
                         append grp.weights weight.weight
                     )
                 )
+                vertId += 1
             )
 
             for i = 1 to groups.count do (
@@ -999,21 +1020,12 @@ rollout MafiaTools_4dsExport "" (   --module
             setVert tr i (vert * otrans)
         )
 
-        local vmin = getVert tr 1
-        local vmax = getVert tr 1
+        mirr.dmin = getVert tr 1
+        mirr.dmax = getVert tr 1
         for i = 2 to tr.numverts do (
             local vert = getVert tr i
-            if vert.x < vmin.x do vmin.x = vert.x
-            if vert.y < vmin.y do vmin.y = vert.y
-            if vert.z < vmin.z do vmin.z = vert.z
-
-            if vert.x > vmax.x do vmax.x = vert.x
-            if vert.y > vmax.y do vmax.y = vert.y
-            if vert.z > vmax.z do vmax.z = vert.z
+            MinMax mirr.dmin mirr.dmax vert
         )
-
-        mirr.dmin = vmin
-        mirr.dmax = vmax
 
         local volume = mnode.volume
         if volume == undefined then (
@@ -1201,14 +1213,8 @@ rollout MafiaTools_4dsExport "" (   --module
                         vmin = copy pt
                         vmax = copy pt
                     )
-                    else (
-                        if pt.x < vmin.x do vmin.x = pt.x
-                        if pt.y < vmin.y do vmin.y = pt.y
-                        if pt.z < vmin.z do vmin.z = pt.z
-
-                        if pt.x > vmax.x do vmax.x = pt.x
-                        if pt.y > vmax.y do vmax.y = pt.y
-                        if pt.z > vmax.z do vmax.z = pt.z
+                    else (                        
+                        MinMax vmin vmax pt
                     )
 
                     local mpoint = parser.TMorphedPoint pos:pt normal:normal
@@ -1252,6 +1258,7 @@ rollout MafiaTools_4dsExport "" (   --module
         )
     )
 
+    -- Sorts lodWeights by weight, lodWeights is modified.
     -- returns vertOrderLods, where value is the new vertex id
     fn SortWeights lodWeights = (
         for weights in lodWeights collect (
@@ -1351,7 +1358,7 @@ rollout MafiaTools_4dsExport "" (   --module
                     SplitWeights mmesh lodWeights extraVertsLods
                     local vertOrderLods = SortWeights lodWeights
                     SortMesh mmesh vertOrderLods
-                    local mskins = ExtractSkin mnode lodWeights unitscl
+                    local mskins = ExtractSkin mnode lodWeights mmesh unitscl
 
                     mobj.definitions[1] = mmesh
                     mobj.definitions[2] = mskins
@@ -1379,7 +1386,7 @@ rollout MafiaTools_4dsExport "" (   --module
                     SplitWeights mmesh lodWeights extraVertsLods
                     local vertOrderLods = SortWeights lodWeights
                     SortMesh mmesh vertOrderLods
-                    local mskins = ExtractSkin mnode lodWeights unitscl
+                    local mskins = ExtractSkin mnode lodWeights mmesh unitscl
 
                     local mmorph = ExtractMorph mnode vertOrderLods[1] mmesh.lods[1].mesh extraVertsLods[1] unitscl
 
