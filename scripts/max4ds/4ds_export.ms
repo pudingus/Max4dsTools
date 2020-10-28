@@ -338,15 +338,13 @@ rollout MafiaTools_4dsExport "" (   --module
                 )
                 #singlemesh: (
                     local id = mnodeSet.GetIdByNode rootBones[obj.inode.handle]
-                    print (id as string)
-
+                    
                     mnodeSet.mnodes[id].baseNode = obj
                     mnodeSet.mnodes[id].type = #singlemesh
                     mnodeSet.AddPointer obj id
                 )
                 #singlemorph: (
                     local id = mnodeSet.GetIdByNode rootBones[obj.inode.handle]
-                    print (id as string)
 
                     mnodeSet.mnodes[id].baseNode = obj
                     mnodeSet.mnodes[id].type = #singlemorph
@@ -483,6 +481,7 @@ rollout MafiaTools_4dsExport "" (   --module
 
             local weights = #()
             local numverts = skinOps.GetNumberVertices bskin
+            
             for vertId = 1 to numverts do (
                 local numWeights = skinOps.GetVertexWeightCount bskin vertId
 
@@ -510,7 +509,7 @@ rollout MafiaTools_4dsExport "" (   --module
                     weight = weight1 / sum
                     boneid = boneid1
                     
-                    if weight < 0.98 then (                        
+                    if weight < 0.98 then (
                         local boneNode1 = skinBones[boneid1]
                         local boneNode2 = skinBones[boneid2]
                         if util.isDescendantOf boneNode2 boneNode1 then (
@@ -518,10 +517,16 @@ rollout MafiaTools_4dsExport "" (   --module
                             boneid = boneid2
                         )
                     )
-                )               
+                )
                 
-                local globalBoneId = globalBoneIds[boneid] - 1
-                if globalBoneId == 0 then globalBoneId = 9999
+                local globalBoneId
+                if boneid == undefined then (
+                    globalBoneId = 9999
+                )
+                else (
+                    globalBoneId = globalBoneIds[boneid] - 1
+                    if globalBoneId == 0 then globalBoneId = 9999
+                )               
 
                 wv = WeightedVertex()
                 wv.boneid = globalBoneId
@@ -547,7 +552,7 @@ rollout MafiaTools_4dsExport "" (   --module
         if vert.z > dmax.z do dmax.z = vert.z
     )
 
-    fn ExtractSkin mnode lodWeights mmesh unitscl = (        
+    fn ExtractSkin mnode lodWeights mmesh unitscl = (
         local lodnodes = #(mnode.baseNode) + mnode.lods
 
         local mskins = #()
@@ -1225,9 +1230,6 @@ rollout MafiaTools_4dsExport "" (   --module
             append mmorph.layers mlayer
         )
 
-        print vmin
-        print vmax
-
         -- thanks Duelist
         mmorph.dmin = vmin
         mmorph.dmax = vmax
@@ -1509,7 +1511,7 @@ rollout MafiaTools_4dsExport "" (   --module
         else #unsupported
     )
 
-    fn Export4ds file cachedNorm editNorm unitscl allow5ds  = (
+    fn Export4ds file cachedNorm editNorm unitscl allow5ds = (
 
         USE_CACHED_NORMALS = cachedNorm
         USE_EDIT_NORMALS = editNorm

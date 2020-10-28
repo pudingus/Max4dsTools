@@ -3,6 +3,7 @@ rollout MafiaTools_4dsImport "" (   --module
 
     --imports--
     local Layers = ::MafiaTools_Layers    
+    local util = ::MafiaTools_Util
     -----------
 
     fn GetMafParams nnode = (
@@ -254,7 +255,6 @@ rollout MafiaTools_4dsImport "" (   --module
         volume.transform = s * r * t
         volume.parent = nnode
         
-        local util = ::MafiaTools_Util
         util.PrintMatrix mirr.matrix
 
         nnode
@@ -264,7 +264,6 @@ rollout MafiaTools_4dsImport "" (   --module
         local dmin = mdummy.dmin * unitscale
         local dmax = mdummy.dmax * unitscale
         local nnode = dummy()
-        local util = ::MafiaTools_Util
         nnode.boxsize = util.ToBoxsize dmin dmax
 
         hide nnode
@@ -601,6 +600,13 @@ rollout MafiaTools_4dsImport "" (   --module
                 10: ( --bone
                     local mbone = mobj.definitions[1]
                     nnode = CreateBone()
+                    
+                    -- format "%\n" mobj.name
+                    -- util.printmatrix mbone.matrix
+                    -- format "s: %, r: %, t: %\n" mbone.matrix.scalepart mbone.matrix.rotationpart mbone.matrix.translationpart 
+                    -- format "s: %, r: %, t: %\n" mobj.scl mobj.rot mobj.offset
+                    
+                    -- format "\n"
 
                     buffer.boneNodes[mbone.boneId+2] = nnode
 
