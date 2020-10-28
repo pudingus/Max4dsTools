@@ -1063,10 +1063,12 @@ rollout MafiaTools_4dsExport "" (   --module
 
     --trims trailing unused layers (keeps the leading)
     fn TrimUnused layers = (
-        for i = layers.count to 1 by -1 do (
+        local finished = false
+        for i = layers.count to 1 by -1 while not finished do (
             if layers[i].usedChannels.numberset == 0 then (
                 deleteItem layers i
             )
+            else finished = true
         )
     )
 
