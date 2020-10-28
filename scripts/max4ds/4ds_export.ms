@@ -1009,25 +1009,22 @@ rollout MafiaTools_4dsExport "" (   --module
         local mirr = parser.TMirror()
         local gp = custAttributes.get baseNode MafParams_def baseObject:false
 
-        --thank you Duelist
-        local vertXarr = #()
-        local vertYarr = #()
-        local vertZarr = #()
-
         local tr = copy baseNode.mesh
         mirr.mesh = tr
 
         local scl = scaleMatrix [unitscl,unitscl,unitscl]
         local otrans = baseNode.objectTransform * inverse baseNode.transform * scl
 
+        --apply object offset to mesh
         for i = 1 to tr.numverts do (
             local vert = getVert tr i
             setVert tr i (vert * otrans)
         )
 
-        mirr.dmin = getVert tr 1
-        mirr.dmax = getVert tr 1
-        for i = 2 to tr.numverts do (
+        local size = 10.0 ^ 16   --this value is used in original skin vertex groups, so I'm using it here too
+        mirr.dmin = [size, size, size]
+        mirr.dmax = [-size, -size, -size]
+        for i = 1 to tr.numverts do (
             local vert = getVert tr i
             MinMax mirr.dmin mirr.dmax vert
         )
@@ -1044,7 +1041,7 @@ rollout MafiaTools_4dsExport "" (   --module
             local mtr = volume.transform
             local s = scaleMatrix (mtr.scalepart * boxsize)
             local r = mtr.rotationpart as matrix3
-            local t = transMatrix (mtr.translationpart * unitscl)            
+            local t = transMatrix (mtr.translationpart * unitscl)
             mirr.matrix = s * r * t
         )
 
