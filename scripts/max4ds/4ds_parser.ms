@@ -700,31 +700,31 @@ rollout MafiaTools_4dsParser "" ( --module
     fn WriteMorph f morph = (
         WriteByte f morph.numTargets
         
-        --check if target count is zero?
-        
-        WriteByte f morph.layers.count
-        WriteByte f 1 --unknown
-        
-        for layer in morph.layers do (
-            WriteShort f layer.vertices.count
-            for vert in layer.vertices do (
-                if vert.points.count != morph.numTargets then throw "numTargets and points.count mismatch"
-                for point in vert.points do (
-                    WritePoint3 f point.pos
-                    WritePoint3 f point.normal
-                )                
-            )            
-            if layer.vertices.count * morph.numTargets > 0 do WriteByte f 1 --unknown
+        if morph.numTargets > 0 then (
+            WriteByte f morph.layers.count
+            WriteByte f 1 --unknown
             
-            for vert in layer.vertices do (
-                WriteShort f (vert.index - 1)
+            for layer in morph.layers do (
+                WriteShort f layer.vertices.count
+                for vert in layer.vertices do (
+                    if vert.points.count != morph.numTargets then throw "numTargets and points.count mismatch"
+                    for point in vert.points do (
+                        WritePoint3 f point.pos
+                        WritePoint3 f point.normal
+                    )
+                )
+                if layer.vertices.count * morph.numTargets > 0 do WriteByte f 1 --unknown
+                
+                for vert in layer.vertices do (
+                    WriteShort f (vert.index - 1)
+                )
             )
+            
+            WritePoint3 f morph.dmin
+            WritePoint3 f morph.dmax
+            WritePoint3 f morph.center
+            WriteFloat f morph.dist
         )
-        
-        WritePoint3 f morph.dmin
-        WritePoint3 f morph.dmax
-        WritePoint3 f morph.center
-        WriteFloat f morph.dist
     )
     
     -------------------------------------------------

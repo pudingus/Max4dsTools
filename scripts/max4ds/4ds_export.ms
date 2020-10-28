@@ -1154,86 +1154,85 @@ rollout MafiaTools_4dsExport "" (   --module
         --trim unused layers
         TrimUnused layers
 
-
-
-        --split vertices
-        if extraVerts != undefined then (
-            SplitMorphVertices layers extraVerts
-        )
-
-
-        --find changed verts
-        for layerInfo in layers do (
-            for chanId in layerInfo.usedChannels do (
-                local chanMesh = layerInfo.channels[chanId]
-
-                for vertId = 1 to chanMesh.numverts do (
-                    local baseVert = getVert normalMesh vertOrder[vertId]
-                    local chanVert = getVert chanMesh vertId
-
-                    if not close_enough_p3 baseVert chanVert 50 then (
-                        layerInfo.usedVerts[vertId] = true
-                    )
-                )
-            )
-        )
-
-        local numTargets = FindBiggestChannelId layers
-
-
-        -- if num targets zero?
-
-
         local mmorph = parser.TMorph()
-        mmorph.numTargets = numTargets
-
-        local vmin
-        local vmax
-
-        for i = 1 to layers.count do (
-            local layerInfo = layers[i]
-            local mlayer = parser.TMorphLayer()
-
-            for vertId in layerInfo.usedVerts do (
-
-                local corrId = vertOrder[vertId]
-
-                local mvert = parser.TMorphVertex index:corrId
-                for j = 1 to numTargets do (
-                    local chanMesh = layerInfo.channels[j]
-
-                    local pt
-                    if chanMesh != undefined then (
-                        pt = getVert chanMesh vertId
-                    )
-                    else (
-                        pt = getVert normalMesh corrId
-                    )
-
-                    local normal = getNormal normalMesh corrId
-
-                    if vmin == undefined and vmax == undefined then (
-                        -- so that vmin and vmax don't share the same reference between each other
-                        vmin = copy pt
-                        vmax = copy pt
-                    )
-                    else (                        
-                        MinMax vmin vmax pt
-                    )
-
-                    local mpoint = parser.TMorphedPoint pos:pt normal:normal
-                    append mvert.points mpoint
-                )
-                append mlayer.vertices mvert
-            )
-            append mmorph.layers mlayer
+        
+        if layers.count == 0 then (
+            mmorph.numTargets = 1
         )
+        else (
+            local numTargets = FindBiggestChannelId layers
+            mmorph.numTargets = numTargets
+            
+            --split vertices
+            if extraVerts != undefined then (
+                SplitMorphVertices layers extraVerts
+            )
 
-        -- thanks Duelist
-        mmorph.dmin = vmin
-        mmorph.dmax = vmax
-        mmorph.center = (vmin + vmax) / 2
-        mmorph.dist = (distance vmin vmax) / 2
+
+            --find changed verts
+            for layerInfo in layers do (
+                for chanId in layerInfo.usedChannels do (
+                    local chanMesh = layerInfo.channels[chanId]
+
+                    for vertId = 1 to chanMesh.numverts do (
+                        local baseVert = getVert normalMesh vertOrder[vertId]
+                        local chanVert = getVert chanMesh vertId
+
+                        if not close_enough_p3 baseVert chanVert 50 then (
+                            layerInfo.usedVerts[vertId] = true
+                        )
+                    )
+                )
+            )
+
+            local vmin
+            local vmax
+
+            for i = 1 to layers.count do (
+                local layerInfo = layers[i]
+                local mlayer = parser.TMorphLayer()
+
+                for vertId in layerInfo.usedVerts do (
+
+                    local corrId = vertOrder[vertId]
+
+                    local mvert = parser.TMorphVertex index:corrId
+                    for j = 1 to numTargets do (
+                        local chanMesh = layerInfo.channels[j]
+
+                        local pt
+                        if chanMesh != undefined then (
+                            pt = getVert chanMesh vertId
+                        )
+                        else (
+                            pt = getVert normalMesh corrId
+                        )
+
+                        local normal = getNormal normalMesh corrId
+
+                        if vmin == undefined and vmax == undefined then (
+                            -- so that vmin and vmax don't share the same reference between each other
+                            vmin = copy pt
+                            vmax = copy pt
+                        )
+                        else (                        
+                            MinMax vmin vmax pt
+                        )
+
+                        local mpoint = parser.TMorphedPoint pos:pt normal:normal
+                        append mvert.points mpoint
+                    )
+                    append mlayer.vertices mvert
+                )
+                append mmorph.layers mlayer
+            )        
+
+            -- thanks Duelist
+            mmorph.dmin = vmin
+            mmorph.dmax = vmax
+            mmorph.center = (vmin + vmax) / 2
+            mmorph.dist = (distance vmin vmax) / 2
+        )
 
         mmorph
     )
@@ -1460,6 +1459,21 @@ rollout MafiaTools_4dsExport "" (   --module
         )
         mobjects
     )
+    
+    fn MorpherHasData mrph = (
+        local numChannels = WM3_NumberOfChannels mrph        
+        
+        local found = false
+        
+        for chanId = 1 to numChannels while not found do (
+            local hasData = WM3_MC_HasData mrph chanId
+            local isActive = WM3_MC_IsActive mrph chanId
+            
+            if hasData and isActive do found = true            
+        )
+        
+        found
+    )
 
     fn GetNodeType obj = (
         local gp = custAttributes.get obj MafParams_def baseObject:false
@@ -1495,12 +1509,12 @@ rollout MafiaTools_4dsExport "" (   --module
                 #mirror
             )
             else if util.HasMod obj Skin then (
-                if util.HasMod obj Morpher then (
+                if (local mrph = util.GetModByClass obj Morpher; mrph != undefined and MorpherHasData mrph) then (
                     #singlemorph
                 )
                 else #singlemesh
             )
-            else if util.HasMod obj Morpher then (
+            else if (local mrph = util.GetModByClass obj Morpher; mrph != undefined and MorpherHasData mrph) then (
                 #morph
             )
             else (
