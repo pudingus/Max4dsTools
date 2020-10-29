@@ -1112,9 +1112,13 @@ rollout MafiaTools_4dsExport "" (   --module
 
         local baseMesh = copy basenode.mesh
         local layers = #()
-
+        
+        local numChannels = 
+            if WM3_NumberOfChannels == undefined then 100
+            else WM3_NumberOfChannels mrph
+            
         local channelsPerLayer = 10
-        local maxLayers = ( (WM3_NumberOfChannels mrph) / channelsPerLayer ) as integer
+        local maxLayers = ( (numChannels) / channelsPerLayer ) as integer
 
         local scl = scaleMatrix [unitscl,unitscl,unitscl]
 
@@ -1461,7 +1465,9 @@ rollout MafiaTools_4dsExport "" (   --module
     )
     
     fn MorpherHasData mrph = (
-        local numChannels = WM3_NumberOfChannels mrph        
+        local numChannels = 
+            if WM3_NumberOfChannels == undefined then 100
+            else WM3_NumberOfChannels mrph
         
         local found = false
         

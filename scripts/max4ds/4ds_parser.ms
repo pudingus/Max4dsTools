@@ -215,9 +215,9 @@ rollout MafiaTools_4dsParser "" ( --module
         WriteShort f m4ds.objects.count
         for mobj in m4ds.objects do (
             WriteObject f mobj
-        )
+        )        
 
-        WriteByte f (m4ds.allow5ds as integer)
+        WriteByte f (if m4ds.allow5ds then 1 else 0)
     )
     
     -------------------------------------------------

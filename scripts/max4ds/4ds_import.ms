@@ -141,11 +141,11 @@ rollout MafiaTools_4dsImport "" (   --module
 
         local tmod = Morpher()
         addModifier nnode tmod
-        -- local maxver = (maxversion())[1]
-        -- if maxver < 22000 then (
-        --     max modify mode
-        --     select nnode
-        -- )
+        local maxver = (maxversion())[1]
+        if maxver < 15000 then (   --2013 works without selecting, 2009 doesnt, todo: find which version exactly
+            max modify mode
+            select nnode
+        )
 
         local letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
