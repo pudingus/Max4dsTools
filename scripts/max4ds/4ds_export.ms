@@ -1106,7 +1106,6 @@ rollout MafiaTools_4dsExport "" (   --module
             vertOrder = for i = 1 to normalMesh.numverts collect i
         )
 
-        --local basenode = mnode
         local basenode = mnode.basenode
         local mrph = util.GetModByClass basenode Morpher
 
@@ -1135,14 +1134,15 @@ rollout MafiaTools_4dsExport "" (   --module
             local layerInfo = TLayerInfo()
             for j = 1 to channelsPerLayer do (
                 local chanId = ((i - 1) * channelsPerLayer) + j
-                local hasData = WM3_MC_HasData mrph chanId
                 local isActive = WM3_MC_IsActive mrph chanId
+                local hasData = WM3_MC_HasData mrph chanId
+                local isValid = WM3_MC_IsValid mrph chanId
 
                 local chanMesh
-                if hasData and isActive then (
+                if isActive and hasData and isValid then (
                     layerInfo.usedChannels[j] = true
 
-                    local numpts = WM3_MC_NumPts mrph chanId
+                    local numpts = amin #((WM3_MC_NumPts mrph chanId), basemesh.numverts)
                     chanMesh = TriMesh()
                     chanMesh.numverts = numpts
                     for vertId = 1 to numpts do (
@@ -1472,10 +1472,11 @@ rollout MafiaTools_4dsExport "" (   --module
         local found = false
         
         for chanId = 1 to numChannels while not found do (
-            local hasData = WM3_MC_HasData mrph chanId
             local isActive = WM3_MC_IsActive mrph chanId
+            local hasData = WM3_MC_HasData mrph chanId
+            local isValid = WM3_MC_IsValid mrph chanId
             
-            if hasData and isActive do found = true            
+            if isActive and hasData and isValid do found = true
         )
         
         found
