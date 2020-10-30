@@ -246,14 +246,14 @@ rollout MafiaTools_4dsImport "" (   --module
         
         local size = 2 * unitscale
         
-        local volume = dummy boxsize:[size, size, size]
-        volume.name = "$volume"
+        local viewbox = dummy boxsize:[size, size, size]
+        viewbox.name = "$viewbox"
         local mtr = mirr.matrix
         local s = scaleMatrix mtr.scalepart
         local r = mtr.rotationpart as matrix3
         local t = transMatrix (mtr.translationpart * unitscale)
-        volume.transform = s * r * t
-        volume.parent = nnode
+        viewbox.transform = s * r * t
+        viewbox.parent = nnode
         
         util.PrintMatrix mirr.matrix
 

@@ -18,7 +18,7 @@ rollout MafiaTools_4dsExport "" (   --module
         type,
         lods = #(),
         portals = #(),
-        volume,   --rendered volume for mirrors
+        viewbox,   --rendered volume for mirrors
         rootBone
     )
 
@@ -280,9 +280,17 @@ rollout MafiaTools_4dsExport "" (   --module
         local util = ::MafiaTools_util
         local nodeTypes = #()
         local rootBones = #()
+        -- local str = "$volume"
+        -- local strPattern = str + "*"
+        
         for obj in objects do (
             local type = nodeTypes[obj.inode.handle]
             if type == undefined then (
+                
+                -- if matchPattern obj.name pattern:strPattern then (
+                --     obj.name = replace obj.name 1 str.count "$viewbox"
+                -- )
+            
                 type = GetNodeType obj
 
                 if type == #singlemesh or type == #singlemorph then (
@@ -358,10 +366,10 @@ rollout MafiaTools_4dsExport "" (   --module
                         mnodeSet.Add obj mnode
                     )
                 )
-                #volume: (
+                #viewbox: (
                     if obj.parent != undefined then (
                         local parentMnode = mnodeSet.GetByNode obj.parent
-                        parentMnode.volume = obj
+                        parentMnode.viewbox = obj
                     )
                 )
                 #morph_target: ()
@@ -1029,17 +1037,17 @@ rollout MafiaTools_4dsExport "" (   --module
             MinMax mirr.dmin mirr.dmax vert
         )
 
-        local volume = mnode.volume
-        if volume == undefined then (
+        local viewbox = mnode.viewbox
+        if viewbox == undefined then (
             mirr.matrix = matrix3 1
         )
         else (
-            local dmin = in coordsys local volume.min
-            local dmax = in coordsys local volume.max
+            local dmin = in coordsys local viewbox.min
+            local dmax = in coordsys local viewbox.max
             local boxsize = util.ToBoxsize dmin dmax
             local mult = (boxsize * unitscl) / 2
             
-            local mtr = volume.transform * inverse basenode.transform
+            local mtr = viewbox.transform * inverse basenode.transform
             local s = scaleMatrix (mtr.scalepart * mult)
             local r = mtr.rotationpart as matrix3
             local t = transMatrix (mtr.translationpart * unitscl)
@@ -1495,7 +1503,7 @@ rollout MafiaTools_4dsExport "" (   --module
             #glow
         )
         else if matchPattern obj.name pattern:"$volume*" or matchPattern obj.name pattern:"$viewbox*" then (
-            #volume
+            #viewbox
         )
         else if isKindOf obj Dummy then (
             #dummy
