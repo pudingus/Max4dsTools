@@ -1037,9 +1037,10 @@ rollout MafiaTools_4dsExport "" (   --module
             local dmin = in coordsys local volume.min
             local dmax = in coordsys local volume.max
             local boxsize = util.ToBoxsize dmin dmax
-            boxsize = (boxsize * unitscl) / 2
-            local mtr = volume.transform
-            local s = scaleMatrix (mtr.scalepart * boxsize)
+            local mult = (boxsize * unitscl) / 2
+            
+            local mtr = volume.transform * inverse basenode.transform
+            local s = scaleMatrix (mtr.scalepart * mult)
             local r = mtr.rotationpart as matrix3
             local t = transMatrix (mtr.translationpart * unitscl)
             mirr.matrix = s * r * t
@@ -1493,7 +1494,7 @@ rollout MafiaTools_4dsExport "" (   --module
         else if isKindOf obj Glow4ds then (
             #glow
         )
-        else if matchPattern obj.name pattern:"$volume*" then (
+        else if matchPattern obj.name pattern:"$volume*" or matchPattern obj.name pattern:"$viewbox*" then (
             #volume
         )
         else if isKindOf obj Dummy then (
