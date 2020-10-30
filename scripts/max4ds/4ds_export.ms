@@ -1357,7 +1357,7 @@ rollout MafiaTools_4dsExport "" (   --module
                 #mesh: (
                     mobj.objectType = 1
                     mobj.visualType = 0
-                    mobj.definitions[1] = (ExtractMesh mnode mnodeSet unitscl)[1]
+                    mobj.mesh = (ExtractMesh mnode mnodeSet unitscl)[1]
                 )
                 #singlemesh: (
                     mobj.objectType = 1
@@ -1373,8 +1373,8 @@ rollout MafiaTools_4dsExport "" (   --module
                     SortMesh mmesh vertOrderLods
                     local mskins = ExtractSkin mnode lodWeights mmesh unitscl
 
-                    mobj.definitions[1] = mmesh
-                    mobj.definitions[2] = mskins
+                    mobj.mesh = mmesh
+                    mobj.skin = mskins
 
                     mobj.name = mnode.rootBone.name
 
@@ -1403,9 +1403,9 @@ rollout MafiaTools_4dsExport "" (   --module
 
                     local mmorph = ExtractMorph mnode vertOrderLods[1] mmesh.lods[1].mesh extraVertsLods[1] unitscl
 
-                    mobj.definitions[1] = mmesh
-                    mobj.definitions[2] = mskins
-                    mobj.definitions[3] = mmorph
+                    mobj.mesh = mmesh
+                    mobj.skin = mskins
+                    mobj.morph = mmorph
 
                     mobj.name = mnode.rootBone.name
 
@@ -1421,19 +1421,19 @@ rollout MafiaTools_4dsExport "" (   --module
                 #morph: (
                     mobj.objectType = 1
                     mobj.visualType = 5
-                    mobj.definitions[1] = (ExtractMesh mnode mnodeSet unitscl)[1]
-                    mobj.definitions[2] = ExtractMorph mnode undefined mobj.definitions[1].lods[1].mesh undefined unitscl
+                    mobj.mesh = (ExtractMesh mnode mnodeSet unitscl)[1]
+                    mobj.morph = ExtractMorph mnode undefined mobj.mesh.lods[1].mesh undefined unitscl
                 )
                 #billboard: (
                     mobj.objectType = 1
                     mobj.visualType = 4
-                    mobj.definitions[1] = (ExtractMesh mnode mnodeSet unitscl)[1]
-                    mobj.definitions[2] = ExtractBillboard mnode
+                    mobj.mesh = (ExtractMesh mnode mnodeSet unitscl)[1]
+                    mobj.billboard = ExtractBillboard mnode
                 )
                 #sector: (
                     mobj.objectType = 5
                     mobj.cullFlags = 125
-                    mobj.definitions[1] = ExtractSector mnode unitscl
+                    mobj.sector = ExtractSector mnode unitscl
 
                     mobj.offset = [0,0,0]
                     mobj.scl = [1,1,1]
@@ -1441,29 +1441,29 @@ rollout MafiaTools_4dsExport "" (   --module
                 )
                 #dummy: (
                     mobj.objectType = 6
-                    mobj.definitions[1] = ExtractDummy mnode unitscl
+                    mobj.dummy = ExtractDummy mnode unitscl
                 )
                 #bone: (
                     mobj.objectType = 10
-                    mobj.definitions[1] = ExtractBone mnode
+                    mobj.bone = ExtractBone mnode
                 )
                 #target: (
                     mobj.objectType = 7
-                    mobj.definitions[1] = ExtractTarget mnode mnodeSet
+                    mobj.target = ExtractTarget mnode mnodeSet
                 )
                 #glow: (
                     mobj.objectType = 1
                     mobj.visualType = 6
-                    mobj.definitions[1] = ExtractGlow mnode
+                    mobj.glow = ExtractGlow mnode
                 )
                 #mirror: (
                     mobj.objectType = 1
                     mobj.visualType = 8
-                    mobj.definitions[1] = ExtractMirror mnode unitscl
+                    mobj.mirror = ExtractMirror mnode unitscl
                 )
                 default: (
                     mobj.objectType = 6
-                    mobj.definitions[1] = ExtractDummy mnode unitscl
+                    mobj.dummy = ExtractDummy mnode unitscl
                 )
             )
 

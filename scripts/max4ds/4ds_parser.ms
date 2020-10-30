@@ -334,7 +334,18 @@ rollout MafiaTools_4dsParser "" ( --module
         cullFlags,
         name,
         strParams,
-        definitions = #(),
+        
+        --definitions----
+        mesh,
+        skin,
+        morph,
+        billboard,
+        glow,
+        mirror,
+        sector,
+        dummy,
+        target,
+        bone,
 
         fn GetMatrix = (
             local s = scaleMatrix scl
@@ -365,31 +376,31 @@ rollout MafiaTools_4dsParser "" ( --module
 
         case mobj.objectType of (
             1: case mobj.visualType of (
-                0: mobj.definitions[1] = ReadMesh f  --standardmesh
+                0: mobj.mesh = ReadMesh f  --standardmesh
                 2: (  --singlemesh
-                    mobj.definitions[1] = ReadMesh f
-                    mobj.definitions[2] = ReadSkin f mobj.definitions[1].lods.count
+                    mobj.mesh = ReadMesh f
+                    mobj.skin = ReadSkin f mobj.mesh.lods.count
                 )
                 3: (  --singlemorph
-                    mobj.definitions[1] = ReadMesh f
-                    mobj.definitions[2] = ReadSkin f mobj.definitions[1].lods.count
-                    mobj.definitions[3] = ReadMorph f
+                    mobj.mesh = ReadMesh f
+                    mobj.skin = ReadSkin f mobj.mesh.lods.count
+                    mobj.morph = ReadMorph f
                 )
                 4: (
-                    mobj.definitions[1] = ReadMesh f
-                    mobj.definitions[2] = ReadBillboard f
+                    mobj.mesh = ReadMesh f
+                    mobj.billboard = ReadBillboard f
                 )
                 5: ( --morph
-                    mobj.definitions[1] = ReadMesh f
-                    mobj.definitions[2] = ReadMorph f
+                    mobj.mesh = ReadMesh f
+                    mobj.morph = ReadMorph f
                 )
-                6: mobj.definitions[1] = ReadGlow f
-                8: mobj.definitions[1] = ReadMirror f
+                6: mobj.glow = ReadGlow f
+                8: mobj.mirror = ReadMirror f
             )
-            5: mobj.definitions[1] = ReadSector f
-            6: mobj.definitions[1] = ReadDummy f
-            7: mobj.definitions[1] = ReadTarget f
-            10: mobj.definitions[1] = ReadBone f
+            5: mobj.sector = ReadSector f
+            6: mobj.dummy = ReadDummy f
+            7: mobj.target = ReadTarget f
+            10: mobj.bone = ReadBone f
         )
 
         mobj
@@ -414,32 +425,32 @@ rollout MafiaTools_4dsParser "" ( --module
 
         case mobj.objectType of (
             1: case mobj.visualType of (
-                0: WriteMesh f mobj.definitions[1]
+                0: WriteMesh f mobj.mesh
                 2: (
-                    WriteMesh f mobj.definitions[1]
-                    WriteSkin f mobj.definitions[2]
+                    WriteMesh f mobj.mesh
+                    WriteSkin f mobj.skin
                 )
                 3: (
-                    WriteMesh f mobj.definitions[1]
-                    WriteSkin f mobj.definitions[2]
-                    WriteMorph f mobj.definitions[3]
+                    WriteMesh f mobj.mesh
+                    WriteSkin f mobj.skin
+                    WriteMorph f mobj.morph
                 )
                 4: (
-                    WriteMesh f mobj.definitions[1]
-                    WriteBillboard f mobj.definitions[2]
+                    WriteMesh f mobj.mesh
+                    WriteBillboard f mobj.billboard
                 )
                 5: (
-                    WriteMesh f mobj.definitions[1]
-                    WriteMorph f mobj.definitions[2]
+                    WriteMesh f mobj.mesh
+                    WriteMorph f mobj.morph
                 )
-                6: WriteGlow f mobj.definitions[1]
-                8: WriteMirror f mobj.definitions[1]
+                6: WriteGlow f mobj.glow
+                8: WriteMirror f mobj.mirror
                 default: throw "invalid visual type"
             )
-            5: WriteSector f mobj.definitions[1]
-            6: WriteDummy f mobj.definitions[1]
-            7: WriteTarget f mobj.definitions[1]
-            10: WriteBone f mobj.definitions[1]
+            5: WriteSector f mobj.sector
+            6: WriteDummy f mobj.dummy
+            7: WriteTarget f mobj.target
+            10: WriteBone f mobj.bone
             default: throw "invalid object type"
         )
     )

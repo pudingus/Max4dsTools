@@ -506,7 +506,7 @@ rollout MafiaTools_4dsImport "" (   --module
             case mobj.objectType of (
                 1: case mobj.visualType of (
                     0: (  --standardmesh
-                        local mmesh = mobj.definitions[1]
+                        local mmesh = mobj.mesh
 
                         local nodes = #()
                         if mmesh.instanceId == 0 then (
@@ -519,8 +519,8 @@ rollout MafiaTools_4dsImport "" (   --module
                         nnode = nodes[1]
                     )
                     2: (  --singlemesh
-                        local mmesh = mobj.definitions[1]
-                        local mskins = mobj.definitions[2]
+                        local mmesh = mobj.mesh
+                        local mskins = mobj.skin
                         local nodes = CreateMesh mmesh filename unitscale materials
 
                         baseMesh = nodes[1]
@@ -535,9 +535,9 @@ rollout MafiaTools_4dsImport "" (   --module
                         --baseMesh.parent = nnode
                     )
                     3: (  --singlemorph
-                        local mmesh = mobj.definitions[1]
-                        local mskins = mobj.definitions[2]
-                        local mmorph = mobj.definitions[3]
+                        local mmesh = mobj.mesh
+                        local mskins = mobj.skin
+                        local mmorph = mobj.morph
                         local nodes = CreateMesh mmesh filename unitscale materials
                         CreateMorph mmorph mmesh nodes[1] unitscale
 
@@ -553,8 +553,8 @@ rollout MafiaTools_4dsImport "" (   --module
                         --baseMesh.parent = nnode
                     )
                     4: ( --billboard
-                        local mmesh = mobj.definitions[1]
-                        local mbillboard = mobj.definitions[2]
+                        local mmesh = mobj.mesh
+                        local mbillboard = mobj.billboard
                         local nodes = CreateMesh mmesh mobj.name unitscale materials
                         nnode = nodes[1]
                         CreateBillboard mbillboard nnode
@@ -565,40 +565,40 @@ rollout MafiaTools_4dsImport "" (   --module
                         --append buffer.normalNodes
                     )
                     5: ( --morph
-                        local mmesh = mobj.definitions[1]
-                        local mmorph = mobj.definitions[2]
+                        local mmesh = mobj.mesh
+                        local mmorph = mobj.morph
                         local nodes = CreateMesh mmesh mobj.name unitscale materials
                         nnode = nodes[1]
                         CreateMorph mmorph mmesh nnode unitscale
                     )
                     6: ( --glow
-                        local mglows = mobj.definitions[1]
+                        local mglows = mobj.glow
                         nnode = CreateGlow mglows mobj unitscale materials
                         Layers.AddTo nnode "Glows"
                     )
                     8: (  --mirror
-                        local mmirror = mobj.definitions[1]
+                        local mmirror = mobj.mirror
                         nnode = CreateMirror mmirror mobj unitscale
                     )
                 )
                 5: ( --sector
-                    local msector = mobj.definitions[1]
+                    local msector = mobj.sector
                     nnode = (CreateSector msector mobj unitscale)[1]
                     Layers.AddTo nnode "Sectors"
                 )
                 6: ( --dummy
-                    local mdummy = mobj.definitions[1]
+                    local mdummy = mobj.dummy
                     nnode = CreateDummy mdummy mobj unitscale
                     Layers.AddTo nnode "Dummies"
                 )
                 7: ( --target
-                    local mtarget = mobj.definitions[1]
+                    local mtarget = mobj.target
                     nnode = CreateTarget mtarget mobj unitscale
 
                     append buffer.targetBuffer (TObjPair mdefs:mtarget nodes:nnode)
                 )
                 10: ( --bone
-                    local mbone = mobj.definitions[1]
+                    local mbone = mobj.bone
                     nnode = CreateBone()
                     
                     -- format "%\n" mobj.name
