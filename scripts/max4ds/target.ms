@@ -47,7 +47,10 @@ replaceUI:true
         on TargetRoll open do (
             local items = #()
             for obj in nodes do (
-                append items obj.name
+                local name = 
+                    if isValidNode obj then obj.name
+                    else "<deleted>"                
+                append items name
             )
             lbNodes.items = items
         )
