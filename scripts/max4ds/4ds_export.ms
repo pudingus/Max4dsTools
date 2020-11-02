@@ -1456,7 +1456,7 @@ rollout MafiaTools_4dsExport "" (   --module
                 )
                 #sector: (
                     mobj.objectType = 5
-                    mobj.cullFlags = 125
+                    if gp == undefined then mobj.cullFlags = 125
                     mobj.sector = ExtractSector mnode unitscl
 
                     mobj.offset = [0,0,0]
