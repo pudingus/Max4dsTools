@@ -1128,7 +1128,28 @@ rollout MafiaTools_4dsExport "" (   --module
     )
     
     fn ExtractSplitMesh lodnode rootbone unitscl = (
+        local morphMod = util.GetModByClass lodnode Morpher
+        --local values
+        if morphMod != undefined then (
+            local numChannels = 
+                if WM3_NumberOfChannels == undefined then 100
+                else WM3_NumberOfChannels morphMod
+                
+            local values = for chanId = 1 to numChannels collect (
+                val = WM3_MC_GetValue morphMod chanId
+                WM3_MC_SetValue morphMod chanId 0.0
+                val
+            )
+        )
+        
         local lodmesh = copy lodnode.mesh
+        
+        if values != undefined then (
+            for chanId = 1 to values.count do (
+                WM3_MC_SetValue morphMod chanId values[chanId]
+            )
+        )
+        
         
         ---get unit scale and object offset transform
         local scl = scaleMatrix [unitscl,unitscl,unitscl]
@@ -1146,7 +1167,7 @@ rollout MafiaTools_4dsExport "" (   --module
         local weights = ExtractWeights lodnode
         
         
-        local morphMod = util.GetModByClass lodnode Morpher        
+             
         local layers = 
             if morphMod != undefined then
                 ExtractLayers morphMod lodmesh.numverts otrans unitscl
