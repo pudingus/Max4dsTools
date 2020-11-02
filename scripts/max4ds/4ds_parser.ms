@@ -645,8 +645,9 @@ rollout MafiaTools_4dsParser "" ( --module
     -------------------------------------------------
     
     struct TMorph (
-        layers = #(),   --array of TMorphLayer
         numTargets,    --num targets per layer
+        layers = #(),   --array of TMorphLayer
+        unknown,
         dmin,
         dmax,
         center,
@@ -674,7 +675,7 @@ rollout MafiaTools_4dsParser "" ( --module
 
         if numTargets > 0 then (
             local numLayers = ReadByte f #unsigned
-            ReadByte f #unsigned   --unknown
+            morph.unknown = ReadByte f #unsigned   --unknown
             for i = 1 to numLayers do   (
                 local layer = TMorphLayer()
                 local numVerts = ReadShort f #unsigned
