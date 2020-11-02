@@ -555,8 +555,16 @@ rollout MafiaTools_4dsImport "" (   --module
                     4: ( --billboard
                         local mmesh = mobj.mesh
                         local mbillboard = mobj.billboard
-                        local nodes = CreateMesh mmesh mobj.name unitscale materials
+                        local nodes = #()
+                        if mmesh.instanceId == 0 then (
+                            nodes = CreateMesh mmesh mobj.name unitscale materials
+                        )
+                        else (
+                            nodes[1] = instance buffer.mafiaNodes[mmesh.instanceId]
+                        )
+
                         nnode = nodes[1]
+                        
                         CreateBillboard mbillboard nnode
 
                         Layers.AddTo nnode "Billboards"
