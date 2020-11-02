@@ -424,7 +424,7 @@ rollout MafiaTools_4dsImport "" (   --module
     )
 
 
-    fn CreateSkins skinBuffer boneNodes  = (
+    fn CreateSkins skinBuffer boneNodes = (
         local maxver = (maxversion())[1]
         for pair in skinBuffer do (
             local mskins = pair.mdefs
@@ -493,6 +493,23 @@ rollout MafiaTools_4dsImport "" (   --module
         for boneNode in boneNodes do (
             boneNode.setBoneEnable true sliderTime
         )
+    )
+    
+    fn CreateOccluder ocl unitscale = (
+        local tr = TriMesh()
+        tr.numverts = ocl.verts.count
+        tr.numfaces = ocl.faces.count
+        
+        for vertId = 1 to tr.numverts do (
+            setVert tr vertId ocl.verts[vertId]
+        )
+        
+        for faceId = 1 to tr.numfaces do (
+            setFace tr faceId ocl.faces[faceId]
+            setFaceSmoothGroup tr faceId 0
+        )
+        
+        mesh mesh:tr wirecolor:(color 178 89 255)
     )
 
     fn CreateObjects mobjects filename unitscale materials = (
@@ -620,65 +637,73 @@ rollout MafiaTools_4dsImport "" (   --module
 
                     --format "% | objId: % | boneid: %\n" mobj.name i mbone.boneid
                 )
-            )
-
-            if mobj.cullFlags == 16 then (
-                Layers.AddTo nnode "Disabled"
-            )
-
-
-
-
-            ---basebone
-
-
-            local s = scaleMatrix mobj.scl
-            local r = mobj.rot as matrix3
-            local t = transMatrix (mobj.offset * unitscale)
-
-            if mobj.parentId > 0 then (
-                nnode.parent = buffer.mafiaNodes[mobj.parentId]
-                nnode.transform = s * r * t * nnode.parent.transform
-            )
-            else (
-                nnode.transform = s * r * t
-            )
-
-
-            if baseMesh != undefined then (
-                baseMesh.parent = nnode
-                baseMesh.transform = nnode.transform
-            )
-
-            nnode.name = mobj.name
-            append buffer.mafiaNodes nnode
-            --basebone
-
-
-            ---basemesh
-            local gp
-            if baseMesh != undefined then gp = GetMafParams baseMesh
-            else gp = GetMafParams nnode
-
-
-            --cant set objectType in CreateMesh for singlemeshes, singlemorphs...
-            gp.objectType = case mobj.objectType of (
-                1: case mobj.visualType of (
-                    6: "Dummy"
-                    4: "Billboard"
-                    8: "Mirror"
-                    default: "Mesh"
+                12: (
+                    local ocl = mobj.occluder
+                    nnode = CreateOccluder ocl unitscale
                 )
-                5: "Sector"
-                7: "Target"
-                default: "Dummy"
             )
+            
+            if nnode != undefined then (
+                
+            
 
-            gp.renderFlags = mobj.renderFlags
-            gp.renderFlags2 = mobj.renderFlags2
-            gp.cullFlags = mobj.cullFlags
-            if mobj.strParams != undefined then gp.strParams = mobj.strParams
+                if mobj.cullFlags == 16 then (
+                    Layers.AddTo nnode "Disabled"
+                )
 
+
+
+
+                ---basebone
+
+
+                local s = scaleMatrix mobj.scl
+                local r = mobj.rot as matrix3
+                local t = transMatrix (mobj.offset * unitscale)
+
+                if mobj.parentId > 0 then (
+                    nnode.parent = buffer.mafiaNodes[mobj.parentId]
+                    nnode.transform = s * r * t * nnode.parent.transform
+                )
+                else (
+                    nnode.transform = s * r * t
+                )
+
+
+                if baseMesh != undefined then (
+                    baseMesh.parent = nnode
+                    baseMesh.transform = nnode.transform
+                )
+
+                nnode.name = mobj.name
+                append buffer.mafiaNodes nnode
+                --basebone
+
+
+                ---basemesh
+                local gp
+                if baseMesh != undefined then gp = GetMafParams baseMesh
+                else gp = GetMafParams nnode
+
+
+                --cant set objectType in CreateMesh for singlemeshes, singlemorphs...
+                gp.objectType = case mobj.objectType of (
+                    1: case mobj.visualType of (
+                        6: "Dummy"
+                        4: "Billboard"
+                        8: "Mirror"
+                        default: "Mesh"
+                    )
+                    5: "Sector"
+                    7: "Target"
+                    default: "Dummy"
+                )
+
+                gp.renderFlags = mobj.renderFlags
+                gp.renderFlags2 = mobj.renderFlags2
+                gp.cullFlags = mobj.cullFlags
+                if mobj.strParams != undefined then gp.strParams = mobj.strParams
+            )
         )
 
         buffer
