@@ -490,73 +490,79 @@ rollout MafiaTools_4dsExport "" (   --module
     --     if the highest weight is < 0.98 and the second weight is descendant, the second is picked
     --     else the highest is picked
     --------------------------------------------------------------------------
-    fn ExtractWeights bskin lodnode = (
-        max modify mode
-        modPanel.setCurrentObject bskin
-
-        local xskin = skin_makeCache bskin
-
-        local skinBones = util.GetBoneNodes bskin
+    -- returns 'undefined' if it has no skin modifier or if the weight table is empty
+    fn ExtractWeights lodnode = (
+        local bskin = util.GetModByClass lodnode Skin 
+        local weights
         
-        -- for skin local boneid returns global boneid -> globalBoneIds[localId]
-        local globalBoneIds = GetGlobalBoneIds skinBones
+        if bskin != undefined then (
+            max modify mode
+            modPanel.setCurrentObject bskin
 
-        local weights = #()
-        local numverts = skinOps.GetNumberVertices bskin
-        
-        for vertId = 1 to numverts do (
-            local numWeights = skinOps.GetVertexWeightCount bskin vertId
+            local xskin = skin_makeCache bskin
 
-            local weight = 0.0
-            local boneid
-            if numWeights == 1 then (
-                weight = skinOps.GetVertexWeight bskin vertId 1
-                boneid = skin_getVertexWeightBoneId xskin vertId 1
-            )
-            else if numWeights > 1 then (
-                --sort weights by the highest weight
-                local vertBones = for n = 1 to numWeights collect (
-                    local w = skinOps.GetVertexWeight bskin vertId n
-                    local id = skin_getVertexWeightBoneId xskin vertId n
-                    VertBone boneid:id weight:w
+            local skinBones = util.GetBoneNodes bskin
+            
+            -- for skin local boneid returns global boneid -> globalBoneIds[localId]
+            local globalBoneIds = GetGlobalBoneIds skinBones
+
+            local numverts = skinOps.GetNumberVertices bskin
+            
+            weights = for vertId = 1 to numverts collect (
+                local numWeights = skinOps.GetVertexWeightCount bskin vertId
+
+                local weight = 0.0
+                local boneid
+                if numWeights == 1 then (
+                    weight = skinOps.GetVertexWeight bskin vertId 1
+                    boneid = skin_getVertexWeightBoneId xskin vertId 1
                 )
-                qsort vertBones CompareVertBones
+                else if numWeights > 1 then (
+                    --sort weights by the highest weight
+                    local vertBones = for n = 1 to numWeights collect (
+                        local w = skinOps.GetVertexWeight bskin vertId n
+                        local id = skin_getVertexWeightBoneId xskin vertId n
+                        VertBone boneid:id weight:w
+                    )
+                    qsort vertBones CompareVertBones
 
-                local weight1 = vertBones[1].weight
-                local weight2 = vertBones[2].weight
-                local boneid1 = vertBones[1].boneid
-                local boneid2 = vertBones[2].boneid
+                    local weight1 = vertBones[1].weight
+                    local weight2 = vertBones[2].weight
+                    local boneid1 = vertBones[1].boneid
+                    local boneid2 = vertBones[2].boneid
 
-                local sum = weight1 + weight2
-                weight = weight1 / sum
-                boneid = boneid1
-                
-                if weight < 0.98 then (
-                    local boneNode1 = skinBones[boneid1]
-                    local boneNode2 = skinBones[boneid2]
-                    if util.isDescendantOf boneNode2 boneNode1 then (
-                        weight = weight2 / sum
-                        boneid = boneid2
+                    local sum = weight1 + weight2
+                    weight = weight1 / sum
+                    boneid = boneid1
+                    
+                    if weight < 0.98 then (
+                        local boneNode1 = skinBones[boneid1]
+                        local boneNode2 = skinBones[boneid2]
+                        if util.isDescendantOf boneNode2 boneNode1 then (
+                            weight = weight2 / sum
+                            boneid = boneid2
+                        )
                     )
                 )
-            )
-            
-            local globalBoneId
-            if boneid == undefined then (
-                globalBoneId = 9999
-            )
-            else (
-                globalBoneId = globalBoneIds[boneid] - 1
-                if globalBoneId == 0 then globalBoneId = 9999
-            )               
+                
+                local globalBoneId
+                if boneid == undefined then (
+                    globalBoneId = 9999
+                )
+                else (
+                    globalBoneId = globalBoneIds[boneid] - 1
+                    if globalBoneId == 0 then globalBoneId = 9999
+                )               
 
-            wv = WeightedVertex()
-            wv.boneid = globalBoneId
-            wv.weight = weight
-            wv.vertid = vertId
+                wv = WeightedVertex()
+                wv.boneid = globalBoneId
+                wv.weight = weight
+                wv.vertid = vertId
 
-            append weights wv
+                wv
+            )
         )
+        if weights != undefined and weights.count == 0 then weights = undefined
         
         weights
     )
@@ -615,27 +621,17 @@ rollout MafiaTools_4dsExport "" (   --module
     )
     
     fn ExtractSkinLod splmesh rootbone unitscl = (
-        local weights = splmesh.weights 
-        local lodmesh = splmesh.mesh    
-        
-        --for global bone id, returns its parent global bone id, zero if no parent
-        local parentBoneIds = for boneNode in BONE_NODES collect (
-            local parentId
-            if boneNode.parent != undefined then (
-                parentId = findItem BONE_NODES boneNode.parent
-            )
-            if parentId == undefined then parentId = 0
-            parentId
-        )
+        local weights = splmesh.weights
+        local lodmesh = splmesh.mesh
     
         local size = 10.0 ^ 16    --this value is used in original 4ds files
         local mskin = parser.TSkin()
         mskin.numW0Verts = 0
         mskin.dmin = [size, size, size]
         mskin.dmax = [-size, -size, -size]
-
+        
         local groups = #()
-
+        
         for i = 2 to BONE_NODES.count do (
             local boneNode = BONE_NODES[i]
             local grp = parser.TSkinVertexGroup()
@@ -666,40 +662,54 @@ rollout MafiaTools_4dsExport "" (   --module
             append groups grp
         )
         
-        local vertId = 1
+        if weights != undefined then (
+            local vertId = 1
 
-        for weight in weights do (
-            if weight.boneid == 9999 then (   --this is at the end
-                mskin.numW0Verts += 1
-                
-                local vert = getVert lodmesh vertid
-                
-                MinMax mskin.dmin mskin.dmax vert
-            )
-            else (
-                local id = weight.boneid
-                local grp = groups[id]
-
-                local vert = (getVert lodmesh vertid) * grp.matrix
-                
-                MinMax grp.dmin grp.dmax vert
-
-                if weight.weight == 1.0 then grp.numW1Verts += 1
+            for weight in weights do (
+                if weight.boneid == 9999 then (   --this is at the end
+                    mskin.numW0Verts += 1
+                    
+                    local vert = getVert lodmesh vertid
+                    
+                    MinMax mskin.dmin mskin.dmax vert
+                )
                 else (
-                    append grp.weights weight.weight
+                    local id = weight.boneid
+                    local grp = groups[id]
+
+                    local vert = (getVert lodmesh vertid) * grp.matrix
+                    
+                    MinMax grp.dmin grp.dmax vert
+
+                    if weight.weight == 1.0 then grp.numW1Verts += 1
+                    else (
+                        append grp.weights weight.weight
+                    )
+                )
+                vertId += 1
+            )
+            
+                    
+            --for global bone id, returns its parent global bone id, zero if no parent
+            local parentBoneIds = for boneNode in BONE_NODES collect (
+                local parentId
+                if boneNode.parent != undefined then (
+                    parentId = findItem BONE_NODES boneNode.parent
+                )
+                if parentId == undefined then parentId = 0
+                parentId
+            )
+
+            for i = 1 to groups.count do (
+                local grp = groups[i]
+
+                if (grp.numW1Verts > 0) or (grp.weights.count > 0) then (
+                    grp.boneid = parentBoneIds[i+1]-1
                 )
             )
-            vertId += 1
         )
-
-        for i = 1 to groups.count do (
-            local grp = groups[i]
-
-            if (grp.numW1Verts > 0) or (grp.weights.count > 0) then (
-                grp.boneid = parentBoneIds[i+1]-1
-            )
-        )
-
+        else mskin.numW0Verts = lodmesh.numverts
+        
         mskin.vgroups = groups
         
         mskin
@@ -1131,12 +1141,9 @@ rollout MafiaTools_4dsExport "" (   --module
         
         -----------------------------
 
-        local faceVertNormals = ExtractNormals lodnode lodmesh
-        
-        local skinMod = util.GetModByClass lodnode Skin  
-        local weights = 
-            if skinMod != undefined then
-                ExtractWeights skinMod lodnode
+        local faceVertNormals = ExtractNormals lodnode lodmesh        
+         
+        local weights = ExtractWeights lodnode
         
         
         local morphMod = util.GetModByClass lodnode Morpher        
@@ -1162,7 +1169,7 @@ rollout MafiaTools_4dsExport "" (   --module
         ---if has skin
         
         local vertOrder
-        if skinMod != undefined then (
+        if weights != undefined then (
             vertOrder = SortWeights weights
             lodmesh = SortMesh lodmesh vertOrder
         )
@@ -1312,9 +1319,9 @@ rollout MafiaTools_4dsExport "" (   --module
             for lodnode in lodnodes do (        
                 local splmesh = ExtractSplitMesh lodnode rootbone unitscl
                 local mlod = ExtractLod lodnode splmesh.mesh
-                local skinlod = if splmesh.weights != undefined then ExtractSkinLod splmesh rootbone unitscl
+                local skinlod = if rootbone != undefined then ExtractSkinLod splmesh rootbone unitscl
                 local morphlod = if splmesh.layers != undefined then ExtractMorphLod splmesh
-                            
+
                 
                 local gp = custAttributes.get lodnode MafParams_def baseObject:false
                 if gp != undefined then (
@@ -1323,7 +1330,7 @@ rollout MafiaTools_4dsExport "" (   --module
                 else (
                     if lodnode == lodnodes[lodnodes.count] then mlod.distance = 0.0
                     else mlod.distance = prevDist + 100.0
-                )            
+                )
                 prevDist = mlod.distance
                 
                 
