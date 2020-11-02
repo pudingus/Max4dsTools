@@ -24,35 +24,56 @@ replaceUI:true
         listbox lbNodes "Targeting nodes" height:6
 
         on pbAdd picked val do (
-            append nodes val
-            local items = lbNodes.items
-            append items val.name
-            lbNodes.items = items
+            undo "Add targeting node" on (
+                append nodes val
+                local items = lbNodes.items
+                append items val.name
+                lbNodes.items = items
+            )
         )
 
 
         on btnRemove pressed do (
             local sel = lbNodes.selection
             if sel != 0 then (
-                local items = lbNodes.items
-                deleteItem items sel
-                deleteItem nodes sel
-                lbNodes.items = items
+                undo "Remove targeting node" on (
+                    local items = lbNodes.items
+                    deleteItem items sel
+                    deleteItem nodes sel
+                    lbNodes.items = items
 
-                if sel > items.count then lbNodes.selection = items.count
-                else lbNodes.selection = sel
+                    if sel > items.count then lbNodes.selection = items.count
+                    else lbNodes.selection = sel
+                )
             )
         )
-
-        on TargetRoll open do (
+        
+        fn Reload sender = (          
+            
             local items = #()
-            for obj in nodes do (
+            for obj in sender.nodes do (
                 local name = 
                     if isValidNode obj then obj.name
                     else "<deleted>"                
                 append items name
             )
-            lbNodes.items = items
+            sender.TargetRoll.lbNodes.items = items
+        )
+
+        on TargetRoll open do (
+            Reload this
+            
+            local events = ::Max4ds_Events
+            
+            events.AddListener events.SceneUndo YoYo this
+            events.AddListener events.SceneRedo YoYo this
+        )
+        
+        on TargetRoll close do (        
+            local events = ::Max4ds_Events
+                
+            events.RemoveListener events.SceneUndo YoYo
+            events.RemoveListener events.SceneRedo YoYo
         )
 
     )

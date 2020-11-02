@@ -35,6 +35,8 @@
     DisableScript file
     DisableScript file2
     
+    filein "events.ms"
+    
         
     --scriptedPlugins
     filein "material.ms"
@@ -65,5 +67,4 @@ fn PostReset = (
     ::MafiaTools_ImpExpSettings.useImportedFilename = false
     ::MafiaTools_ImpExpSettings.allow5ds = false
     ::ImpExp.cbAllow5ds.checked = false
-    
 )
