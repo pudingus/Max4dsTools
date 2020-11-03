@@ -33,15 +33,75 @@ rollout MafiaTools_4dsParser "" ( --module
     
     -------------------------------------------------
     
+    
+    fn ReadU8 f = (
+        local result = ReadByte f #unsigned
+        if result == undefined then throw "Unexpected end of file. Read 'undefined'"
+        else result
+    )
+    
+    fn ReadU16 f = (
+        local result = ReadShort f #unsigned
+        if result == undefined then throw "Unexpected end of file. Read 'undefined'"
+        else result
+    )
+    
+    fn ReadU32 f = (
+        local result = ReadLong f #unsigned
+        if result == undefined then throw "Unexpected end of file. Read 'undefined'"
+        else result
+    )
+    
+    fn ReadU64 f = (
+        local result = ReadLongLong f #unsigned
+        if result == undefined then throw "Unexpected end of file. Read 'undefined'"
+        else result
+    )
+    
+    fn ReadFloatSafe f = (
+        local result = ReadFloat f
+        if result == undefined then throw "Unexpected end of file. Read 'undefined'"
+        else result
+    )
+    
+    
+    fn WriteU8 f val = (
+        if val > 255 or val < 0 then throw "Write error. Value out of U8 range! Value: " val
+        local result = WriteByte f val
+        if result != true then throw "Unknown write error"
+        else result
+    )
+    
+    fn WriteU16 f val = (
+        if val > 65535 or val < 0 then throw "Write error. Value out of U16 range! Value: " val
+        local result = WriteShort f val
+        if result != true then throw "Unknown write error"
+        else result
+    )
+    
+    fn WriteU32 f val = (
+        local result = WriteLong f val
+        if result != true then throw "Unknown write error"
+        else result
+    )
+    
+    fn WriteU64 f val = (
+        local result = WriteLongLong f val
+        if result != true then throw "Unknown write error"
+        else result
+    )
+    
+    -------------------------------------------------
+    
     fn ReadText f = (
-        local len = ReadByte f #unsigned
+        local len = ReadU8 f
 
         local result
         if len > 0 then (
             local fmt = "%"
             local ss = StringStream ""
             for i = 1 to len do (
-                format fmt (bit.intAsChar(ReadByte f #unsigned)) to:ss
+                format fmt (bit.intAsChar(ReadU8 f)) to:ss
             )
             result = ss as string
         )
@@ -54,12 +114,11 @@ rollout MafiaTools_4dsParser "" ( --module
 
         if count > 255 then (
             count = 255
-            --messageBox ("String '" + txt + "' is over the maximum of 255 characters!") icon:#warning
-            format "String '%' is over the maximum of 255 characters!\n" txt
+            throw "String is over the maximum of 255 characters: " txt
         )
-        WriteByte f count #unsigned
+        WriteU8 f count
         for i = 1 to count do (
-            WriteByte f (bit.charasint txt[i])
+            WriteU8 f (bit.charasint txt[i])
         )
 
         count
@@ -68,9 +127,9 @@ rollout MafiaTools_4dsParser "" ( --module
     -------------------------------------------------
 
     fn ReadPoint3 f = (
-        x = ReadFloat f
-        y = ReadFloat f
-        z = ReadFloat f
+        x = ReadFloatSafe f
+        y = ReadFloatSafe f
+        z = ReadFloatSafe f
         [x, z, y]
     )    
     
@@ -83,9 +142,9 @@ rollout MafiaTools_4dsParser "" ( --module
     -------------------------------------------------
 
     fn ReadColor f = (
-        r = (ReadFloat f) * 255
-        g = (ReadFloat f) * 255
-        b = (ReadFloat f) * 255
+        r = (ReadFloatSafe f) * 255
+        g = (ReadFloatSafe f) * 255
+        b = (ReadFloatSafe f) * 255
         clr = color r g b
         clr
     )
@@ -99,19 +158,19 @@ rollout MafiaTools_4dsParser "" ( --module
     -------------------------------------------------
     
     fn ReadQuatWXYZ f = (
-        rw = ReadFloat f
-        rx = ReadFloat f
-        ry = ReadFloat f
-        rz = ReadFloat f
+        rw = ReadFloatSafe f
+        rx = ReadFloatSafe f
+        ry = ReadFloatSafe f
+        rz = ReadFloatSafe f
         qt = quat rx rz ry rw
         inverse qt
     )
     
     fn ReadQuatXYZW f = (
-        rx = ReadFloat f
-        ry = ReadFloat f
-        rz = ReadFloat f
-        rw = ReadFloat f
+        rx = ReadFloatSafe f
+        ry = ReadFloatSafe f
+        rz = ReadFloatSafe f
+        rw = ReadFloatSafe f
         qt = quat rx rz ry rw
         inverse qt
     )
@@ -126,9 +185,9 @@ rollout MafiaTools_4dsParser "" ( --module
     -------------------------------------------------
     
     fn ReadFace f = (
-        a = ReadShort f #unsigned
-        b = ReadShort f #unsigned
-        c = ReadShort f #unsigned
+        a = ReadU16 f
+        b = ReadU16 f
+        c = ReadU16 f
         [a+1, c+1, b+1]       --face vertex indexes are 1-based in 3ds Max
     )
     
@@ -136,16 +195,16 @@ rollout MafiaTools_4dsParser "" ( --module
         a = (face[1] - 1) as integer  --vertices are indexed from 0 in 4ds, from 1 in max
         b = (face[3] - 1) as integer
         c = (face[2] - 1) as integer
-        WriteShort f a #unsigned
-        WriteShort f b #unsigned
-        WriteShort f c #unsigned
+        WriteU16 f a
+        WriteU16 f b
+        WriteU16 f c
     )
 
     -------------------------------------------------
     
     fn ReadUV f = (
-        x = ReadFloat f
-        y = ReadFloat f
+        x = ReadFloatSafe f
+        y = ReadFloatSafe f
         [x, 1-y, 0]
     )
     
@@ -160,7 +219,7 @@ rollout MafiaTools_4dsParser "" ( --module
         local mtr = #()
         for m = 1 to 4 do (
             mtr[m] = #()
-            for n = 1 to 4 do mtr[m][n] = ReadFloat f
+            for n = 1 to 4 do mtr[m][n] = ReadFloatSafe f
         )
 
         local row1 = [mtr[1][1], mtr[1][3], mtr[1][2]]
@@ -194,11 +253,11 @@ rollout MafiaTools_4dsParser "" ( --module
     fn Read4ds f = (
         local m4ds
         
-        local fourcc = ReadLong f #unsigned
+        local fourcc = ReadU32 f
         if fourcc != 5456948 then return undefined
         
-        local version = ReadShort f #unsigned
-        local filetime = ReadLongLong f #unsigned
+        local version = ReadU16 f
+        local filetime = ReadU64 f
         version = 
             if version == 29 or version == 27 then #mafia
             else if version == 41 then #hd2
@@ -206,42 +265,43 @@ rollout MafiaTools_4dsParser "" ( --module
         
         if version == #mafia or version == #chameleon then (
             m4ds = T4ds()
-            local numMats = ReadShort f #unsigned
+            local numMats = ReadU16 f
             for i = 1 to numMats do (
+                --format "%: " i
                 append m4ds.materials (ReadMaterial f version)
             )
 
-            local numObjects = ReadShort f #unsigned
+            local numObjects = ReadU16 f
             for i = 1 to numObjects do (
-                format "%: " i
+                --format "%: " i
                 append m4ds.objects (ReadObject f version)
             )
             
-            m4ds.allow5ds = (ReadByte f #unsigned) > 0
+            m4ds.allow5ds = (ReadU8 f) > 0
         )
 
         m4ds
     )
     
     fn Write4ds f m4ds = (
-        WriteLong f 5456948     -- 4DS
-        WriteShort f 29         --format version
+        WriteU32 f 5456948     -- 4DS
+        WriteU16 f 29         --format version
         
         local DateTime = dotNetClass "DateTime"
         local filetime = DateTime.UtcNow.ToFiletime()        
-        WriteLongLong f filetime        
+        WriteU64 f filetime        
 
-        WriteShort f m4ds.materials.count
+        WriteU16 f m4ds.materials.count
         for mmat in m4ds.materials do (
             WriteMaterial f mmat
         )
 
-        WriteShort f m4ds.objects.count
+        WriteU16 f m4ds.objects.count
         for mobj in m4ds.objects do (
             WriteObject f mobj
         )        
 
-        WriteByte f (if m4ds.allow5ds then 1 else 0)
+        WriteU8 f (if m4ds.allow5ds then 1 else 0)
     )
 
     -------------------------------------------------    
@@ -264,7 +324,7 @@ rollout MafiaTools_4dsParser "" ( --module
     
     fn ReadMaterial f version = (
         local mmat = TMaterial()
-        mmat.flags = ReadLong f #unsigned
+        mmat.flags = ReadU32 f
         
         if version == #mafia then (
             mmat.ambient = ReadColor f
@@ -280,31 +340,34 @@ rollout MafiaTools_4dsParser "" ( --module
             ReadLong f
             mmat.emission = ReadColor f
             ReadLong f
-            mmat.specularity = ReadFloat f
+            mmat.specularity = ReadFloatSafe f
         )
         
-        mmat.opacity = ReadFloat f
+        mmat.opacity = ReadFloatSafe f
         if bit.get mmat.flags 20 then (  --env map enabled
-            mmat.envMapAmount = ReadFloat f
+            mmat.envMapAmount = ReadFloatSafe f
             mmat.envMapName = ReadText f
         )
         mmat.diffMapName = ReadText f
-        if (mmat.diffMapName != undefined) and (bit.get mmat.flags 31) then (
+        if (mmat.diffMapName != undefined) and (bit.get mmat.flags 31) and not (bit.get mmat.flags 25) then (
             mmat.alphaMapName = ReadText f
         )
 
         if bit.get mmat.flags 27 then (
-            mmat.animFrames = ReadLong f #unsigned
-            ReadShort f #unsigned
-            mmat.animPeriod = ReadLong f #unsigned
-            ReadLong f #unsigned
-            ReadLong f #unsigned
+            mmat.animFrames = ReadU32 f
+            ReadU16 f
+            mmat.animPeriod = ReadU32 f
+            ReadU32 f
+            ReadU32 f
         )
+        
+        --format "mat diff: %, env: %, alpha: % \n" mmat.diffMapName mmat.envMapName mmat.alphaMapName 
+        
         mmat
     )
     
     fn WriteMaterial f mmat = (
-        WriteLong f mmat.flags
+        WriteU32 f mmat.flags
         WriteColor f mmat.ambient
         WriteColor f mmat.diffuse
         WriteColor f mmat.emission
@@ -321,11 +384,11 @@ rollout MafiaTools_4dsParser "" ( --module
         )
 
         if bit.get mmat.flags 27 then (     -- animated
-            WriteLong f mmat.animFrames
-            WriteShort f 0
-            WriteLong f mmat.animPeriod
-            WriteLong f 0
-            WriteLong f 0
+            WriteU32 f mmat.animFrames
+            WriteU16 f 0
+            WriteU32 f mmat.animPeriod
+            WriteU32 f 0
+            WriteU32 f 0
         )
 
     )
@@ -388,14 +451,14 @@ rollout MafiaTools_4dsParser "" ( --module
     fn ReadObject f version = (
         local mobj = TObject()
 
-        mobj.objectType = ReadByte f #unsigned
+        mobj.objectType = ReadU8 f
 
         if mobj.objectType == 1 then (  --visual object
-            mobj.visualType = ReadByte f #unsigned
-            mobj.renderFlags = ReadByte f #unsigned
-            mobj.renderFlags2 = ReadByte f #unsigned
+            mobj.visualType = ReadU8 f
+            mobj.renderFlags = ReadU8 f
+            mobj.renderFlags2 = ReadU8 f
         )
-        mobj.parentId = ReadShort f #unsigned
+        mobj.parentId = ReadU16 f
         if version == #mafia then (
             mobj.offset = ReadPoint3 f
             mobj.scl = ReadPoint3 f
@@ -409,23 +472,23 @@ rollout MafiaTools_4dsParser "" ( --module
         
         if version == #hd2 then ReadLong f
 
-        mobj.cullFlags = ReadByte f #unsigned
+        mobj.cullFlags = ReadU8 f
         mobj.name = ReadText f
         mobj.strParams = ReadText f
         
-        format "%, type: %\n" mobj.name (mobj.getType())
+        --format "%, type: %\n" mobj.name (mobj.getType())
 
         case mobj.objectType of (
             1: case mobj.visualType of (
                 0: mobj.mesh = ReadMesh f version  --standardmesh
                 2: (  --singlemesh
                     mobj.mesh = ReadMesh f version
-                    mobj.skin = ReadSkin f mobj.mesh.lods.count
+                    mobj.skin = ReadSkin f mobj.mesh.lods.count version
                 )
                 3: (  --singlemorph
                     mobj.mesh = ReadMesh f version
-                    mobj.skin = ReadSkin f mobj.mesh.lods.count
-                    mobj.morph = ReadMorph f
+                    mobj.skin = ReadSkin f mobj.mesh.lods.count version
+                    mobj.morph = ReadMorph f version
                 )
                 4: (
                     mobj.mesh = ReadMesh f version
@@ -433,35 +496,37 @@ rollout MafiaTools_4dsParser "" ( --module
                 )
                 5: ( --morph
                     mobj.mesh = ReadMesh f version
-                    mobj.morph = ReadMorph f
+                    mobj.morph = ReadMorph f version
                 )
                 6: mobj.glow = ReadGlow f version
                 8: mobj.mirror = ReadMirror f
+                default: throw "unknown visual type!"
             )
             5: mobj.sector = ReadSector f version
             6: mobj.dummy = ReadDummy f
             7: mobj.target = ReadTarget f
             10: mobj.bone = ReadBone f version
             12: mobj.occluder = ReadOccluder f
+            default: throw "unknown object type!"
         )
 
         mobj
     )
     
     fn WriteObject f mobj = (
-        WriteByte f mobj.objectType
+        WriteU8 f mobj.objectType
 
         if mobj.objectType == 1 then (
-            WriteByte f mobj.visualType
-            WriteByte f mobj.renderFlags
-            WriteByte f mobj.renderFlags2
+            WriteU8 f mobj.visualType
+            WriteU8 f mobj.renderFlags
+            WriteU8 f mobj.renderFlags2
         )
 
-        WriteShort f mobj.parentId
+        WriteU16 f mobj.parentId
         WritePoint3 f mobj.offset
         WritePoint3 f mobj.scl
         WriteQuat f mobj.rot
-        WriteByte f mobj.cullFlags
+        WriteU8 f mobj.cullFlags
         WriteText f mobj.name
         WriteText f mobj.strParams
 
@@ -517,21 +582,21 @@ rollout MafiaTools_4dsParser "" ( --module
     
     fn ReadMesh f version = (
         local mmesh = TMesh()
-        mmesh.instanceId = ReadShort f #unsigned
+        mmesh.instanceId = ReadU16 f
 
         if mmesh.instanceId == 0 then (
-            local numlods = ReadByte f #unsigned
+            local numlods = ReadU8 f
             struct TVert (pos, normal, uv)
             
             for lodId = 1 to numlods do (
                 local mlod = TLod()
-                mlod.distance = ReadFloat f
+                mlod.distance = ReadFloatSafe f
                 
                 if version == #hd2 or version == #chameleon then (
-                    local numExtraData = ReadLong f #unsigned
+                    local numExtraData = ReadU32 f
                 )
                 
-                local numVerts = ReadShort f #unsigned                
+                local numVerts = ReadU16 f                
                 
                 local verts = for i = 1 to numVerts collect (
                     local vert = ReadPoint3 f
@@ -542,22 +607,22 @@ rollout MafiaTools_4dsParser "" ( --module
                 )
                 
                 if version == #hd2 or version == #chameleon then ( 
-                    for i = 1 to numExtraData * numVerts do ReadFloat f
+                    for i = 1 to numExtraData * numVerts do ReadFloatSafe f
                 )
                 
                 local faces = #()
                 local prevTotal = 0
-                local numFacegroups = ReadByte f #unsigned
+                local numFacegroups = ReadU8 f
                 for i = 1 to numFacegroups do (
                     local fcgrp = TFacegroup()
-                    local grpNumFaces = ReadShort f #unsigned   --number of faces in this facegroup                                         
+                    local grpNumFaces = ReadU16 f   --number of faces in this facegroup                                         
                     
                     for j = 1 to grpNumFaces do (                                                        
                         append faces (ReadFace f)     
                         local faceId = prevTotal + j                       
                         append fcgrp.faceIds faceId
                     )
-                    fcgrp.matId = ReadShort f #unsigned
+                    fcgrp.matId = ReadU16 f
 
                     append mlod.facegroups fcgrp    
                     prevTotal = prevTotal + grpNumFaces
@@ -590,13 +655,13 @@ rollout MafiaTools_4dsParser "" ( --module
     )
 
     fn WriteMesh f mmesh = (
-        WriteShort f mmesh.instanceId
+        WriteU16 f mmesh.instanceId
 
         if mmesh.instanceId == 0 then (
-            WriteByte f mmesh.lods.count
+            WriteU8 f mmesh.lods.count
             for lod in mmesh.lods do (
                 WriteFloat f lod.distance
-                WriteShort f lod.mesh.numverts
+                WriteU16 f lod.mesh.numverts
 
                 for i = 1 to lod.mesh.numverts do (
                     WritePoint3 f (getVert lod.mesh i)
@@ -604,13 +669,13 @@ rollout MafiaTools_4dsParser "" ( --module
                     WriteUV f (getTVert lod.mesh i)
                 )
 
-                WriteByte f lod.facegroups.count
+                WriteU8 f lod.facegroups.count
                 for facegroup in lod.facegroups do (
-                    WriteShort f facegroup.faceIds.count
+                    WriteU16 f facegroup.faceIds.count
                     for faceId in facegroup.faceIds do (
                         WriteFace f (getFace lod.mesh faceId)
                     )
-                    WriteShort f (facegroup.matId - 1)
+                    WriteU16 f (facegroup.matId - 1)
                 )
             )
         )
@@ -640,8 +705,8 @@ rollout MafiaTools_4dsParser "" ( --module
         for l = 1 to numLods do (
             local mskin = TSkin()
 
-            local numGroups = ReadByte f #unsigned
-            mskin.numW0Verts = ReadLong f #unsigned
+            local numGroups = ReadU8 f
+            mskin.numW0Verts = ReadU32 f
 
             mskin.dmin = ReadPoint3 f
             mskin.dmax = ReadPoint3 f
@@ -650,15 +715,15 @@ rollout MafiaTools_4dsParser "" ( --module
                 local vgroup = TSkinVertexGroup()
                 vgroup.matrix = ReadMatrix f
 
-                vgroup.numW1Verts = ReadLong f #unsigned
-                local numWeights = ReadLong f #unsigned
-                vgroup.boneId = ReadLong f #unsigned
+                vgroup.numW1Verts = ReadU32 f
+                local numWeights = ReadU32 f
+                vgroup.boneId = ReadU32 f
 
                 vgroup.dmin = ReadPoint3 f
                 vgroup.dmax = ReadPoint3 f
 
                 for w = 1 to numWeights do (
-                    append vgroup.weights (ReadFloat f)
+                    append vgroup.weights (ReadFloatSafe f)
                 )
                 append mskin.vgroups vgroup
             )
@@ -692,12 +757,12 @@ rollout MafiaTools_4dsParser "" ( --module
     
     fn ReadByteArray f count = (
         for i = 1 to count collect (
-            ReadByte f #unsigned
+            ReadU8 f
         )
     )
     
     fn ReadSkinChameleon f numlods = (
-        local numGroups = ReadByte f #unsigned
+        local numGroups = ReadU8 f
         local dmin = ReadPoint3 f
         local dmax = ReadPoint3 f
         local parentIds = ReadByteArray f numGroups    
@@ -713,10 +778,10 @@ rollout MafiaTools_4dsParser "" ( --module
         )
         
         for i = 1 to numlods do (
-            local numWeights = ReadLong f #unsigned
+            local numWeights = ReadU32 f
             for j = 1 to numWeights do (
-                local boneId = ReadByte f #unsigned
-                local weight = ReadByte f #unsigned
+                local boneId = ReadU8 f
+                local weight = ReadU8 f
             )
         )
     )
@@ -732,17 +797,17 @@ rollout MafiaTools_4dsParser "" ( --module
 
     fn WriteSkin f mskins = (
         for mskin in mskins do (
-            WriteByte f mskin.vgroups.count
-            WriteLong f mskin.numW0Verts
+            WriteU8 f mskin.vgroups.count
+            WriteU32 f mskin.numW0Verts
             WritePoint3 f mskin.dmin
             WritePoint3 f mskin.dmax
 
             for grp in mskin.vgroups do (
                 WriteMatrix f grp.matrix
 
-                WriteLong f grp.numW1Verts
-                WriteLong f grp.weights.count
-                WriteLong f grp.boneId
+                WriteU32 f grp.numW1Verts
+                WriteU32 f grp.weights.count
+                WriteU32 f grp.boneId
                 WritePoint3 f grp.dmin
                 WritePoint3 f grp.dmax
 
@@ -779,15 +844,15 @@ rollout MafiaTools_4dsParser "" ( --module
     
     fn ReadMorph f version = (
         local morph = TMorph()
-        local numTargets = ReadByte f #unsigned
+        local numTargets = ReadU8 f
         morph.numTargets = numTargets
 
         if numTargets > 0 then (
-            local numLayers = ReadByte f #unsigned
-            morph.unknown = ReadByte f #unsigned   --unknown
+            local numLayers = ReadU8 f
+            morph.unknown = ReadU8 f   --unknown
             for i = 1 to numLayers do   (
                 local layer = TMorphLayer()
-                local numVerts = ReadShort f #unsigned
+                local numVerts = ReadU16 f
 
                 for v = 1 to numVerts do (
                     local vert = TMorphVertex()
@@ -801,10 +866,10 @@ rollout MafiaTools_4dsParser "" ( --module
                     append layer.vertices vert
                 )
 
-                if (numTargets * numVerts) > 0 then ReadByte f #unsigned  --unknown
+                if (numTargets * numVerts) > 0 then ReadU8 f  --unknown
 
                 for v = 1 to numVerts do (
-                    layer.vertices[v].index = (ReadShort f #unsigned) + 1
+                    layer.vertices[v].index = (ReadU16 f) + 1
                 )
 
                 append morph.layers layer
@@ -813,22 +878,22 @@ rollout MafiaTools_4dsParser "" ( --module
             morph.dmin = ReadPoint3 f
             morph.dmax = ReadPoint3 f
             morph.center = ReadPoint3 f
-            morph.dist = ReadFloat f
+            morph.dist = ReadFloatSafe f
             
-            if version == #hd2 then (ReadFloat f; ReadFloat f)
+            if version == #hd2 then (ReadFloatSafe f; ReadFloatSafe f)
         )
         morph
     )
     
     fn WriteMorph f morph = (
-        WriteByte f morph.numTargets
+        WriteU8 f morph.numTargets
         
         if morph.numTargets > 0 then (
-            WriteByte f morph.layers.count
-            WriteByte f 1 --unknown
+            WriteU8 f morph.layers.count
+            WriteU8 f 1 --unknown
             
             for layer in morph.layers do (
-                WriteShort f layer.vertices.count
+                WriteU16 f layer.vertices.count
                 for vert in layer.vertices do (
                     if vert.points.count != morph.numTargets then throw "numTargets and points.count mismatch"
                     for point in vert.points do (
@@ -836,10 +901,10 @@ rollout MafiaTools_4dsParser "" ( --module
                         WritePoint3 f point.normal
                     )
                 )
-                if layer.vertices.count * morph.numTargets > 0 do WriteByte f 1 --unknown
+                if layer.vertices.count * morph.numTargets > 0 do WriteU8 f 1 --unknown
                 
                 for vert in layer.vertices do (
-                    WriteShort f (vert.index - 1)
+                    WriteU16 f (vert.index - 1)
                 )
             )
             
@@ -859,15 +924,15 @@ rollout MafiaTools_4dsParser "" ( --module
     
     fn ReadBillboard f = (
         local mbillboard = TBillboard()
-        mbillboard.rotAxis = (ReadLong f #unsigned) + 1
-        mbillboard.rotMode = (ReadByte f #unsigned) + 1
+        mbillboard.rotAxis = (ReadU32 f) + 1
+        mbillboard.rotMode = (ReadU8 f) + 1
 
         mbillboard
     )
     
     fn WriteBillboard f mbillboard = (
-        WriteByte f (mbillboard.rotAxis - 1)
-        WriteLong f (mbillboard.rotMode - 1)
+        WriteU8 f (mbillboard.rotAxis - 1)
+        WriteU32 f (mbillboard.rotMode - 1)
     )
     
     -------------------------------------------------    
@@ -882,13 +947,13 @@ rollout MafiaTools_4dsParser "" ( --module
     
     fn ReadGlow f version = (
         local glows = #()
-        local numGlows = ReadByte f #unsigned
+        local numGlows = ReadU8 f
 
         for i = 1 to numGlows do (
             local glow = TGlow()
-            glow.position = ReadFloat f
-            if version != #mafia do ReadFloat f
-            glow.matId = ReadShort f #unsigned
+            glow.position = ReadFloatSafe f
+            if version != #mafia do ReadFloatSafe f
+            glow.matId = ReadU16 f
 
             append glows glow
         )
@@ -897,10 +962,10 @@ rollout MafiaTools_4dsParser "" ( --module
     )
 
     fn WriteGlow f mglows = (
-        WriteByte f mglows.count
+        WriteU8 f mglows.count
         for mglow in mglows do (
             WriteFloat f mglow.position
-            WriteShort f mglow.matId
+            WriteU16 f mglow.matId
             if mglow.matId == 0 do throw "TGlow.matId cannot be zero"
         )
     )
@@ -923,15 +988,15 @@ rollout MafiaTools_4dsParser "" ( --module
         mMirror.dmin = ReadPoint3 f
         mMirror.dmax = ReadPoint3 f      
 
-        for i = 1 to 4 do mMirror.unknown[i] = ReadFloat f        
+        for i = 1 to 4 do mMirror.unknown[i] = ReadFloatSafe f        
         
         mMirror.matrix = ReadMatrix f        
 
         mMirror.backColor = ReadColor f
-        mMirror.drawDistance = ReadFloat f
+        mMirror.drawDistance = ReadFloatSafe f
 
-        local numVerts = ReadLong f #unsigned
-        local numFaces = ReadLong f #unsigned
+        local numVerts = ReadU32 f
+        local numFaces = ReadU32 f
 
         local tr = TriMesh()
         setNumVerts tr numVerts
@@ -963,8 +1028,8 @@ rollout MafiaTools_4dsParser "" ( --module
         WriteFloat f mmirror.drawDistance
         
         local tr = mmirror.mesh
-        WriteLong f tr.numverts
-        WriteLong f tr.numfaces
+        WriteU32 f tr.numverts
+        WriteU32 f tr.numfaces
         
         for i = 1 to tr.numverts do (
             local vert = getVert tr i
@@ -1015,11 +1080,11 @@ rollout MafiaTools_4dsParser "" ( --module
     fn ReadSector f version = (
         local msector = TSector()
 
-        ReadLong f #unsigned --always 2049
-        ReadLong f #unsigned --always 0
+        ReadU32 f --always 2049
+        ReadU32 f --always 0
 
-        local numVerts = ReadLong f #unsigned
-        local numFaces = ReadLong f #unsigned
+        local numVerts = ReadU32 f
+        local numFaces = ReadU32 f
 
         local tr = TriMesh()
         setNumVerts tr numVerts
@@ -1047,14 +1112,14 @@ rollout MafiaTools_4dsParser "" ( --module
             msector.dmax = ReadPoint3 f
         )
 
-        local numPortals = ReadByte f #unsigned
+        local numPortals = ReadU8 f
 
         for i = 1 to numPortals do (
             local mportal = TPortal()
-            local numVerts = ReadByte f #unsigned
-            for j = 1 to 5 do ReadLong f #unsigned
-            mportal.nearRange = ReadFloat f
-            mportal.farRange = ReadFloat f
+            local numVerts = ReadU8 f
+            for j = 1 to 5 do ReadU32 f
+            mportal.nearRange = ReadFloatSafe f
+            mportal.farRange = ReadFloatSafe f
             
             if version != #mafia then ReadLong f
 
@@ -1070,13 +1135,13 @@ rollout MafiaTools_4dsParser "" ( --module
     )
     
     fn WriteSector f sector = (
-        WriteLong f 2049    --unknown
-        WriteLong f 0       --unknown
+        WriteU32 f 2049    --unknown
+        WriteU32 f 0       --unknown
 
         local smesh = sector.mesh
 
-        WriteLong f smesh.numVerts
-        WriteLong f smesh.numFaces
+        WriteU32 f smesh.numVerts
+        WriteU32 f smesh.numFaces
 
         for i = 1 to smesh.numVerts do (
             local vert = getVert smesh i
@@ -1090,12 +1155,12 @@ rollout MafiaTools_4dsParser "" ( --module
 
         WritePoint3 f sector.dmin
         WritePoint3 f sector.dmax
-        WriteByte f sector.portals.count
+        WriteU8 f sector.portals.count
 
         for portal in sector.portals do (
-            WriteByte f portal.verts.count
-            WriteLong f 4   --unknown
-            for i = 1 to 4 do WriteLong f 0 --unknown
+            WriteU8 f portal.verts.count
+            WriteU32 f 4   --unknown
+            for i = 1 to 4 do WriteU32 f 0 --unknown
 
             WriteFloat f portal.nearRange
             WriteFloat f portal.farRange
@@ -1117,23 +1182,23 @@ rollout MafiaTools_4dsParser "" ( --module
     fn ReadTarget f = (
         local mTarget = TTarget()
 
-        mTarget.unk1 = ReadByte f #unsigned
-        mTarget.unk2 = ReadByte f #unsigned
-        local numLinks = ReadByte f #unsigned
+        mTarget.unk1 = ReadU8 f
+        mTarget.unk2 = ReadU8 f
+        local numLinks = ReadU8 f
 
         for i = 1 to numLinks do (
-            append mTarget.linkIds (ReadShort f #unsigned)
+            append mTarget.linkIds (ReadU16 f)
         )
 
         mTarget
     )
 
     fn WriteTarget f mtarget = (
-        WriteShort f 0
-        WriteByte f mtarget.linkIds.count
+        WriteU16 f 0
+        WriteU8 f mtarget.linkIds.count
 
         for linkId in mtarget.linkIds do (
-            WriteShort f linkId
+            WriteU16 f linkId
         )
     )
     
@@ -1148,14 +1213,14 @@ rollout MafiaTools_4dsParser "" ( --module
         local mbone = TBone()
         if version == #mafia do 
             mbone.matrix = ReadMatrix f
-        mbone.boneId = ReadLong f #unsigned
+        mbone.boneId = ReadU32 f
         mbone
     )
 
     fn WriteBone f mbone = (
         WriteMatrix f mbone.matrix
 
-        WriteLong f mbone.boneId
+        WriteU32 f mbone.boneId
     )   
     
     -------------------------------------------------
@@ -1178,8 +1243,8 @@ rollout MafiaTools_4dsParser "" ( --module
     )
     
     fn ReadOccluder f = (
-        local numVerts = ReadLong f #unsigned
-        local numFaces = ReadLong f #unsigned
+        local numVerts = ReadU32 f
+        local numFaces = ReadU32 f
         
         local verts = ReadPoint3Array f numVerts
         local faces = ReadFaceArray f numFaces
