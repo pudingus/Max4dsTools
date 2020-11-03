@@ -213,7 +213,7 @@ rollout MafiaTools_4dsParser "" ( --module
 
             local numObjects = ReadShort f #unsigned
             for i = 1 to numObjects do (
-                --format "%: " i
+                format "%: " i
                 append m4ds.objects (ReadObject f version)
             )
             
@@ -413,7 +413,7 @@ rollout MafiaTools_4dsParser "" ( --module
         mobj.name = ReadText f
         mobj.strParams = ReadText f
         
-        --format "%, type: %\n" mobj.name (mobj.getType())
+        format "%, type: %\n" mobj.name (mobj.getType())
 
         case mobj.objectType of (
             1: case mobj.visualType of (
@@ -626,7 +626,7 @@ rollout MafiaTools_4dsParser "" ( --module
     )
     
     struct TSkinVertexGroup (
-        matrix = #(),  --4x4 matrix
+        matrix,
         numW1Verts,
         boneId,   -- 0-based, TODO: make this 1-based to be consistent
         dmin,
@@ -634,8 +634,7 @@ rollout MafiaTools_4dsParser "" ( --module
         weights = #()   --array of float
     )
     
-    fn ReadSkin f numlods = (
-
+    fn ReadSkinMafia f numlods = (
         local mskins = #()
 
         for l = 1 to numLods do (
@@ -667,6 +666,68 @@ rollout MafiaTools_4dsParser "" ( --module
         )
 
         mskins
+    )
+    
+    struct TSkinChameleon (
+        dmin,
+        dmax,
+        vgroups = #(),
+        lods = #()
+    )
+    
+    struct TSkinVertexGroupChameleon (
+        matrix,
+        dmin,
+        dmax
+    )
+    
+    struct TSkinLodChameleon (
+        weights = #()
+    )
+    
+    struct TSkinLodWeight (
+        boneid,
+        weight
+    )
+    
+    fn ReadByteArray f count = (
+        for i = 1 to count collect (
+            ReadByte f #unsigned
+        )
+    )
+    
+    fn ReadSkinChameleon f numlods = (
+        local numGroups = ReadByte f #unsigned
+        local dmin = ReadPoint3 f
+        local dmax = ReadPoint3 f
+        local parentIds = ReadByteArray f numGroups    
+        
+        local vgroups = #()
+        
+        for i = 1 to numGroups do (
+            local matrix = ReadMatrix f
+            local dmin = ReadPoint3 f
+            local dmax = ReadPoint3 f
+            
+            append vgroups (TSkinVertexGroupChameleon matrix:matrix dmin:dmin dmax:dmax)
+        )
+        
+        for i = 1 to numlods do (
+            local numWeights = ReadLong f #unsigned
+            for j = 1 to numWeights do (
+                local boneId = ReadByte f #unsigned
+                local weight = ReadByte f #unsigned
+            )
+        )
+    )
+    
+    fn ReadSkin f numlods version = (
+        if version == #mafia then (
+            ReadSkinMafia f numlods
+        )
+        else (
+            ReadSkinChameleon f numlods
+        )
     )
 
     fn WriteSkin f mskins = (
