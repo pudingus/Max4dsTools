@@ -638,7 +638,7 @@ rollout MafiaTools_4dsImport "" (   --module
                     
                     -- format "\n"
 
-                    buffer.boneNodes[mbone.boneId+2] = nnode
+                    buffer.boneNodes[mbone.boneId + 1] = nnode
 
                     --format "% | objId: % | boneid: %\n" mobj.name i mbone.boneid
                 )

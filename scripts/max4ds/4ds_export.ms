@@ -1231,10 +1231,9 @@ rollout MafiaTools_4dsExport "" (   --module
 
     fn ExtractBone mnode = (
         mbone = parser.TBone()
-        --mbone.boneId = mnode.baseNode.boneId
         local handle = mnode.baseNode.inode.handle
-        mbone.boneId = (findItem BONE_NODES mnode.baseNode) - 2
-
+        --minus one to remove the root bone
+        mbone.boneId = (findItem BONE_NODES mnode.baseNode) - 1
         mbone.matrix = matrix3 1
 
         mbone

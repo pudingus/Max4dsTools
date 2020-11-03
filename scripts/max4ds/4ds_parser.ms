@@ -1215,21 +1215,21 @@ rollout MafiaTools_4dsParser "" ( --module
     
     struct TBone (
         matrix,
-        boneId   --0-based,  --TODO: make this 1-based to be consistent
+        boneId   --1-based
     )
     
     fn ReadBone f version = (
         local mbone = TBone()
         if version == #mafia do 
             mbone.matrix = ReadMatrix f
-        mbone.boneId = ReadU32 f
+        mbone.boneId = (ReadU32 f) + 1
         mbone
     )
 
     fn WriteBone f mbone = (
         WriteMatrix f mbone.matrix
 
-        WriteU32 f mbone.boneId
+        WriteU32 f (mbone.boneId - 1)
     )   
     
     -------------------------------------------------
