@@ -245,6 +245,7 @@ rollout MafiaTools_4dsParser "" ( --module
     -------------------------------------------------
     
     struct T4ds (
+        version,
         materials = #(),  --array of TMaterial
         objects = #(),   --array of TObject
         allow5ds   --bool
@@ -279,7 +280,7 @@ rollout MafiaTools_4dsParser "" ( --module
             
             m4ds.allow5ds = (ReadU8 f) > 0
         )
-
+        m4ds.version = version
         m4ds
     )
     
@@ -470,7 +471,7 @@ rollout MafiaTools_4dsParser "" ( --module
             mobj.scl = ReadPoint3 f
         )
         
-        if version == #hd2 then ReadLong f
+        if version == #hd2 then ReadU32 f
 
         mobj.cullFlags = ReadU8 f
         mobj.name = ReadText f
@@ -733,9 +734,12 @@ rollout MafiaTools_4dsParser "" ( --module
         mskins
     )
     
+    --------------
+    
     struct TSkinChameleon (
         dmin,
         dmax,
+        parentIds = #(),
         vgroups = #(),
         lods = #()
     )
@@ -766,25 +770,30 @@ rollout MafiaTools_4dsParser "" ( --module
         local dmin = ReadPoint3 f
         local dmax = ReadPoint3 f
         local parentIds = ReadByteArray f numGroups    
-        
-        local vgroups = #()
-        
-        for i = 1 to numGroups do (
+                
+        local vgroups = for i = 1 to numGroups collect (
             local matrix = ReadMatrix f
             local dmin = ReadPoint3 f
             local dmax = ReadPoint3 f
             
-            append vgroups (TSkinVertexGroupChameleon matrix:matrix dmin:dmin dmax:dmax)
+            TSkinVertexGroupChameleon matrix:matrix dmin:dmin dmax:dmax
         )
         
-        for i = 1 to numlods do (
+        local lods = for i = 1 to numlods collect (
             local numWeights = ReadU32 f
-            for j = 1 to numWeights do (
+            local weights = for j = 1 to numWeights collect (
                 local boneId = ReadU8 f
                 local weight = ReadU8 f
+                TSkinLodWeight boneid:boneid weight:weight
             )
+            
+            TSkinLodChameleon weights:weights
         )
+        
+        TSkinChameleon dmin:dmin dmax:dmax parentIds:parentIds vgroups:vgroups lods:lods
     )
+    
+    ---------
     
     fn ReadSkin f numlods version = (
         if version == #mafia then (
