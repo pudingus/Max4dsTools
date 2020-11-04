@@ -460,7 +460,7 @@ rollout MafiaTools_4dsImport "" (   --module
             )
         )
         
-        for boneNode in boneNodes do (
+        for boneNode in boneNodes where bonenode != undefined do (
             boneNode.setBoneEnable true sliderTime
         )
     )
@@ -595,24 +595,13 @@ rollout MafiaTools_4dsImport "" (   --module
                 10: ( --bone
                     local mbone = mobj.bone
                     nnode = CreateBone()
-                    
-                    -- format "%\n" mobj.name
-                    -- util.printmatrix mbone.matrix
-                    -- format "s: %, r: %, t: %\n" mbone.matrix.scalepart mbone.matrix.rotationpart mbone.matrix.translationpart 
-                    -- format "s: %, r: %, t: %\n" mobj.scl mobj.rot mobj.offset
-                    
-                    -- format "\n"
 
                     buffer.boneNodes[mbone.boneId + 1] = nnode
-
-                    --format "% | objId: % | boneid: %\n" mobj.name i mbone.boneid
-                    
-                    --format "boneid: %, name: %\n" (mbone.boneid-1) mobj.name
-                    
                 )
                 12: (
                     local ocl = mobj.occluder
                     nnode = CreateOccluder ocl unitscale
+                    Layers.AddTo nnode "Occluders"
                 )
             )
             
