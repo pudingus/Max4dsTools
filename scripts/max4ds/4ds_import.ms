@@ -424,80 +424,45 @@ rollout MafiaTools_4dsImport "" (   --module
     )
 
 
-    fn CreateSkins skinBuffer boneNodes version = (
+    fn CreateSkins skinBuffer boneNodes = (
         local maxver = (maxversion())[1]
-        
-        if version == #chameleon then (
-        )
-        else (
-            for pair in skinBuffer do (
-                local mskins = pair.mdefs
-                local nodes = pair.nodes
+       
+        for pair in skinBuffer do (
+            local mskins = pair.mdefs
+            local nodes = pair.nodes
 
-                for q = 1 to nodes.count do (
-                    local nnode = nodes[q]
-                    local mskin = mskins[q]
+            for q = 1 to nodes.count do (
+                local nnode = nodes[q]
+                local mskin = mskins[q]
 
-                    local oskin = Skin()
-                    oskin.showNoEnvelopes = true
-                    addModifier nnode oskin
-                    if maxver < 22000 then (
-                        max modify mode
-                        select nnode
-                    )
-    
+                local oskin = Skin()
+                oskin.showNoEnvelopes = true
+                addModifier nnode oskin
+                if maxver < 22000 then (
+                    max modify mode
+                    select nnode
+                )   
 
-                    for boneId = 1 to boneNodes.count do (
-                        skinOps.AddBone oskin boneNodes[boneId] 0
-                    )
-
-                    --clear weights
-                    for vertId = 1 to nnode.numverts do (
-                        for boneId = 1 to boneNodes.count do (
-                            skinOps.ReplaceVertexWeights oskin vertId boneId 0.0
-                        )
-                    )
-                    ---------
-                                    
-                    local xskin = skin_makeCache oskin             
-
-                    local vertId = 1
-
-                    for i = 1 to mskin.vgroups.count do (
-                        local grp = mskin.vgroups[i]
-                        local boneid1 = i+1
-                        local boneid2 = grp.boneId+1
-
-                        for j = 1 to grp.numW1Verts do (
-                            local weight = 1.0
-                            skin_setVertexWeight xskin vertId boneid1 weight
-
-                            vertId += 1
-                        )
-
-                        for weight in grp.weights do (
-                            skin_setVertexWeight xskin vertId boneid1 weight
-                            skin_setVertexWeight xskin vertId boneid2 (1.0 - weight)
-
-                            vertId += 1
-                        )
-                    )
-
-                    (
-                        local weight = 1.0
-                        local boneId = 1
-                            
-                        for i = 1 to mskin.numW0Verts do (                        
-                            skin_setVertexWeight xskin vertId boneId weight
-                            vertId += 1
-                        )
-                    )
+                for boneId = 1 to boneNodes.count do (
+                    skinOps.AddBone oskin boneNodes[boneId] 1
                 )
-            )            
+                
+                for vertId = 1 to mskin.joints.count do (
+                    local joints = mskin.joints[vertId]
+                    local weights = mskin.weights[vertId]
+                    --format "%: %, %\n" vertId joints weights
+                    skinOps.ReplaceVertexWeights oskin vertId joints weights
+                )
+                
+                for vertId = mskin.joints.count + 1 to nnode.numverts do (
+                    skinOps.ReplaceVertexWeights oskin vertId 1 0.0
+                )
+            )
         )
+        
         for boneNode in boneNodes do (
             boneNode.setBoneEnable true sliderTime
-        )        
+        )
     )
     
     fn CreateOccluder ocl unitscale = (
@@ -641,6 +606,9 @@ rollout MafiaTools_4dsImport "" (   --module
                     buffer.boneNodes[mbone.boneId + 1] = nnode
 
                     --format "% | objId: % | boneid: %\n" mobj.name i mbone.boneid
+                    
+                    --format "boneid: %, name: %\n" (mbone.boneid-1) mobj.name
+                    
                 )
                 12: (
                     local ocl = mobj.occluder
@@ -757,7 +725,7 @@ rollout MafiaTools_4dsImport "" (   --module
                 local buffer = CreateObjects m4ds.objects filename unitscale materials
 
                 LinkTargets buffer.targetBuffer buffer.mafiaNodes
-                CreateSkins buffer.skinBuffer buffer.boneNodes m4ds.version
+                CreateSkins buffer.skinBuffer buffer.boneNodes
                 Layers.Hide #("Disabled")
                 --Layers.HideLods #{1..9}
             )

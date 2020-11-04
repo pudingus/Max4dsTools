@@ -245,7 +245,6 @@ rollout MafiaTools_4dsParser "" ( --module
     -------------------------------------------------
     
     struct T4ds (
-        version,
         materials = #(),  --array of TMaterial
         objects = #(),   --array of TObject
         allow5ds   --bool
@@ -280,7 +279,6 @@ rollout MafiaTools_4dsParser "" ( --module
             
             m4ds.allow5ds = (ReadU8 f) > 0
         )
-        m4ds.version = version
         m4ds
     )
     
@@ -682,6 +680,86 @@ rollout MafiaTools_4dsParser "" ( --module
         )
     )
     
+    -------------------------------------------------
+    struct TSkinCommon (
+        joints = #(),
+        weights = #()       
+    )
+    
+    fn ReadSkinCommonMafia f numlods = (
+        for l = 1 to numLods collect (
+            local numGroups = ReadU8 f
+            local numW1Verts = ReadU32 f
+
+            local dmin = ReadPoint3 f
+            local dmax = ReadPoint3 f
+            
+            local joints = #()
+            local weights = #()
+
+            for i = 1 to numGroups do (
+                local matrix = ReadMatrix f
+
+                local numW1Verts = ReadU32 f
+                local numWeights = ReadU32 f
+                local parentId = (ReadU32 f) + 1
+
+                local dmin = ReadPoint3 f
+                local dmax = ReadPoint3 f
+                
+                for w = 1 to numW1Verts do (
+                    append joints #(i + 1, parentId)
+                    append weights #(1.0, 0.0)
+                )
+
+                for w = 1 to numWeights do (
+                    local weight = ReadFloatSafe f
+                    
+                    append joints #(i + 1, parentId)
+                    append weights #(weight, 1.0 - weight)
+                )
+            )
+            
+            for w = 1 to numW1Verts do (
+                append joints #(1, 1)
+                append weights #(0.0, 1.0)
+            )    
+            
+            TSkinCommon joints:joints weights:weights
+        )
+    )
+    
+    fn ReadSkinCommonChameleon f numlods = (
+        local numGroups = ReadU8 f
+        local dmin = ReadPoint3 f
+        local dmax = ReadPoint3 f
+        local parentIds = for i = 1 to numGroups collect (
+            (ReadU8 f) + 1
+        )        
+                
+        for i = 1 to numGroups do (
+            local matrix = ReadMatrix f
+            local dmin = ReadPoint3 f
+            local dmax = ReadPoint3 f
+        )
+        
+        for i = 1 to numlods collect (
+            local numWeights = ReadU32 f
+            local joints = #()
+            local weights = #()
+            for j = 1 to numWeights do (
+                local boneId = (ReadU8 f) + 1
+                local weight = 1.0 / 255.0 * (ReadU8 f)     
+                
+                --format "%: boneId: %, weight: %\n" (j-1) boneId weight
+                
+                append joints #(parentIds[boneId-1], boneid)
+                append weights #(weight, 1.0 - weight)
+            )      
+            TSkinCommon joints:joints weights:weights      
+        )
+    )
+    
     -------------------------------------------------    
     
     struct TSkin (
@@ -698,113 +776,9 @@ rollout MafiaTools_4dsParser "" ( --module
         dmin,
         dmax,
         weights = #()   --array of float
-    )
+    )    
     
-    fn ReadSkinMafia f numlods = (
-        local mskins = #()
-
-        for l = 1 to numLods do (
-            local mskin = TSkin()
-
-            local numGroups = ReadU8 f
-            mskin.numW0Verts = ReadU32 f
-
-            mskin.dmin = ReadPoint3 f
-            mskin.dmax = ReadPoint3 f
-
-            for i = 0 to numGroups-1 do (
-                local vgroup = TSkinVertexGroup()
-                vgroup.matrix = ReadMatrix f
-
-                vgroup.numW1Verts = ReadU32 f
-                local numWeights = ReadU32 f
-                vgroup.boneId = ReadU32 f
-
-                vgroup.dmin = ReadPoint3 f
-                vgroup.dmax = ReadPoint3 f
-
-                for w = 1 to numWeights do (
-                    append vgroup.weights (ReadFloatSafe f)
-                )
-                append mskin.vgroups vgroup
-            )
-            append mskins mskin
-        )
-
-        mskins
-    )
-    
-    --------------
-    
-    struct TSkinChameleon (
-        dmin,
-        dmax,
-        parentIds = #(),
-        vgroups = #(),
-        lods = #()
-    )
-    
-    struct TSkinVertexGroupChameleon (
-        matrix,
-        dmin,
-        dmax
-    )
-    
-    struct TSkinLodChameleon (
-        weights = #()
-    )
-    
-    struct TSkinLodWeight (
-        boneid,
-        weight
-    )
-    
-    fn ReadByteArray f count = (
-        for i = 1 to count collect (
-            ReadU8 f
-        )
-    )
-    
-    fn ReadSkinChameleon f numlods = (
-        local numGroups = ReadU8 f
-        local dmin = ReadPoint3 f
-        local dmax = ReadPoint3 f
-        local parentIds = ReadByteArray f numGroups    
-                
-        local vgroups = for i = 1 to numGroups collect (
-            local matrix = ReadMatrix f
-            local dmin = ReadPoint3 f
-            local dmax = ReadPoint3 f
-            
-            TSkinVertexGroupChameleon matrix:matrix dmin:dmin dmax:dmax
-        )
-        
-        local lods = for i = 1 to numlods collect (
-            local numWeights = ReadU32 f
-            local weights = for j = 1 to numWeights collect (
-                local boneId = ReadU8 f
-                local weight = ReadU8 f
-                TSkinLodWeight boneid:boneid weight:weight
-            )
-            
-            TSkinLodChameleon weights:weights
-        )
-        
-        TSkinChameleon dmin:dmin dmax:dmax parentIds:parentIds vgroups:vgroups lods:lods
-    )
-    
-    ---------
-    
-    fn ReadSkin f numlods version = (
-        if version == #mafia then (
-            ReadSkinMafia f numlods
-        )
-        else (
-            ReadSkinChameleon f numlods
-        )
-    )
-
-    fn WriteSkin f mskins = (
+    fn WriteSkinMafia f mskins = (
         for mskin in mskins do (
             WriteU8 f mskin.vgroups.count
             WriteU32 f mskin.numW0Verts
@@ -823,6 +797,21 @@ rollout MafiaTools_4dsParser "" ( --module
                 for weight in grp.weights do WriteFloat f weight
             )
         )
+    )
+    
+    --------------    
+    
+    fn ReadSkin f numlods version = (
+        if version == #mafia then (
+            ReadSkinCommonMafia f numlods
+        )
+        else (
+            ReadSkinCommonChameleon f numlods
+        )
+    )
+
+    fn WriteSkin f mskins = (
+        WriteSkinMafia f mskins
     )
 
     -------------------------------------------------
