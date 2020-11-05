@@ -52,8 +52,8 @@ rollout MafiaTools_Util "" (    --module
         if existingWeight == undefined then existingWeight = 0.0
 
         if weight != undefined then (
-            skin_setVertexWeight xskin vertid oldid 0.0
-            skin_setVertexWeight xskin vertid newid (weight + existingWeight)
+            skin_setVertexWeights xskin vertid oldid 0.0
+            skin_setVertexWeights xskin vertid newid (weight + existingWeight)
         )
     )
     ------------------

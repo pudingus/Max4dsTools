@@ -15,6 +15,8 @@
         listIds = #()
     )
     
+    -- Call this after adding bones and before setting weights.
+    -- Whenever bones are added or removed, this becomes invalid
     fn makeCache skinMod = (
         xCachedData skinMod:skinMod
     )
@@ -27,13 +29,17 @@
         skinOps.GetVertexWeightBoneID xdata.skinMod vertId weightId
     )
     
-    fn setVertexWeight xdata vertId boneId weight  = (
+    fn setVertexWeights xdata vertId boneId weight  = (
         skinOps.SetVertexWeights xdata.skinMod vertId boneId weight
-    )      
+    )
+    
+    fn replaceVertexWeights xdata vertId boneId weight  = (
+        skinOps.ReplaceVertexWeights xdata.skinMod vertId boneId weight
+    )
     
     fn selectBone xdata boneId = (
         skinOps.SelectBone xdata.skinMod boneId
-    ) 
+    )
     
     ---------
     fn makeCache_2012 skinMod = (
@@ -59,8 +65,24 @@
         xdata.sysIds[boneId]
     )
     
-    fn setVertexWeight_2012 xdata vertId boneId weight = (
-        skinOps.SetVertexWeights xdata.skinMod vertId xdata.listIds[boneId] weight
+    fn setVertexWeights_2012 xdata vertId boneId weight = (
+        if classof boneId == Array then (
+            for i = 1 to boneId.count do (
+                boneId[i] = xdata.listIds[boneId[i]]
+            )
+        )
+        else boneId = xdata.listIds[boneId]
+        skinOps.SetVertexWeights xdata.skinMod vertId boneId weight
+    )
+    
+    fn replaceVertexWeights_2012 xdata vertId boneId weight = (
+        if classof boneId == Array then (
+            for i = 1 to boneId.count do (
+                boneId[i] = xdata.listIds[boneId[i]]
+            )
+        )
+        else boneId = xdata.listIds[boneId]
+        skinOps.ReplaceVertexWeights xdata.skinMod vertId boneId weight
     )
     
     fn selectBone_2012 xdata boneId = (
@@ -72,7 +94,8 @@
     ::skin_makeCache = makeCache
     ::skin_getBoneName = getBoneName
     ::skin_getVertexWeightBoneId = getVertexWeightBoneId
-    ::skin_setVertexWeight = setVertexWeight
+    ::skin_setVertexWeights = setVertexWeights
+    ::skin_replaceVertexWeights = replaceVertexWeights
     ::skin_selectBone = selectBone    
     
     --2012, 2013, 
@@ -80,7 +103,8 @@
         ::skin_makeCache = makeCache_2012
         ::skin_getBoneName = getBoneName_2012
         ::skin_getVertexWeightBoneId = getVertexWeightBoneId_2012
-        ::skin_setVertexWeight = setVertexWeight_2012
+        ::skin_setVertexWeights = setVertexWeights_2012
+        ::skin_replaceVertexWeights = replaceVertexWeights_2012
         ::skin_selectBone = selectBone_2012
     )
     else if is2014 then (  --2014sp0-sp3

@@ -422,27 +422,34 @@ rollout MafiaTools_4dsImport "" (   --module
                 local nnode = nodes[q]
                 local mskin = mskins[q]
 
-                local oskin = Skin()
-                oskin.showNoEnvelopes = true
-                addModifier nnode oskin
+                local skinMod = Skin()
+                skinMod.showNoEnvelopes = true
+                addModifier nnode skinMod
                 if maxver < 22000 then (
                     max modify mode
                     select nnode
                 )   
 
-                for boneId = 1 to boneNodes.count do (
-                    skinOps.AddBone oskin boneNodes[boneId] 1
+                for boneId = 1 to boneNodes.count - 1 do (
+                    skinOps.AddBone skinMod boneNodes[boneId] 0
                 )
+                skinOps.AddBone skinMod boneNodes[boneNodes.count] 1
+                
+                -- The update integer in AddBone doesnt work on old versions (2013, 2009...)
+                -- and this somehow updates it, so keep it!
+                nnode.numverts  --keep this!
+                
+                local xskin = skin_makeCache skinMod
                 
                 for vertId = 1 to mskin.joints.count do (
                     local joints = mskin.joints[vertId]
                     local weights = mskin.weights[vertId]
                     --format "%: %, %\n" vertId joints weights
-                    skinOps.ReplaceVertexWeights oskin vertId joints weights
+                    skin_replaceVertexWeights xskin vertId joints weights
                 )
                 
                 for vertId = mskin.joints.count + 1 to nnode.numverts do (
-                    skinOps.ReplaceVertexWeights oskin vertId 1 0.0
+                    skin_replaceVertexWeights xskin vertId 1 0.0
                 )
             )
         )
