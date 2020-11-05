@@ -715,27 +715,27 @@ rollout MafiaTools_4dsExport "" (   --module
     -----------MORPH------------------------------------
     ----------------------------------------------------
     
-    struct TLayerInfo (
+    struct TRegionInfo (
         usedChannels = #{},
         usedVerts = #{},
         channels = #()
     )
 
-    --trims trailing unused layers (keeps the leading)
-    fn TrimUnused layers = (
+    --trims trailing unused regions (keeps the leading)
+    fn TrimUnused regions = (
         local finished = false
-        for i = layers.count to 1 by -1 while not finished do (
-            if layers[i].usedChannels.numberset == 0 then (
-                deleteItem layers i
+        for i = regions.count to 1 by -1 while not finished do (
+            if regions[i].usedChannels.numberset == 0 then (
+                deleteItem regions i
             )
             else finished = true
         )
     )
 
-    fn FindBiggestChannelId layers = (
+    fn FindBiggestChannelId regions = (
         local biggest = 0
-        for layerInfo in layers do (
-            local largestIndex = layerInfo.usedChannels.count
+        for regionInfo in regions do (
+            local largestIndex = regionInfo.usedChannels.count
             if largestIndex > biggest then biggest = largestIndex
         )
 
@@ -754,39 +754,39 @@ rollout MafiaTools_4dsExport "" (   --module
         )
     )
 
-    fn SplitMorphVertices layers extraVerts = (
-        for layerInfo in layers do (
-            for chanId in layerInfo.usedChannels do (
-                local chanMesh = layerInfo.channels[chanId]
+    fn SplitMorphVertices regions extraVerts = (
+        for regionInfo in regions do (
+            for chanId in regionInfo.usedChannels do (
+                local chanMesh = regionInfo.channels[chanId]
                 
                 SplitChanMesh chanMesh extraVerts
             )
         )
     )
     
-    fn ExtractLayers mrph baseNumverts otrans unitscale = (
+    fn ExtractRegions mrph baseNumverts otrans unitscale = (
       
-        local layers = #()
+        local regions = #()
         
         local numChannels = 
             if WM3_NumberOfChannels == undefined then 100
             else WM3_NumberOfChannels mrph
             
-        local channelsPerLayer = 10
-        local maxLayers = ( (numChannels) / channelsPerLayer ) as integer
+        local channelsPerRegion = 10
+        local maxRegions = ( (numChannels) / channelsPerRegion ) as integer
 
         --collect morph meshes
-        for i = 1 to maxLayers do (
-            local layerInfo = TLayerInfo()
-            for j = 1 to channelsPerLayer do (
-                local chanId = ((i - 1) * channelsPerLayer) + j
+        for i = 1 to maxRegions do (
+            local regionInfo = TRegionInfo()
+            for j = 1 to channelsPerRegion do (
+                local chanId = ((i - 1) * channelsPerRegion) + j
                 local hasData = WM3_MC_HasData mrph chanId
                 local isValid = WM3_MC_IsValid mrph chanId
                 local isActive = WM3_MC_IsActive mrph chanId
 
                 local chanMesh
                 if hasData and isValid and isActive then (
-                    layerInfo.usedChannels[j] = true
+                    regionInfo.usedChannels[j] = true
 
                     local numpts = amin #((WM3_MC_NumPts mrph chanId), baseNumverts)
                     chanMesh = TriMesh()
@@ -796,19 +796,19 @@ rollout MafiaTools_4dsExport "" (   --module
                         setVert chanMesh vertId (pt * otrans)
                     )
                 )
-                append layerInfo.channels chanMesh
+                append regionInfo.channels chanMesh
             )
-            append layers layerInfo
+            append regions regionInfo
         )
 
-        --trim unused layers
-        TrimUnused layers
+        --trim unused regions
+        TrimUnused regions
         
-        layers
+        regions
     )
 
     fn ExtractMorphLod splmesh = ( 
-        local layers = splmesh.layers
+        local regions = splmesh.regions
         local lodmesh = splmesh.mesh
         local vertOrder = splmesh.vertOrder
         
@@ -818,24 +818,24 @@ rollout MafiaTools_4dsExport "" (   --module
         
         local mmorph = parser.TMorph()
         
-        if layers.count == 0 then (
+        if regions.count == 0 then (
             mmorph.numTargets = 1
         )
         else (
-            local numTargets = FindBiggestChannelId layers
+            local numTargets = FindBiggestChannelId regions
             mmorph.numTargets = numTargets
 
             --find changed verts
-            for layerInfo in layers do (
-                for chanId in layerInfo.usedChannels do (
-                    local chanMesh = layerInfo.channels[chanId]
+            for regionInfo in regions do (
+                for chanId in regionInfo.usedChannels do (
+                    local chanMesh = regionInfo.channels[chanId]
 
                     for vertId = 1 to chanMesh.numverts do (
                         local baseVert = getVert lodmesh vertOrder[vertId]
                         local chanVert = getVert chanMesh vertId
 
                         if not close_enough_p3 baseVert chanVert 50 then (
-                            layerInfo.usedVerts[vertId] = true
+                            regionInfo.usedVerts[vertId] = true
                         )
                     )
                 )
@@ -844,17 +844,17 @@ rollout MafiaTools_4dsExport "" (   --module
             local vmin
             local vmax
 
-            for i = 1 to layers.count do (
-                local layerInfo = layers[i]
-                local mlayer = parser.TMorphLayer()
+            for i = 1 to regions.count do (
+                local regionInfo = regions[i]
+                local mregion = parser.TMorphRegion()
 
-                for vertId in layerInfo.usedVerts do (
+                for vertId in regionInfo.usedVerts do (
 
                     local corrId = vertOrder[vertId]
 
                     local mvert = parser.TMorphVertex index:corrId
                     for j = 1 to numTargets do (
-                        local chanMesh = layerInfo.channels[j]
+                        local chanMesh = regionInfo.channels[j]
 
                         local pt
                         if chanMesh != undefined then (
@@ -878,9 +878,9 @@ rollout MafiaTools_4dsExport "" (   --module
                         local mpoint = parser.TMorphedPoint pos:pt normal:normal
                         append mvert.points mpoint
                     )
-                    append mlayer.vertices mvert
+                    append mregion.vertices mvert
                 )
-                append mmorph.layers mlayer
+                append mmorph.regions mregion
             )        
 
             -- thanks Duelist
@@ -897,7 +897,7 @@ rollout MafiaTools_4dsExport "" (   --module
     ------MESH------------------------------------------
     ----------------------------------------------------
 
-    fn SplitVertices mesh faceVertNormals weights layers = (
+    fn SplitVertices mesh faceVertNormals weights regions = (
         local numverts = mesh.numverts
         local normals = #()   -- min. count = count of vertices, normals for duplicated verts are appended to the end
         local uvs = #()     -- =||=
@@ -1037,9 +1037,9 @@ rollout MafiaTools_4dsExport "" (   --module
             SplitWeights weights extraVerts
         )
         
-        --------SPLIT MORPH LAYERS
-        if layers != undefined then (
-            SplitMorphVertices layers extraVerts
+        --------SPLIT MORPH REGIONS
+        if regions != undefined then (
+            SplitMorphVertices regions extraVerts
         )
     )
 
@@ -1120,7 +1120,7 @@ rollout MafiaTools_4dsExport "" (   --module
     struct TSplitMesh (
         mesh,   --trimesh
         weights,  --array of WeightedVertex
-        layers,
+        regions,
         vertOrder
     )
     
@@ -1165,11 +1165,11 @@ rollout MafiaTools_4dsExport "" (   --module
         
         
              
-        local layers = 
+        local regions = 
             if morphMod != undefined then
-                ExtractLayers morphMod lodmesh.numverts otrans unitscale
+                ExtractRegions morphMod lodmesh.numverts otrans unitscale
         
-        SplitVertices lodmesh faceVertNormals weights layers
+        SplitVertices lodmesh faceVertNormals weights regions
 
 
         --apply transformation
@@ -1192,7 +1192,7 @@ rollout MafiaTools_4dsExport "" (   --module
             lodmesh = SortMesh lodmesh vertOrder
         )
         
-        TSplitMesh mesh:lodmesh weights:weights layers:layers vertOrder:vertOrder
+        TSplitMesh mesh:lodmesh weights:weights regions:regions vertOrder:vertOrder
     )
 
     fn ExtractLod lodnode lodmesh = (
@@ -1334,7 +1334,7 @@ rollout MafiaTools_4dsExport "" (   --module
                 local splmesh = ExtractSplitMesh lodnode rootbone unitscale
                 local mlod = ExtractLod lodnode splmesh.mesh
                 local skinlod = if rootbone != undefined then ExtractSkinLod splmesh rootbone unitscale
-                local morphlod = if splmesh.layers != undefined then ExtractMorphLod splmesh
+                local morphlod = if splmesh.regions != undefined then ExtractMorphLod splmesh
 
                 
                 local gp = custAttributes.get lodnode MafParams_def baseObject:false

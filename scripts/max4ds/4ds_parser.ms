@@ -825,8 +825,8 @@ rollout MafiaTools_4dsParser "" ( --module
     -------------------------------------------------
     
     struct TMorph (
-        numTargets,    --num targets per layer
-        layers = #(),   --array of TMorphLayer
+        numTargets,    --num targets per region
+        regions = #(),   --array of TMorphRegion
         unknown,
         dmin,
         dmax,
@@ -834,7 +834,7 @@ rollout MafiaTools_4dsParser "" ( --module
         dist 
     )
     
-    struct TMorphLayer (
+    struct TMorphRegion (
         vertices = #()      --array of TMorphVertex
     )
     
@@ -854,10 +854,10 @@ rollout MafiaTools_4dsParser "" ( --module
         morph.numTargets = numTargets
 
         if numTargets > 0 then (
-            local numLayers = ReadU8 f
+            local numRegions = ReadU8 f
             morph.unknown = ReadU8 f   --unknown
-            for i = 1 to numLayers do   (
-                local layer = TMorphLayer()
+            for i = 1 to numRegions do   (
+                local region = TMorphRegion()
                 local numVerts = ReadU16 f
 
                 for v = 1 to numVerts do (
@@ -869,16 +869,16 @@ rollout MafiaTools_4dsParser "" ( --module
                         point.normal = ReadPoint3 f
                         append vert.points point
                     )
-                    append layer.vertices vert
+                    append region.vertices vert
                 )
 
                 if (numTargets * numVerts) > 0 then ReadU8 f  --unknown
 
                 for v = 1 to numVerts do (
-                    layer.vertices[v].index = (ReadU16 f) + 1
+                    region.vertices[v].index = (ReadU16 f) + 1
                 )
 
-                append morph.layers layer
+                append morph.regions region
             )
 
             morph.dmin = ReadPoint3 f
@@ -895,21 +895,21 @@ rollout MafiaTools_4dsParser "" ( --module
         WriteU8 f morph.numTargets
         
         if morph.numTargets > 0 then (
-            WriteU8 f morph.layers.count
+            WriteU8 f morph.regions.count
             WriteU8 f 1 --unknown
             
-            for layer in morph.layers do (
-                WriteU16 f layer.vertices.count
-                for vert in layer.vertices do (
+            for region in morph.regions do (
+                WriteU16 f region.vertices.count
+                for vert in region.vertices do (
                     if vert.points.count != morph.numTargets then throw "numTargets and points.count mismatch"
                     for point in vert.points do (
                         WritePoint3 f point.pos
                         WritePoint3 f point.normal
                     )
                 )
-                if layer.vertices.count * morph.numTargets > 0 do WriteU8 f 1 --unknown
+                if region.vertices.count * morph.numTargets > 0 do WriteU8 f 1 --unknown
                 
-                for vert in layer.vertices do (
+                for vert in region.vertices do (
                     WriteU16 f (vert.index - 1)
                 )
             )

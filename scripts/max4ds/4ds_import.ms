@@ -120,23 +120,23 @@ rollout MafiaTools_4dsImport "" (   --module
         local baseMesh = mmesh.lods[1].mesh
         local meshes = #()
 
-        for layer in mmorph.layers do (
-            local sectionMeshes = #()
+        for region in mmorph.regions do (
+            local regionMeshes = #()
 
             for i = 1 to mmorph.numTargets do (
-                sectionMeshes[i] = copy baseMesh
+                regionMeshes[i] = copy baseMesh
             )
 
-            for vert in layer.vertices do (
+            for vert in region.vertices do (
                 local vertId = vert.index
 
                 for j = 1 to vert.points.count do (
                     local point = vert.points[j]
                     local pos = point.pos * unitscale
-                    setVert sectionMeshes[j] vertId pos
+                    setVert regionMeshes[j] vertId pos
                 )
             )
-            append meshes sectionMeshes
+            append meshes regionMeshes
         )
 
         local tmod = Morpher()
@@ -156,18 +156,18 @@ rollout MafiaTools_4dsImport "" (   --module
         -- certain morpher function is called first (SetName, IsActive, HasData and maybe other)
         WM3_MC_HasData tmod 1
         
-        for sectMesh in meshes do (
-            local layerLetter = letters[sectionId]
-            WM3_CreateMarker tmod marker ("layer " + layerLetter)
+        for regionMeshes in meshes do (
+            local regionLetter = letters[sectionId]
+            WM3_CreateMarker tmod marker ("region " + regionLetter)
 
             local targetId = 1
 
-            for targetMesh in sectMesh do (
+            for targetMesh in regionMeshes do (
                 local tnode = mesh mesh:targetMesh
                 local finalId = (marker + targetId - 1)
 
                 WM3_MC_BuildFromNode tmod finalId tnode
-                WM3_MC_SetName tmod finalId (layerLetter + " " + (targetId as string))
+                WM3_MC_SetName tmod finalId (regionLetter + " " + (targetId as string))
                 
                 delete tnode
 
