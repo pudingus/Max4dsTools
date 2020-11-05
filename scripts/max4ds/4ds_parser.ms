@@ -505,7 +505,7 @@ rollout MafiaTools_4dsParser "" ( --module
                     mobj.morph = ReadMorph f version
                 )
                 6: mobj.glow = ReadGlow f version
-                8: mobj.mirror = ReadMirror f
+                8: mobj.mirror = ReadMirror f version
                 default: throw "unknown visual type!"
             )
             5: mobj.sector = ReadSector f version
@@ -1014,6 +1014,7 @@ rollout MafiaTools_4dsParser "" ( --module
         
         for faceId = 1 to tr.numFaces do (
             setFace tr faceId (ReadFace f)
+            for c = 1 to 3 do setEdgeVis tr faceId c true
         )
 
         mirr.mesh = tr
@@ -1108,6 +1109,7 @@ rollout MafiaTools_4dsParser "" ( --module
         for faceId = 1 to tr.numFaces do (
             setFace tr faceId (ReadFace f)
             setFaceSmoothGroup tr faceId 0
+            for c = 1 to 3 do setEdgeVis tr faceId c true
         )
 
         msector.mesh = tr
@@ -1248,6 +1250,7 @@ rollout MafiaTools_4dsParser "" ( --module
         for faceId = 1 to tr.numFaces do (
             setFace tr faceId (ReadFace f)
             setFaceSmoothGroup tr faceId 0
+            for c = 1 to 3 do setEdgeVis tr faceId c true
         )
         TOccluder mesh:tr
     )
