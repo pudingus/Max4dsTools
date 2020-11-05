@@ -225,14 +225,9 @@ rollout MafiaTools_4dsImport "" (   --module
     )
 
     fn CreateMirror mirr mobj unitscale = (
-        local msh = mirr.mesh
+        util.TransformVerts mirr.mesh unitscale
 
-        for i = 1 to msh.numverts do (
-            local vert = getVert msh i
-            setVert msh i (vert * unitscale)
-        )
-
-        local nnode = mesh mesh:msh
+        local nnode = mesh mesh:mirr.mesh
         nnode.wirecolor = white
         Layers.AddTo nnode "Mirrors"
         
@@ -275,27 +270,19 @@ rollout MafiaTools_4dsImport "" (   --module
     fn CreateSector msector mobj unitscale = (
         local nodes = #()
 
-        local msh = msector.mesh
+        util.TransformVerts msector.mesh unitscale
 
-        for i = 1 to msh.numverts do (
-            local vert = getVert msh i
-            setVert msh i (vert * unitscale)
-        )
-
-        nodes[1] = mesh mesh:msh
+        nodes[1] = mesh mesh:msector.mesh
         nodes[1].wirecolor = (color 255 199 0)
 
         local portalId = 0
         for mportal in msector.portals do (
-            local numverts = mportal.verts.count
-            local portalNode = mesh numverts:numVerts
+            util.TransformVerts mportal.mesh unitscale
+            
+            local portalNode = mesh mesh:mportal.mesh
             portalNode.name = "$portal" + (formattedPrint portalId format:".2u") + "__" + mobj.name
-
-            for v = 1 to numVerts do (
-                local vert = mportal.verts[v]
-                setVert portalNode v (vert * unitscale)
-            )
-            local face = for v = 1 to numVerts collect v
+            
+            local face = for v = 1 to portalnode.numVerts collect v
             portalNode = convertToPoly portalNode
             polyop.createPolygon portalNode face
 
@@ -465,21 +452,10 @@ rollout MafiaTools_4dsImport "" (   --module
         )
     )
     
-    fn CreateOccluder ocl unitscale = (
-        local tr = TriMesh()
-        tr.numverts = ocl.verts.count
-        tr.numfaces = ocl.faces.count
+    fn CreateOccluder ocl unitscale = (        
+        util.TransformVerts ocl.mesh unitscale
         
-        for vertId = 1 to tr.numverts do (
-            setVert tr vertId ocl.verts[vertId]
-        )
-        
-        for faceId = 1 to tr.numfaces do (
-            setFace tr faceId ocl.faces[faceId]
-            setFaceSmoothGroup tr faceId 0
-        )
-        
-        mesh mesh:tr wirecolor:(color 178 89 255)
+        mesh mesh:ocl.mesh wirecolor:(color 178 89 255)
     )
 
     fn CreateObjects mobjects filename unitscale materials = (

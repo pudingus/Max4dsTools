@@ -1081,7 +1081,7 @@ rollout MafiaTools_4dsParser "" ( --module
     struct TPortal (
         nearRange,
         farRange,
-        verts = #() --array of point3
+        mesh
     )
     
     fn ReadSector f version = (
@@ -1120,17 +1120,18 @@ rollout MafiaTools_4dsParser "" ( --module
 
         for i = 1 to numPortals do (
             local mportal = TPortal()
-            local numVerts = ReadU8 f
+            local trp = TriMesh()
+            trp.numVerts = ReadU8 f
             for j = 1 to 5 do ReadU32 f
             mportal.nearRange = ReadFloatSafe f
             mportal.farRange = ReadFloatSafe f
             
             if version != #mafia then ReadU32 f
 
-            for v = 1 to numVerts do (
-                local vert = ReadPoint f
-                append mportal.verts vert
+            for vertId = 1 to trp.numVerts do (
+                setVert trp vertId (ReadPoint f)
             )
+            mportal.mesh = trp
             append msector.portals mportal
         )
 
@@ -1230,19 +1231,25 @@ rollout MafiaTools_4dsParser "" ( --module
     -------------------------------------------------
     
     struct TOccluder (
-        verts,
-        faces
+        mesh
     )
         
     fn ReadOccluder f version = (
-        local numVerts = ReadU32 f
-        local numFaces = ReadU32 f
+        local tr = TriMesh()
+        tr.numVerts = ReadU32 f
+        tr.numFaces = ReadU32 f
         
         local ReadPoint = if version == #hd2 then ReadPoint4 else ReadPoint3  
         
-        local verts = for i = 1 to numVerts collect ReadPoint f
-        local faces = for i = 1 to numFaces collect ReadFace f
-        TOccluder verts:verts faces:faces
+        for vertId = 1 to tr.numVerts do (
+            setVert tr vertId (ReadPoint f)
+        )
+        
+        for faceId = 1 to tr.numFaces do (
+            setFace tr faceId (ReadFace f)
+            setFaceSmoothGroup tr faceId 0
+        )
+        TOccluder mesh:tr
     )
     
     -------------------------------------------------

@@ -133,6 +133,17 @@ rollout MafiaTools_Util "" (    --module
     )
     
     -----------------
+    
+    ---mesh ops
+    fn TransformVerts mesh transform = (
+        if transform != 1.0 then (
+            for vertId = 1 to mesh.numverts do (
+                local vert = getVert mesh vertId
+                setVert mesh vertId (vert * transform)
+            )
+        )
+    )
+    
           
 )
 

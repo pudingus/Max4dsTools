@@ -415,16 +415,13 @@ rollout MafiaTools_4dsExport "" (   --module
         mnodeSet
     )
 
-    fn ExtractSector mnode unitscl = (
+    fn ExtractSector mnode unitscale = (
         local sector = parser.TSector()
         sector.mesh = snapshotAsMesh mnode.baseNode
-        sector.dmin = mnode.baseNode.min * unitscl
-        sector.dmax = mnode.baseNode.max * unitscl
-
-        for i = 1 to sector.mesh.numverts do (
-            local vert = getVert sector.mesh i
-            setVert sector.mesh i (vert * unitscl)
-        )
+        sector.dmin = mnode.baseNode.min * unitscale
+        sector.dmax = mnode.baseNode.max * unitscale
+      
+        util.TransformVerts sector.mesh unitscale
 
         for portalNode in mnode.portals do (
             local portal = parser.TPortal()
@@ -442,7 +439,7 @@ rollout MafiaTools_4dsExport "" (   --module
 
             for id in vertIds do (
                 local vert = polyop.getVert portalNode id
-                append portal.verts (vert * unitscl)
+                append portal.verts (vert * unitscale)
             )
             append sector.portals portal
         )
@@ -450,10 +447,10 @@ rollout MafiaTools_4dsExport "" (   --module
         sector
     )
 
-    fn ExtractDummy mnode unitscl = (
+    fn ExtractDummy mnode unitscale = (
         local mdummy = parser.TDummy()
-        mdummy.dmin = in coordsys local mnode.baseNode.min * unitscl
-        mdummy.dmax = in coordsys local mnode.baseNode.max * unitscl
+        mdummy.dmin = in coordsys local mnode.baseNode.min * unitscale
+        mdummy.dmax = in coordsys local mnode.baseNode.max * unitscale
         mdummy
     )
     
@@ -620,7 +617,7 @@ rollout MafiaTools_4dsExport "" (   --module
         newtr
     )
     
-    fn ExtractSkinLod splmesh rootbone unitscl = (
+    fn ExtractSkinLod splmesh rootbone unitscale = (
         local weights = splmesh.weights
         local lodmesh = splmesh.mesh
     
@@ -642,14 +639,14 @@ rollout MafiaTools_4dsExport "" (   --module
             grp.boneid = 0
 
             local boneTF = boneNode.transform
-            local t = transMatrix (boneTF.translationpart * unitscl)
+            local t = transMatrix (boneTF.translationpart * unitscale)
             local s = scaleMatrix boneTF.scalepart
             local r = boneTF.rotationpart as matrix3
             local boneTFs = s * r * t
 
 
             local rootTF = rootbone.transform
-            local t = transMatrix (rootTF.translationpart * unitscl)
+            local t = transMatrix (rootTF.translationpart * unitscale)
             local s = scaleMatrix rootTF.scalepart
             local r = rootTF.rotationpart as matrix3
             local rootTFs = s * r * t
@@ -767,7 +764,7 @@ rollout MafiaTools_4dsExport "" (   --module
         )
     )
     
-    fn ExtractLayers mrph baseNumverts otrans unitscl = (
+    fn ExtractLayers mrph baseNumverts otrans unitscale = (
       
         local layers = #()
         
@@ -1127,7 +1124,7 @@ rollout MafiaTools_4dsExport "" (   --module
         vertOrder
     )
     
-    fn ExtractSplitMesh lodnode rootbone unitscl = (
+    fn ExtractSplitMesh lodnode rootbone unitscale = (
         local morphMod = util.GetModByClass lodnode Morpher
         --local values
         if morphMod != undefined then (
@@ -1152,7 +1149,7 @@ rollout MafiaTools_4dsExport "" (   --module
         
         
         ---get unit scale and object offset transform
-        local scl = scaleMatrix [unitscl,unitscl,unitscl]
+        local scl = scaleMatrix [unitscale,unitscale,unitscale]
         local otrans = lodnode.objectTransform * inverse lodnode.transform * scl
 
         if rootbone != undefined then (
@@ -1170,7 +1167,7 @@ rollout MafiaTools_4dsExport "" (   --module
              
         local layers = 
             if morphMod != undefined then
-                ExtractLayers morphMod lodmesh.numverts otrans unitscl
+                ExtractLayers morphMod lodmesh.numverts otrans unitscale
         
         SplitVertices lodmesh faceVertNormals weights layers
 
@@ -1268,7 +1265,7 @@ rollout MafiaTools_4dsExport "" (   --module
         mglows
     )
 
-    fn ExtractMirror mnode unitscl = (
+    fn ExtractMirror mnode unitscale = (
         local baseNode = mnode.basenode
         local mirr = parser.TMirror()
         local gp = custAttributes.get baseNode MafParams_def baseObject:false
@@ -1276,14 +1273,11 @@ rollout MafiaTools_4dsExport "" (   --module
         local tr = copy baseNode.mesh
         mirr.mesh = tr
 
-        local scl = scaleMatrix [unitscl,unitscl,unitscl]
+        local scl = scaleMatrix [unitscale,unitscale,unitscale]
         local otrans = baseNode.objectTransform * inverse baseNode.transform * scl
 
-        --apply object offset to mesh
-        for i = 1 to tr.numverts do (
-            local vert = getVert tr i
-            setVert tr i (vert * otrans)
-        )
+        --apply object offset to mesh        
+        util.TransformVerts tr otrans
 
         local size = 10.0 ^ 16   --this value is used in original skin vertex groups, so I'm using it here too
         mirr.dmin = [size, size, size]
@@ -1301,12 +1295,12 @@ rollout MafiaTools_4dsExport "" (   --module
             local dmin = in coordsys local viewbox.min
             local dmax = in coordsys local viewbox.max
             local boxsize = util.ToBoxsize dmin dmax
-            local mult = (boxsize * unitscl) / 2
+            local mult = (boxsize * unitscale) / 2
             
             local mtr = viewbox.transform * inverse basenode.transform
             local s = scaleMatrix (mtr.scalepart * mult)
             local r = mtr.rotationpart as matrix3
-            local t = transMatrix (mtr.translationpart * unitscl)
+            local t = transMatrix (mtr.translationpart * unitscale)
             mirr.matrix = s * r * t
         )
 
@@ -1320,7 +1314,7 @@ rollout MafiaTools_4dsExport "" (   --module
         mirr
     )
     
-    fn ExtractCommon mnode mnodeSet mobj unitscl hasSkin:false hasMorph:false = (
+    fn ExtractCommon mnode mnodeSet mobj unitscale hasSkin:false hasMorph:false = (
         local mmesh = parser.TMesh()
         
         local skinlods = #()
@@ -1337,9 +1331,9 @@ rollout MafiaTools_4dsExport "" (   --module
             mmesh.instanceId = 0
             local prevDist = 0.0       
             for lodnode in lodnodes do (        
-                local splmesh = ExtractSplitMesh lodnode rootbone unitscl
+                local splmesh = ExtractSplitMesh lodnode rootbone unitscale
                 local mlod = ExtractLod lodnode splmesh.mesh
-                local skinlod = if rootbone != undefined then ExtractSkinLod splmesh rootbone unitscl
+                local skinlod = if rootbone != undefined then ExtractSkinLod splmesh rootbone unitscale
                 local morphlod = if splmesh.layers != undefined then ExtractMorphLod splmesh
 
                 
@@ -1372,7 +1366,7 @@ rollout MafiaTools_4dsExport "" (   --module
             mobj.parentId = mnodeSet.GetIDByNode mnode.rootBone.parent
     
             in coordsys parent (
-                mobj.offset = mnode.rootBone.pos * unitscl
+                mobj.offset = mnode.rootBone.pos * unitscale
                 mobj.scl = mnode.rootBone.scale
                 mobj.rot = mnode.rootBone.rotation
             )
@@ -1383,7 +1377,7 @@ rollout MafiaTools_4dsExport "" (   --module
         )
     )
     
-    fn ExtractObjects mnodeSet unitscl = (
+    fn ExtractObjects mnodeSet unitscale = (
         local mobjects = #()
 
         for mnode in mnodeSet.mnodes do (
@@ -1408,7 +1402,7 @@ rollout MafiaTools_4dsExport "" (   --module
             if (baseNode.parent != undefined) and (GetNodeType baseNode.parent == #sector) then (
                 in coordsys world
                 (
-                    mobj.offset = mnode.baseNode.pos * unitscl
+                    mobj.offset = mnode.baseNode.pos * unitscale
                     mobj.scl = mnode.baseNode.scale
                     mobj.rot = mnode.baseNode.rotation
                 )
@@ -1416,7 +1410,7 @@ rollout MafiaTools_4dsExport "" (   --module
             else (
                 in coordsys parent
                 (
-                    mobj.offset = mnode.baseNode.pos * unitscl
+                    mobj.offset = mnode.baseNode.pos * unitscale
                     mobj.scl = mnode.baseNode.scale
                     mobj.rot = mnode.baseNode.rotation
                 )
@@ -1427,36 +1421,36 @@ rollout MafiaTools_4dsExport "" (   --module
                     mobj.objectType = 1
                     mobj.visualType = 0
                     
-                    ExtractCommon mnode mnodeSet mobj unitscl hasSkin:false hasMorph:false
+                    ExtractCommon mnode mnodeSet mobj unitscale hasSkin:false hasMorph:false
                 )
                 #singlemesh: (
                     mobj.objectType = 1
                     mobj.visualType = 2
                     
-                    ExtractCommon mnode mnodeSet mobj unitscl hasSkin:true hasMorph:false
+                    ExtractCommon mnode mnodeSet mobj unitscale hasSkin:true hasMorph:false
                 )
                 #singlemorph: (
                     mobj.objectType = 1
                     mobj.visualType = 3
                     
-                    ExtractCommon mnode mnodeSet mobj unitscl hasSkin:true hasMorph:true
+                    ExtractCommon mnode mnodeSet mobj unitscale hasSkin:true hasMorph:true
                 )
                 #morph: (
                     mobj.objectType = 1
                     mobj.visualType = 5
                     
-                    ExtractCommon mnode mnodeSet mobj unitscl hasSkin:false hasMorph:true
+                    ExtractCommon mnode mnodeSet mobj unitscale hasSkin:false hasMorph:true
                 )
                 #billboard: (
                     mobj.objectType = 1
                     mobj.visualType = 4
-                    ExtractCommon mnode mnodeSet mobj unitscl hasSkin:false hasMorph:false
+                    ExtractCommon mnode mnodeSet mobj unitscale hasSkin:false hasMorph:false
                     mobj.billboard = ExtractBillboard mnode
                 )
                 #sector: (
                     mobj.objectType = 5
                     if gp == undefined then mobj.cullFlags = 125
-                    mobj.sector = ExtractSector mnode unitscl
+                    mobj.sector = ExtractSector mnode unitscale
 
                     mobj.offset = [0,0,0]
                     mobj.scl = [1,1,1]
@@ -1464,7 +1458,7 @@ rollout MafiaTools_4dsExport "" (   --module
                 )
                 #dummy: (
                     mobj.objectType = 6
-                    mobj.dummy = ExtractDummy mnode unitscl
+                    mobj.dummy = ExtractDummy mnode unitscale
                 )
                 #bone: (
                     mobj.objectType = 10
@@ -1482,11 +1476,11 @@ rollout MafiaTools_4dsExport "" (   --module
                 #mirror: (
                     mobj.objectType = 1
                     mobj.visualType = 8
-                    mobj.mirror = ExtractMirror mnode unitscl
+                    mobj.mirror = ExtractMirror mnode unitscale
                 )
                 default: (
                     mobj.objectType = 6
-                    mobj.dummy = ExtractDummy mnode unitscl
+                    mobj.dummy = ExtractDummy mnode unitscale
                 )
             )
 
@@ -1563,7 +1557,7 @@ rollout MafiaTools_4dsExport "" (   --module
         else #unsupported
     )
 
-    fn Export4ds file cachedNorm editNorm unitscl allow5ds = (
+    fn Export4ds file cachedNorm editNorm unitscale allow5ds = (
 
         USE_CACHED_NORMALS = cachedNorm
         USE_EDIT_NORMALS = editNorm
@@ -1590,7 +1584,7 @@ rollout MafiaTools_4dsExport "" (   --module
 
             m4ds.materials = ExtractMaterials mmmm
             local mnodeSet = CollectNodes()
-            m4ds.objects = ExtractObjects mnodeSet unitscl
+            m4ds.objects = ExtractObjects mnodeSet unitscale
             m4ds.allow5ds = allow5ds
 
             parser.Write4ds f m4ds
