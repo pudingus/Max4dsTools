@@ -996,17 +996,16 @@ rollout MafiaTools_4dsParser "" ( --module
         local ReadPoint = if version == #hd2 then ReadPoint4 else ReadPoint3  
 
         mirr.dmin = ReadPoint f
-        mirr.dmax = ReadPoint f      
-
+        mirr.dmax = ReadPoint f
         for i = 1 to 4 do mirr.unknown[i] = ReadFloatSafe f        
-        
-        mirr.matrix = ReadMatrix f        
-
+        mirr.matrix = ReadMatrix f
         mirr.backColor = ReadColor f
+        
+        if version == #hd2 then ReadU32 f
+        
         mirr.drawDistance = ReadFloatSafe f
 
-        local tr = TriMesh()
-        
+        local tr = TriMesh()        
         tr.numVerts = ReadU32 f
         tr.numFaces = ReadU32 f
                 
