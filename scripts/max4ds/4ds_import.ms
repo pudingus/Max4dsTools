@@ -690,6 +690,7 @@ rollout MafiaTools_4dsImport "" (   --module
 
         if m4ds == undefined then (
             messageBox "This file cannot be imported. Unknown version or format." icon:#critical
+            undefined
         )
         else (
             with redraw off (
@@ -713,7 +714,6 @@ rollout MafiaTools_4dsImport "" (   --module
 
             local message = "Importing took " + (dur as string) + " seconds\n"
             format message
-            --messageBox message
             
             if savedMode != undefined do (
                 setCommandPanelTaskMode savedMode

@@ -91,18 +91,22 @@
                     local sel = ddlUnits.selection
                     local unitscl = 1 / unitMeterRatios[sel]
                     local result = imp.Import4ds file unitscl
-                    local dur = result[1]
-                    local allow5ds = result[2]
                     
-                    if del then (
-                        cbAllow5ds.checked = allow5ds
-                    )
-                    else (
-                        if cbAllow5ds.checked == false then cbAllow5ds.checked = allow5ds
-                    )
+                    if result != undefined then (
+                        local dur = result[1]
+                        local allow5ds = result[2]
+                        
+                        if del then (
+                            cbAllow5ds.checked = allow5ds
+                        )
+                        else (
+                            if cbAllow5ds.checked == false then cbAllow5ds.checked = allow5ds
+                        )
 
-                    labelDone.text = "Done in " + (dur as string) + " seconds"
-                    clock.active = true
+                        labelDone.text = "Done in " + (dur as string) + " seconds"
+                        clock.active = true
+                    )
+                    else labelDone.text = ""
                 )
             )
         )
