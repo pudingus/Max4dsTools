@@ -66,5 +66,5 @@ callbacks.addScript #systemPostReset "PostReset()" id:#MafiaTools
 fn PostReset = (
     ::MafiaTools_ImpExpSettings.useImportedFilename = false
     ::MafiaTools_ImpExpSettings.allow5ds = false
-    ::ImpExp.cbAllow5ds.checked = false
+    if ::ImpExp != undefined then ::ImpExp.cbAllow5ds.checked = false
 )
