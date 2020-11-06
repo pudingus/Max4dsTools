@@ -311,6 +311,10 @@ global MafParamEditor
             EnableControls rltObject.controls
             requestedRlts = #(rltMirror)
         )
+        else if stricmp strsel "occluder" == 0 then (
+            EnableControls rltObject.controls
+            SetNonVisual()
+        )
 
         local rltsToRemove = #()
         local rltsToUpdate = #()
@@ -445,8 +449,8 @@ global MafParamEditor
                 #sector:        items = #("Sector")
                 #portal:        items = #("Portal")
                 #lod:           items = #("Lod")
-                #mesh:          items = #("Mesh", "Billboard", "Mirror")
-                #billboard:     items = #("Mesh", "Billboard", "Mirror")
+                #mesh:          items = #("Mesh", "Billboard", "Mirror", "Occluder")
+                #billboard:     items = #("Mesh", "Billboard", "Mirror", "Occluder")
                 #singlemesh:    items = #("Mesh")
                 #singlemorph:   items = #("Mesh")
                 #morph:         items = #("Mesh")
@@ -454,7 +458,8 @@ global MafParamEditor
                 #target:        items = #("Target")
                 #glow:          items = #("Glow")
                 #bone:          items = #("Bone")
-                #mirror:        items = #("Mesh", "Billboard", "Mirror")
+                #mirror:        items = #("Mesh", "Billboard", "Mirror", "Occluder")
+                #occluder:      items = #("Mesh", "Billboard", "Mirror", "Occluder")
                 default:        items = #("Dummy")
             )
             MafParamEditor.objectType.items = items

@@ -30,6 +30,7 @@ rollout MafiaTools_4dsParser "" ( --module
     local WriteGlow
     local WriteMirror
     local WriteMorph
+    local WriteOccluder
     
     -------------------------------------------------
     
@@ -564,6 +565,7 @@ rollout MafiaTools_4dsParser "" ( --module
             6: WriteDummy f mobj.dummy
             7: WriteTarget f mobj.target
             10: WriteBone f mobj.bone
+            12: WriteOccluder f mobj.occluder
             default: throw "invalid object type"
         )
     )
@@ -1165,15 +1167,15 @@ rollout MafiaTools_4dsParser "" ( --module
         WriteU8 f sector.portals.count
 
         for portal in sector.portals do (
-            WriteU8 f portal.verts.count
+            WriteU8 f portal.mesh.numVerts
             WriteU32 f 4   --unknown
             for i = 1 to 4 do WriteU32 f 0 --unknown
 
             WriteFloat f portal.nearRange
             WriteFloat f portal.farRange
-
-            for vert in portal.verts do (
-                WritePoint3 f vert
+            
+            for vertId = 1 to portal.mesh.numVerts do (
+                WritePoint3 f (getVert portal.mesh vertId)
             )
         )
     )
@@ -1253,6 +1255,20 @@ rollout MafiaTools_4dsParser "" ( --module
             for c = 1 to 3 do setEdgeVis tr faceId c true
         )
         TOccluder mesh:tr
+    )
+    
+    fn WriteOccluder f ocl = (
+        local tr = ocl.mesh
+        WriteU32 f tr.numVerts
+        WriteU32 f tr.numFaces 
+        
+        for vertId = 1 to tr.numVerts do (
+            WritePoint3 f (getVert tr vertId)
+        )
+        
+        for faceId = 1 to tr.numFaces do (
+            WriteFace f (getFace tr faceId)
+        )
     )
     
     -------------------------------------------------

@@ -641,6 +641,7 @@ rollout MafiaTools_4dsImport "" (   --module
                     )
                     5: "Sector"
                     7: "Target"
+                    12: "Occluder"
                     default: "Dummy"
                 )
 

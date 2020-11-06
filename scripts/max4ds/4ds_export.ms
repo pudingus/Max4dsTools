@@ -436,11 +436,17 @@ rollout MafiaTools_4dsExport "" (   --module
                 portal.farRange = gp.farRange
             )
             local vertIds = polyop.getFaceVerts portalNode 1
+            
+            local tr = TriMesh()
+            tr.numVerts = vertIds.count
 
+            local newVertId = 1
             for id in vertIds do (
                 local vert = polyop.getVert portalNode id
-                append portal.verts (vert * unitscale)
+                setVert tr newVertId (vert * unitscale)
+                newVertId += 1
             )
+            portal.mesh = tr
             append sector.portals portal
         )
 
@@ -1377,6 +1383,11 @@ rollout MafiaTools_4dsExport "" (   --module
         )
     )
     
+    fn ExtractOccluder mnode unitscale = (
+        local mesh = copy mnode.basenode.mesh
+        parser.TOccluder mesh:mesh
+    )
+    
     fn ExtractObjects mnodeSet unitscale = (
         local mobjects = #()
 
@@ -1478,6 +1489,10 @@ rollout MafiaTools_4dsExport "" (   --module
                     mobj.visualType = 8
                     mobj.mirror = ExtractMirror mnode unitscale
                 )
+                #occluder: (
+                    mobj.objectType = 12
+                    mobj.occluder = ExtractOccluder mnode unitscale
+                )
                 default: (
                     mobj.objectType = 6
                     mobj.dummy = ExtractDummy mnode unitscale
@@ -1540,6 +1555,9 @@ rollout MafiaTools_4dsExport "" (   --module
             )
             else if (gp != undefined) and (stricmp gp.objectType "mirror" == 0) then (
                 #mirror
+            )
+            else if (gp != undefined) and (stricmp gp.objectType "occluder" == 0) then (
+                #occluder
             )
             else if util.HasMod obj Skin then (
                 if (local mrph = util.GetModByClass obj Morpher; mrph != undefined and MorpherHasData mrph) then (
