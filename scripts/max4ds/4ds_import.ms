@@ -475,7 +475,20 @@ rollout MafiaTools_4dsImport "" (   --module
 
             case mobj.objectType of (
                 1: case mobj.visualType of (
-                    0: (  --standardmesh
+                    0: (  --object
+                        local mmesh = mobj.mesh
+
+                        local nodes = #()
+                        if mmesh.instanceId == 0 then (
+                            nodes = CreateMesh mmesh mobj.name unitscale materials
+                        )
+                        else (
+                            nodes[1] = instance buffer.mafiaNodes[mmesh.instanceId]
+                        )
+
+                        nnode = nodes[1]
+                    )
+                    1: (  --litobject
                         local mmesh = mobj.mesh
 
                         local nodes = #()
@@ -558,6 +571,11 @@ rollout MafiaTools_4dsImport "" (   --module
                         local mmirror = mobj.mirror
                         nnode = CreateMirror mmirror mobj unitscale
                     )
+                    default: (
+                        local size = 1.0 * unitscale
+                        local boxsize = [size, size, size]
+                        nnode = dummy boxsize:boxsize
+                    )
                 )
                 5: ( --sector
                     local msector = mobj.sector
@@ -586,70 +604,72 @@ rollout MafiaTools_4dsImport "" (   --module
                     nnode = CreateOccluder ocl unitscale
                     Layers.AddTo nnode "Occluders"
                 )
-            )
+                default: (
+                    local size = 1.0 * unitscale
+                    local boxsize = [size, size, size]
+                    nnode = dummy boxsize:boxsize
+                )
+            ) 
             
-            if nnode != undefined then (
-                
-            
 
-                if mobj.cullFlags == 16 then (
-                    Layers.AddTo nnode "Disabled"
-                )
-
-
-
-
-                ---basebone
-
-
-                local s = scaleMatrix mobj.scl
-                local r = mobj.rot as matrix3
-                local t = transMatrix (mobj.offset * unitscale)
-
-                if mobj.parentId > 0 then (
-                    nnode.parent = buffer.mafiaNodes[mobj.parentId]
-                    nnode.transform = s * r * t * nnode.parent.transform
-                )
-                else (
-                    nnode.transform = s * r * t
-                )
-
-
-                if baseMesh != undefined then (
-                    baseMesh.parent = nnode
-                    baseMesh.transform = nnode.transform
-                )
-
-                nnode.name = mobj.name
-                append buffer.mafiaNodes nnode
-                --basebone
-
-
-                ---basemesh
-                local gp
-                if baseMesh != undefined then gp = GetMafParams baseMesh
-                else gp = GetMafParams nnode
-
-
-                --cant set objectType in CreateMesh for singlemeshes, singlemorphs...
-                gp.objectType = case mobj.objectType of (
-                    1: case mobj.visualType of (
-                        6: "Dummy"
-                        4: "Billboard"
-                        8: "Mirror"
-                        default: "Mesh"
-                    )
-                    5: "Sector"
-                    7: "Target"
-                    12: "Occluder"
-                    default: "Dummy"
-                )
-
-                gp.renderFlags = mobj.renderFlags
-                gp.renderFlags2 = mobj.renderFlags2
-                gp.cullFlags = mobj.cullFlags
-                if mobj.strParams != undefined then gp.strParams = mobj.strParams
+            if mobj.cullFlags == 16 then (
+                Layers.AddTo nnode "Disabled"
             )
+
+
+
+
+            ---basebone
+
+
+            local s = scaleMatrix mobj.scl
+            local r = mobj.rot as matrix3
+            local t = transMatrix (mobj.offset * unitscale)
+
+            if mobj.parentId > 0 then (
+                nnode.parent = buffer.mafiaNodes[mobj.parentId]
+                nnode.transform = s * r * t * nnode.parent.transform
+            )
+            else (
+                nnode.transform = s * r * t
+            )
+
+
+            if baseMesh != undefined then (
+                baseMesh.parent = nnode
+                baseMesh.transform = nnode.transform
+            )
+
+            nnode.name = mobj.name
+            append buffer.mafiaNodes nnode
+            --basebone
+
+
+            ---basemesh
+            local gp
+            if baseMesh != undefined then gp = GetMafParams baseMesh
+            else gp = GetMafParams nnode
+
+
+            --cant set objectType in CreateMesh for singlemeshes, singlemorphs...
+            gp.objectType = case mobj.objectType of (
+                1: case mobj.visualType of (
+                    6: "Dummy"
+                    4: "Billboard"
+                    8: "Mirror"
+                    default: "Mesh"
+                )
+                5: "Sector"
+                7: "Target"
+                12: "Occluder"
+                default: "Dummy"
+            )
+
+            gp.renderFlags = mobj.renderFlags
+            gp.renderFlags2 = mobj.renderFlags2
+            gp.cullFlags = mobj.cullFlags
+            if mobj.strParams != undefined then gp.strParams = mobj.strParams
+            
         )
 
         buffer

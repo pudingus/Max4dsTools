@@ -15,6 +15,8 @@ rollout MafiaTools_4dsParser "" ( --module
     local ReadTarget
     local ReadBone
     local ReadOccluder
+    local ReadProjector
+    local ReadLight
     
     local Write4ds
     local WriteHeader
@@ -439,13 +441,16 @@ rollout MafiaTools_4dsParser "" ( --module
             case objectType of (
                 1: case visualType of (
                     0: #mesh
+                    1: #litmesh
                     2: #singlemesh
                     3: #singlemorph
                     4: #billboard
                     5: #morph
                     6: #glow
+                    7: #projector
                     8: #mirror
                 )
+                2: #light
                 5: #sector
                 6: #dummy
                 7: #target
@@ -488,6 +493,7 @@ rollout MafiaTools_4dsParser "" ( --module
         case mobj.objectType of (
             1: case mobj.visualType of (
                 0: mobj.mesh = ReadMesh f version  --standardmesh
+                1: mobj.mesh = ReadMesh f version  --litmesh
                 2: (  --singlemesh
                     mobj.mesh = ReadMesh f version
                     mobj.skin = ReadSkin f mobj.mesh.lods.count version
@@ -506,15 +512,17 @@ rollout MafiaTools_4dsParser "" ( --module
                     mobj.morph = ReadMorph f version
                 )
                 6: mobj.glow = ReadGlow f version
+                7: ReadProjector f
                 8: mobj.mirror = ReadMirror f version
-                default: throw "unknown visual type!"
+                default: throw "unknown visual type! value: " mobj.visualType
             )
+            2: ReadLight f
             5: mobj.sector = ReadSector f version
             6: mobj.dummy = ReadDummy f version
             7: mobj.target = ReadTarget f
             10: mobj.bone = ReadBone f version
             12: mobj.occluder = ReadOccluder f version
-            default: throw "unknown object type!"
+            default: throw "unknown object type! value: " mobj.objectType
         )
 
         mobj
@@ -858,6 +866,11 @@ rollout MafiaTools_4dsParser "" ( --module
         if numTargets > 0 then (
             local numRegions = ReadU8 f
             morph.unknown = ReadU8 f   --unknown
+            
+            if morph.unknown != 1 then throw "morph unknown is not 1! value: " morph.unknown
+            
+            
+            
             for i = 1 to numRegions do   (
                 local region = TMorphRegion()
                 local numVerts = ReadU16 f
@@ -1271,4 +1284,12 @@ rollout MafiaTools_4dsParser "" ( --module
     )
     
     -------------------------------------------------
+    
+    fn ReadProjector f = (
+        ReadU32 f
+    )
+    
+    fn ReadLight f = (
+        for i = 1 to 21 do ReadU32 f
+    )
 )
