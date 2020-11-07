@@ -120,7 +120,7 @@ rollout MafiaTools_4dsImport "" (   --module
         local baseMesh = mmesh.lods[1].mesh
         local meshes = #()
 
-        for region in mmorph.regions do (
+        for region in mmorph.lods[1].regions do (
             local regionMeshes = #()
 
             for i = 1 to mmorph.numTargets do (

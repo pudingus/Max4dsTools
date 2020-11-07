@@ -17,6 +17,7 @@ rollout MafiaTools_4dsParser "" ( --module
     local ReadOccluder
     local ReadProjector
     local ReadLight
+    local ReadEmitor
     
     local Write4ds
     local WriteHeader
@@ -69,6 +70,7 @@ rollout MafiaTools_4dsParser "" ( --module
     
     
     fn WriteU8 f val = (
+        if not isKindOf val Number then throw "Write error. Value is not a number, got: " val
         if val > 255 or val < 0 then throw "Write error. Value out of U8 range! Value: " val
         local result = WriteByte f val
         if result != true then throw "Unknown write error"
@@ -76,6 +78,7 @@ rollout MafiaTools_4dsParser "" ( --module
     )
     
     fn WriteU16 f val = (
+        if not isKindOf val Number then throw "Write error. Value is not a number, got: " val
         if val > 65535 or val < 0 then throw "Write error. Value out of U16 range! Value: " val
         local result = WriteShort f val
         if result != true then throw "Unknown write error"
@@ -83,12 +86,14 @@ rollout MafiaTools_4dsParser "" ( --module
     )
     
     fn WriteU32 f val = (
+        if not isKindOf val Number then throw "Write error. Value is not a number, got: " val
         local result = WriteLong f val
         if result != true then throw "Unknown write error"
         else result
     )
     
     fn WriteU64 f val = (
+        if not isKindOf val Number then throw "Write error. Value is not a number, got: " val
         local result = WriteLongLong f val
         if result != true then throw "Unknown write error"
         else result
@@ -449,6 +454,7 @@ rollout MafiaTools_4dsParser "" ( --module
                     6: #glow
                     7: #projector
                     8: #mirror
+                    9: #emitor
                 )
                 2: #light
                 5: #sector
@@ -514,6 +520,7 @@ rollout MafiaTools_4dsParser "" ( --module
                 6: mobj.glow = ReadGlow f version
                 7: ReadProjector f
                 8: mobj.mirror = ReadMirror f version
+                9: ReadEmitor f
                 default: throw "unknown visual type! value: " mobj.visualType
             )
             2: ReadLight f
@@ -655,7 +662,7 @@ rollout MafiaTools_4dsParser "" ( --module
                     setNormal tr i verts[i].normal
                 )
                 
-                buildTVFaces tr
+                if numverts != 0 then buildTVFaces tr
                 for i = 1 to faces.count do (
                     setFace tr i faces[i]                        
                     setTVFace tr i faces[i]
@@ -836,12 +843,16 @@ rollout MafiaTools_4dsParser "" ( --module
     
     struct TMorph (
         numTargets,    --num targets per region
-        regions = #(),   --array of TMorphRegion
-        unknown,
+        numRegions,
+        lods = #(),
         dmin,
         dmax,
         center,
         dist 
+    )
+    
+    struct TMorphLod (
+        regions = #()     --array of TMorphRegion
     )
     
     struct TMorphRegion (
@@ -860,40 +871,39 @@ rollout MafiaTools_4dsParser "" ( --module
     
     fn ReadMorph f version = (
         local morph = TMorph()
-        local numTargets = ReadU8 f
-        morph.numTargets = numTargets
+        morph.numTargets = ReadU8 f
 
-        if numTargets > 0 then (
-            local numRegions = ReadU8 f
-            morph.unknown = ReadU8 f   --unknown
+        if morph.numTargets > 0 then (
+            morph.numRegions = ReadU8 f
+            local numLods = ReadU8 f
             
-            if morph.unknown != 1 then throw "morph unknown is not 1! value: " morph.unknown
-            
-            
-            
-            for i = 1 to numRegions do   (
-                local region = TMorphRegion()
-                local numVerts = ReadU16 f
-
-                for v = 1 to numVerts do (
-                    local vert = TMorphVertex()
-
-                    for t = 1 to numTargets do (
-                        local point = TMorphedPoint()
-                        point.pos = ReadPoint3 f
-                        point.normal = ReadPoint3 f
-                        append vert.points point
+            for lodId = 1 to numLods do (
+                local lod = TMorphLod()
+                for i = 1 to morph.numRegions do   (
+                    local region = TMorphRegion()
+                    local numVerts = ReadU16 f
+    
+                    for v = 1 to numVerts do (
+                        local vert = TMorphVertex()
+    
+                        for t = 1 to morph.numTargets do (
+                            local point = TMorphedPoint()
+                            point.pos = ReadPoint3 f
+                            point.normal = ReadPoint3 f
+                            append vert.points point
+                        )
+                        append region.vertices vert
                     )
-                    append region.vertices vert
+    
+                    if (morph.numTargets * numVerts) > 0 then ReadU8 f  --unknown
+    
+                    for v = 1 to numVerts do (
+                        region.vertices[v].index = (ReadU16 f) + 1
+                    )
+    
+                    append lod.regions region
                 )
-
-                if (numTargets * numVerts) > 0 then ReadU8 f  --unknown
-
-                for v = 1 to numVerts do (
-                    region.vertices[v].index = (ReadU16 f) + 1
-                )
-
-                append morph.regions region
+                append morph.lods lod
             )
 
             morph.dmin = ReadPoint3 f
@@ -910,22 +920,26 @@ rollout MafiaTools_4dsParser "" ( --module
         WriteU8 f morph.numTargets
         
         if morph.numTargets > 0 then (
-            WriteU8 f morph.regions.count
-            WriteU8 f 1 --unknown
+            WriteU8 f morph.numRegions
+            WriteU8 f morph.lods.count
             
-            for region in morph.regions do (
-                WriteU16 f region.vertices.count
-                for vert in region.vertices do (
-                    if vert.points.count != morph.numTargets then throw "numTargets and points.count mismatch"
-                    for point in vert.points do (
-                        WritePoint3 f point.pos
-                        WritePoint3 f point.normal
-                    )
-                )
-                if region.vertices.count * morph.numTargets > 0 do WriteU8 f 1 --unknown
+            for lod in morph.lods do (
+                if lod.regions.count != morph.numRegions then throw "morph.numRegions and lod.regions.count mismatch"
                 
-                for vert in region.vertices do (
-                    WriteU16 f (vert.index - 1)
+                for region in lod.regions do (
+                    WriteU16 f region.vertices.count
+                    for vert in region.vertices do (
+                        if vert.points.count != morph.numTargets then throw "numTargets and points.count mismatch"
+                        for point in vert.points do (
+                            WritePoint3 f point.pos
+                            WritePoint3 f point.normal
+                        )
+                    )
+                    if region.vertices.count * morph.numTargets > 0 do WriteU8 f 1 --unknown
+                    
+                    for vert in region.vertices do (
+                        WriteU16 f (vert.index - 1)
+                    )
                 )
             )
             
@@ -1291,5 +1305,10 @@ rollout MafiaTools_4dsParser "" ( --module
     
     fn ReadLight f = (
         for i = 1 to 21 do ReadU32 f
+    )
+    
+    fn ReadEmitor f = (
+        ReadU32 f
+        ReadU8 f
     )
 )

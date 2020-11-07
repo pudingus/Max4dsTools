@@ -849,6 +849,8 @@ rollout MafiaTools_4dsExport "" (   --module
 
             local vmin
             local vmax
+            
+            local morphlod = parser.TMorphLod()
 
             for i = 1 to regions.count do (
                 local regionInfo = regions[i]
@@ -886,8 +888,12 @@ rollout MafiaTools_4dsExport "" (   --module
                     )
                     append mregion.vertices mvert
                 )
-                append mmorph.regions mregion
-            )        
+                append morphlod.regions mregion
+            )    
+            
+            append mmorph.lods morphlod
+            
+            mmorph.numRegions = regions.count
 
             -- thanks Duelist
             mmorph.dmin = vmin
