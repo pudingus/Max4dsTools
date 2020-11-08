@@ -65,15 +65,15 @@ replaceUI:true
             
             local events = ::Max4ds_Events
             
-            events.AddListener events.SceneUndo YoYo this
-            events.AddListener events.SceneRedo YoYo this
+            events.AddListener events.SceneUndo Reload this
+            events.AddListener events.SceneRedo Reload this
         )
         
         on TargetRoll close do (        
             local events = ::Max4ds_Events
                 
-            events.RemoveListener events.SceneUndo YoYo
-            events.RemoveListener events.SceneRedo YoYo
+            events.RemoveListener events.SceneUndo Reload
+            events.RemoveListener events.SceneRedo Reload
         )
 
     )

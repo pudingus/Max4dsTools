@@ -779,7 +779,7 @@ rollout MafiaTools_4dsExport "" (   --module
             else WM3_NumberOfChannels mrph
             
         local channelsPerRegion = 10
-        local maxRegions = ( (numChannels) / channelsPerRegion ) as integer
+        local maxRegions = ( numChannels / channelsPerRegion ) as integer
 
         --collect morph meshes
         for i = 1 to maxRegions do (
@@ -792,7 +792,7 @@ rollout MafiaTools_4dsExport "" (   --module
 
                 local chanMesh
                 if hasData and isValid and isActive then (
-                    regionInfo.usedChannels[j] = true
+                    regionInfo.usedChannels[j+1] = true
 
                     local numpts = amin #((WM3_MC_NumPts mrph chanId), baseNumverts)
                     chanMesh = TriMesh()
@@ -802,7 +802,7 @@ rollout MafiaTools_4dsExport "" (   --module
                         setVert chanMesh vertId (pt * otrans)
                     )
                 )
-                append regionInfo.channels chanMesh
+                regionInfo.channels[j+1] = chanMesh
             )
             append regions regionInfo
         )

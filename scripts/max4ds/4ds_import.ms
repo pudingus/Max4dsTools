@@ -123,17 +123,17 @@ rollout MafiaTools_4dsImport "" (   --module
         for region in mmorph.lods[1].regions do (
             local regionMeshes = #()
 
-            for i = 1 to mmorph.numTargets do (
-                regionMeshes[i] = copy baseMesh
+            for i = 2 to mmorph.numTargets do (
+                regionMeshes[i-1] = copy baseMesh
             )
 
             for vert in region.vertices do (
                 local vertId = vert.index
 
-                for j = 1 to vert.points.count do (
+                for j = 2 to vert.points.count do (
                     local point = vert.points[j]
                     local pos = point.pos * unitscale
-                    setVert regionMeshes[j] vertId pos
+                    setVert regionMeshes[j-1] vertId pos
                 )
             )
             append meshes regionMeshes
@@ -149,7 +149,7 @@ rollout MafiaTools_4dsImport "" (   --module
 
         local letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-        local sectionId = 1
+        local regionId = 1
         local marker = 1
 
         -- Keep this! For some reason BuildFromNode builds data only after
@@ -157,7 +157,7 @@ rollout MafiaTools_4dsImport "" (   --module
         WM3_MC_HasData tmod 1
         
         for regionMeshes in meshes do (
-            local regionLetter = letters[sectionId]
+            local regionLetter = letters[regionId]
             WM3_CreateMarker tmod marker ("region " + regionLetter)
 
             local targetId = 1
@@ -174,8 +174,8 @@ rollout MafiaTools_4dsImport "" (   --module
                 targetId += 1
             )            
             
-            marker = (sectionId * 10 + 1)
-            sectionId += 1
+            marker = (regionId * 10 + 1)
+            regionId += 1
         )
 
         WM3_SetCurrentMarker tmod 1
