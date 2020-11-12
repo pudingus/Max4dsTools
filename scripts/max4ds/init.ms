@@ -16,7 +16,8 @@
             cachedNorm,
             unitsSel = 4,
             useImportedFilename = false,
-            allow5ds
+            allow5ds,
+            versionSel = 1
         )
         ::MafiaTools_ImpExpSettings = settings()
     )

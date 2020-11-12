@@ -86,6 +86,7 @@ rollout MafiaTools_4dsImport "" (   --module
                 
 
                 if lodId > 0 then (
+                    --lodNode.name = "$lod" + (lodId as string)
                     lodNode.name = "$lod" + (lodId as string) + "__" + name
                     lodNode.parent = nodes[1]
                     hide lodNode
@@ -188,7 +189,7 @@ rollout MafiaTools_4dsImport "" (   --module
         gp.rotMode = mbillboard.rotMode
     )
 
-    fn CreateGlow mglows mobj unitscale materials = (
+    fn CreateGlow mglows name unitscale materials = (
         local nnode = Glow4ds()
         nnode.wirecolor = color 248 128 0
         nnode.boxmode = true
@@ -203,7 +204,7 @@ rollout MafiaTools_4dsImport "" (   --module
         )
 
         local multimat = multimaterial numsubs:(usedMats.numberSet + 1)
-        multimat.name = mobj.name
+        multimat.name = name
         multimat[multimat.numsubs] = undefined
         local index = 1
         local indices = #()
@@ -224,7 +225,7 @@ rollout MafiaTools_4dsImport "" (   --module
         nnode
     )
 
-    fn CreateMirror mirr mobj unitscale = (
+    fn CreateMirror mirr unitscale = (
         util.TransformVerts mirr.mesh unitscale
 
         local nnode = mesh mesh:mirr.mesh
@@ -255,7 +256,7 @@ rollout MafiaTools_4dsImport "" (   --module
         nnode
     )  
 
-    fn CreateDummy mdummy mobj unitscale = (
+    fn CreateDummy mdummy unitscale = (
         local dmin = mdummy.dmin * unitscale
         local dmax = mdummy.dmax * unitscale
         local nnode = dummy()
@@ -267,7 +268,7 @@ rollout MafiaTools_4dsImport "" (   --module
     )
 
     --returns array of nodes
-    fn CreateSector msector mobj unitscale = (
+    fn CreateSector msector name unitscale = (
         local nodes = #()
 
         util.TransformVerts msector.mesh unitscale
@@ -280,7 +281,7 @@ rollout MafiaTools_4dsImport "" (   --module
             util.TransformVerts mportal.mesh unitscale
             
             local portalNode = mesh mesh:mportal.mesh
-            portalNode.name = "$portal" + (formattedPrint portalId format:".2u") + "__" + mobj.name
+            portalNode.name = "$portal" + (formattedPrint portalId format:".2u") + "__" + name
             
             local face = for v = 1 to portalnode.numVerts collect v
             portalNode = convertToPoly portalNode
@@ -305,7 +306,7 @@ rollout MafiaTools_4dsImport "" (   --module
     )
 
     -- returns Node
-    fn CreateTarget mtarget mobj unitscale = (
+    fn CreateTarget mtarget unitscale = (
         local nnode = Target4ds()
         nnode.wirecolor = color 28 122 210
         nnode.viewportSize = 0.1 * unitscale
@@ -398,11 +399,17 @@ rollout MafiaTools_4dsImport "" (   --module
     )
 
     struct TWorldBuffer (
-        skinBuffer = #(),   --array of TObjPair
+        skinBuffer = #(),   --array of TSkin
         targetBuffer = #(),  --array of TObjPair
         boneNodes = #(),   --array of nodes sorted in boneid order
         normalNodes = #(),    --array of nodes for modifier normals
         mafiaNodes = #()
+    )
+    
+    struct TSkin (
+        skinlods = #(),
+        lodnodes = #(),
+        bonenodes = #()
     )
 
     struct TObjPair (
@@ -411,16 +418,17 @@ rollout MafiaTools_4dsImport "" (   --module
     )
 
 
-    fn CreateSkins skinBuffer boneNodes = (
+    fn CreateSkins skinBuffer = (
         local maxver = (maxversion())[1]
        
         for pair in skinBuffer do (
-            local mskins = pair.mdefs
-            local nodes = pair.nodes
+            local mskins = pair.skinlods
+            local nodes = pair.lodnodes
+            local boneNodes = pair.bonenodes
 
-            for q = 1 to nodes.count do (
-                local nnode = nodes[q]
-                local mskin = mskins[q]
+            for lodId = 1 to nodes.count do (
+                local nnode = nodes[lodId]
+                local mskin = mskins[lodId]
 
                 local skinMod = Skin()
                 skinMod.showNoEnvelopes = true
@@ -441,21 +449,29 @@ rollout MafiaTools_4dsImport "" (   --module
                 
                 local xskin = skin_makeCache skinMod
                 
-                for vertId = 1 to mskin.joints.count do (
-                    local joints = mskin.joints[vertId]
-                    local weights = mskin.weights[vertId]
-                    --format "%: %, %\n" vertId joints weights
-                    skin_replaceVertexWeights xskin vertId joints weights
+                for vertId = 1 to mskin.weights.count do (
+                    local boneId = mskin.weights[vertId][1]
+                    local weight = mskin.weights[vertId][2]
+                    
+                    local parentId = mskin.parentIds[boneId]
+                    
+                    if parentId == undefined then (
+                        skin_replaceVertexWeights xskin vertId boneId weight
+                    )
+                    else (
+                        skin_replaceVertexWeights xskin vertId #(boneId, parentId) #(weight, 1.0 - weight)
+                    )
                 )
                 
-                for vertId = mskin.joints.count + 1 to nnode.numverts do (
+                for vertId = mskin.weights.count + 1 to nnode.numverts do (
                     skin_replaceVertexWeights xskin vertId 1 0.0
                 )
             )
-        )
-        
-        for boneNode in boneNodes where bonenode != undefined do (
-            boneNode.setBoneEnable true sliderTime
+            
+            for boneNode in boneNodes where bonenode != undefined do (
+                boneNode.setBoneEnable true sliderTime
+                boneNode.setSkinPose()
+            )
         )
     )
     
@@ -467,6 +483,8 @@ rollout MafiaTools_4dsImport "" (   --module
 
     fn CreateObjects mobjects filename unitscale materials = (
         local buffer = TWorldBuffer()
+        
+        local currentSkin
 
         for i = 1 to mobjects.count do (
             local mobj = mobjects[i]
@@ -504,16 +522,23 @@ rollout MafiaTools_4dsImport "" (   --module
                     2: (  --singlemesh
                         local mmesh = mobj.mesh
                         local mskins = mobj.skin
-                        local nodes = CreateMesh mmesh filename unitscale materials
+                        
+                        local name = mobj.name + ".skin"
+                        local nodes = CreateMesh mmesh name unitscale materials
 
                         baseMesh = nodes[1]
-                        baseMesh.name = "_" + filename
-
-                        append buffer.skinBuffer (TObjPair mdefs:mskins nodes:nodes)
+                        baseMesh.name = "_" + name
 
 
                         nnode = CreateBone()
-                        buffer.boneNodes[1] = nnode
+                        
+                        currentSkin = TSkin()
+                        currentSkin.boneNodes[1] = nnode
+                        currentSkin.skinLods = mskins
+                        currentSkin.lodnodes = nodes
+                        
+                        
+                        append buffer.skinBuffer currentSkin
 
                         --baseMesh.parent = nnode
                     )
@@ -521,17 +546,23 @@ rollout MafiaTools_4dsImport "" (   --module
                         local mmesh = mobj.mesh
                         local mskins = mobj.skin
                         local mmorph = mobj.morph
-                        local nodes = CreateMesh mmesh filename unitscale materials
+                        
+                        local name = mobj.name + ".skin"
+                        local nodes = CreateMesh mmesh name unitscale materials
                         CreateMorph mmorph mmesh nodes[1] unitscale
 
                         baseMesh = nodes[1]
-                        baseMesh.name = "_" + filename
-
-                        append buffer.skinBuffer (TObjPair mdefs:mskins nodes:nodes)
-
+                        baseMesh.name = "_" + name
 
                         nnode = CreateBone()
-                        buffer.boneNodes[1] = nnode
+                        
+                        currentSkin = TSkin()
+                        currentSkin.boneNodes[1] = nnode
+                        currentSkin.skinLods = mskins
+                        currentSkin.lodnodes = nodes
+                        
+                        
+                        append buffer.skinBuffer currentSkin
 
                         --baseMesh.parent = nnode
                     )
@@ -564,12 +595,12 @@ rollout MafiaTools_4dsImport "" (   --module
                     )
                     6: ( --glow
                         local mglows = mobj.glow
-                        nnode = CreateGlow mglows mobj unitscale materials
+                        nnode = CreateGlow mglows mobj.name unitscale materials
                         Layers.AddTo nnode "Glows"
                     )
                     8: (  --mirror
                         local mmirror = mobj.mirror
-                        nnode = CreateMirror mmirror mobj unitscale
+                        nnode = CreateMirror mmirror unitscale
                     )
                     default: (
                         local size = 1.0 * unitscale
@@ -579,17 +610,17 @@ rollout MafiaTools_4dsImport "" (   --module
                 )
                 5: ( --sector
                     local msector = mobj.sector
-                    nnode = (CreateSector msector mobj unitscale)[1]
+                    nnode = (CreateSector msector mobj.name unitscale)[1]
                     Layers.AddTo nnode "Sectors"
                 )
                 6: ( --dummy
                     local mdummy = mobj.dummy
-                    nnode = CreateDummy mdummy mobj unitscale
+                    nnode = CreateDummy mdummy unitscale
                     Layers.AddTo nnode "Dummies"
                 )
                 7: ( --target
                     local mtarget = mobj.target
-                    nnode = CreateTarget mtarget mobj unitscale
+                    nnode = CreateTarget mtarget unitscale
 
                     append buffer.targetBuffer (TObjPair mdefs:mtarget nodes:nnode)
                 )
@@ -597,7 +628,7 @@ rollout MafiaTools_4dsImport "" (   --module
                     local mbone = mobj.bone
                     nnode = CreateBone()
 
-                    buffer.boneNodes[mbone.boneId + 1] = nnode
+                    currentSkin.boneNodes[mbone.boneId + 1] = nnode
                 )
                 12: (
                     local ocl = mobj.occluder
@@ -719,7 +750,7 @@ rollout MafiaTools_4dsImport "" (   --module
                 local buffer = CreateObjects m4ds.objects filename unitscale materials
 
                 LinkTargets buffer.targetBuffer buffer.mafiaNodes
-                CreateSkins buffer.skinBuffer buffer.boneNodes
+                CreateSkins buffer.skinBuffer
                 Layers.Hide #("Disabled")
                 --Layers.HideLods #{1..9}
             )

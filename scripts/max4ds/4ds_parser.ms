@@ -147,6 +147,13 @@ rollout MafiaTools_4dsParser "" ( --module
         WriteFloat f p3.y
     )
     
+    fn WritePoint4 f p3 = (
+        WriteFloat f p3.x
+        WriteFloat f p3.z
+        WriteFloat f p3.y
+        WriteFloat f 0.0
+    )
+    
     fn ReadPoint4 f = (
         local x = ReadFloatSafe f
         local y = ReadFloatSafe f
@@ -157,17 +164,32 @@ rollout MafiaTools_4dsParser "" ( --module
     
     -------------------------------------------------
 
-    fn ReadColor f = (
+    fn ReadColor3 f = (
         local r = (ReadFloatSafe f) * 255
         local g = (ReadFloatSafe f) * 255
         local b = (ReadFloatSafe f) * 255
         color r g b
     )
     
-    fn WriteColor f clr = (
+    fn ReadColor4 f = (
+        local r = (ReadFloatSafe f) * 255
+        local g = (ReadFloatSafe f) * 255
+        local b = (ReadFloatSafe f) * 255
+        local a = (ReadFloatSafe f) * 255
+        color r g b
+    )
+    
+    fn WriteColor3 f clr = (
         WriteFloat f (clr.r / 255.0)
         WriteFloat f (clr.g / 255.0)
         WriteFloat f (clr.b / 255.0)
+    )
+    
+    fn WriteColor4 f clr = (
+        WriteFloat f (clr.r / 255.0)
+        WriteFloat f (clr.g / 255.0)
+        WriteFloat f (clr.b / 255.0)
+        WriteFloat f 0.0
     )
     
     -------------------------------------------------
@@ -190,11 +212,18 @@ rollout MafiaTools_4dsParser "" ( --module
         inverse qt
     )
     
-    fn WriteQuat f q = (
+    fn WriteQuatWXYZ f q = (
         WriteFloat f q.w
         WriteFloat f q.x
         WriteFloat f q.z
         WriteFloat f q.y
+    )
+    
+    fn WriteQuatXYZW f q = (
+        WriteFloat f q.x
+        WriteFloat f q.z
+        WriteFloat f q.y
+        WriteFloat f q.w
     )
     
     -------------------------------------------------
@@ -297,9 +326,17 @@ rollout MafiaTools_4dsParser "" ( --module
         m4ds
     )
     
-    fn Write4ds f m4ds = (
+    fn Write4ds f m4ds version = (
         WriteU32 f 5456948     -- 4DS
-        WriteU16 f 29         --format version
+        
+        local versionInt = case version of (
+            #mafia: 29
+            #hd2: 41
+            #chameleon: 42
+            default: throw "invalid version, got: " version
+        )
+        
+        WriteU16 f versionInt
         
         local DateTime = dotNetClass "DateTime"
         local filetime = DateTime.UtcNow.ToFiletime()        
@@ -307,12 +344,12 @@ rollout MafiaTools_4dsParser "" ( --module
 
         WriteU16 f m4ds.materials.count
         for mmat in m4ds.materials do (
-            WriteMaterial f mmat
+            WriteMaterial f mmat version
         )
 
         WriteU16 f m4ds.objects.count
         for mobj in m4ds.objects do (
-            WriteObject f mobj
+            WriteObject f mobj version
         )        
 
         WriteU8 f (if m4ds.allow5ds then 1 else 0)
@@ -324,10 +361,10 @@ rollout MafiaTools_4dsParser "" ( --module
         flags,   --u32
         ambient,  --color (float[3])
         diffuse,  --color (=||=)
-        specular, --color (HD2, Chameleon only)
+        specular = white, --color (HD2, Chameleon only)
         emission,  --color
         opacity,  --float
-        specularity,  --float (HD2, Chameleon only)
+        specularity = 0.0,  --float (HD2, Chameleon only)
         envMapAmount,  --float
         envMapName, --pstring
         diffMapName,    --pstring
@@ -340,23 +377,20 @@ rollout MafiaTools_4dsParser "" ( --module
         local mmat = TMaterial()
         mmat.flags = ReadU32 f
         
+        local ReadColor = if version == #mafia then ReadColor3 else ReadColor4
+        
+        mmat.ambient = ReadColor f
+        mmat.diffuse = ReadColor f
+        
         if version == #mafia then (
-            mmat.ambient = ReadColor f
-            mmat.diffuse = ReadColor f
             mmat.emission = ReadColor f
         )
         else (
-            mmat.ambient = ReadColor f
-            ReadU32 f
-            mmat.diffuse = ReadColor f
-            ReadU32 f
             mmat.specular = ReadColor f
-            ReadU32 f
             mmat.emission = ReadColor f
-            ReadU32 f
             mmat.specularity = ReadFloatSafe f
         )
-        
+
         mmat.opacity = ReadFloatSafe f
         if bit.get mmat.flags 20 then (  --env map enabled
             mmat.envMapAmount = ReadFloatSafe f
@@ -380,11 +414,23 @@ rollout MafiaTools_4dsParser "" ( --module
         mmat
     )
     
-    fn WriteMaterial f mmat = (
+    fn WriteMaterial f mmat version = (
         WriteU32 f mmat.flags
+        
+        local WriteColor = if version == #mafia then WriteColor3 else WriteColor4       
+        
         WriteColor f mmat.ambient
         WriteColor f mmat.diffuse
-        WriteColor f mmat.emission
+        
+        if version == #mafia then (
+            WriteColor f mmat.emission
+        )
+        else (
+            WriteColor f mmat.specular
+            WriteColor f mmat.emission
+            WriteFloat f mmat.specularity            
+        )        
+        
         WriteFloat f mmat.opacity
 
         if bit.get mmat.flags 20 then (     -- env map
@@ -477,18 +523,19 @@ rollout MafiaTools_4dsParser "" ( --module
             mobj.renderFlags2 = ReadU8 f
         )
         mobj.parentId = ReadU16 f
+        
+        mobj.offset = ReadPoint3 f
+        
         if version == #mafia then (
-            mobj.offset = ReadPoint3 f
             mobj.scl = ReadPoint3 f
             mobj.rot = ReadQuatWXYZ f
         )
         else (
-            mobj.offset = ReadPoint3 f
             mobj.rot = ReadQuatXYZW f
             mobj.scl = ReadPoint3 f
         )
         
-        if version == #hd2 then ReadU32 f
+        if version == #hd2 then ReadFloatSafe f
 
         mobj.cullFlags = ReadU8 f
         mobj.name = ReadText f
@@ -535,7 +582,7 @@ rollout MafiaTools_4dsParser "" ( --module
         mobj
     )
     
-    fn WriteObject f mobj = (
+    fn WriteObject f mobj version = (
         WriteU8 f mobj.objectType
 
         if mobj.objectType == 1 then (
@@ -545,42 +592,53 @@ rollout MafiaTools_4dsParser "" ( --module
         )
 
         WriteU16 f mobj.parentId
+        
         WritePoint3 f mobj.offset
-        WritePoint3 f mobj.scl
-        WriteQuat f mobj.rot
+        
+        if version == #mafia then (            
+            WritePoint3 f mobj.scl
+            WriteQuatWXYZ f mobj.rot
+        )
+        else (
+            WriteQuatXYZW f mobj.rot
+            WritePoint3 f mobj.scl
+        )
+        
+        if version == #hd2 then WriteFloat f 0.0
+        
         WriteU8 f mobj.cullFlags
         WriteText f mobj.name
         WriteText f mobj.strParams
 
         case mobj.objectType of (
             1: case mobj.visualType of (
-                0: WriteMesh f mobj.mesh
+                0: WriteMesh f mobj.mesh version
                 2: (
-                    WriteMesh f mobj.mesh
-                    WriteSkin f mobj.skin
+                    WriteMesh f mobj.mesh version
+                    WriteSkin f mobj.skin version
                 )
                 3: (
-                    WriteMesh f mobj.mesh
-                    WriteSkin f mobj.skin
-                    WriteMorph f mobj.morph
+                    WriteMesh f mobj.mesh version
+                    WriteSkin f mobj.skin version
+                    WriteMorph f mobj.morph version
                 )
                 4: (
-                    WriteMesh f mobj.mesh
+                    WriteMesh f mobj.mesh version
                     WriteBillboard f mobj.billboard
                 )
                 5: (
-                    WriteMesh f mobj.mesh
-                    WriteMorph f mobj.morph
+                    WriteMesh f mobj.mesh version
+                    WriteMorph f mobj.morph version
                 )
-                6: WriteGlow f mobj.glow
-                8: WriteMirror f mobj.mirror
+                6: WriteGlow f mobj.glow version
+                8: WriteMirror f mobj.mirror version
                 default: throw "invalid visual type"
             )
-            5: WriteSector f mobj.sector
-            6: WriteDummy f mobj.dummy
+            5: WriteSector f mobj.sector version
+            6: WriteDummy f mobj.dummy version
             7: WriteTarget f mobj.target
-            10: WriteBone f mobj.bone
-            12: WriteOccluder f mobj.occluder
+            10: WriteBone f mobj.bone version
+            12: WriteOccluder f mobj.occluder version
             default: throw "invalid object type"
         )
     )
@@ -677,13 +735,18 @@ rollout MafiaTools_4dsParser "" ( --module
         mmesh
     )
 
-    fn WriteMesh f mmesh = (
+    fn WriteMesh f mmesh version = (
         WriteU16 f mmesh.instanceId
 
         if mmesh.instanceId == 0 then (
             WriteU8 f mmesh.lods.count
             for lod in mmesh.lods do (
                 WriteFloat f lod.distance
+                
+                if version == #hd2 or version == #chameleon then (
+                    WriteU32 f 0   --num extra data
+                )
+                
                 WriteU16 f lod.mesh.numverts
 
                 for i = 1 to lod.mesh.numverts do (
@@ -705,9 +768,22 @@ rollout MafiaTools_4dsParser "" ( --module
     )
     
     -------------------------------------------------
+    
+    struct TWeight (
+        boneId,
+        weight
+    )
+
     struct TSkinCommon (
-        joints = #(),
-        weights = #()       
+        parentIds = #(),
+        jointInfo = #(),   --todo: use this when reading
+        weights = #()    --array of #(boneId, weight)
+    )
+    
+    struct TJointInfo (
+        matrix,
+        dmin,
+        dmax
     )
     
     fn ReadSkinCommonMafia f numlods = (
@@ -718,8 +794,9 @@ rollout MafiaTools_4dsParser "" ( --module
             local dmin = ReadPoint3 f
             local dmax = ReadPoint3 f
             
-            local joints = #()
             local weights = #()
+            
+            local parentIds = #()
 
             for i = 1 to numGroups do (
                 local matrix = ReadMatrix f
@@ -731,41 +808,96 @@ rollout MafiaTools_4dsParser "" ( --module
                 local dmin = ReadPoint3 f
                 local dmax = ReadPoint3 f
                 
+                local boneId = i + 1
+                
                 for w = 1 to numW1Verts do (
-                    append joints #(i + 1, parentId)
-                    append weights #(1.0, 0.0)
+                    append weights #(boneId, 1.0)
                 )
 
                 for w = 1 to numWeights do (
                     local weight = ReadFloatSafe f
                     
-                    append joints #(i + 1, parentId)
-                    append weights #(weight, 1.0 - weight)
+                    append weights #(boneId, weight)
                 )
+                
+                parentIds[boneId] = parentId
             )
             
             for w = 1 to numW1Verts do (
-                append joints #(1, 1)
-                append weights #(0.0, 1.0)
-            )    
+                append weights #(1, 1.0)
+            )
             
-            TSkinCommon joints:joints weights:weights
+            TSkinCommon parentIds:parentIds weights:weights
+        )
+    )
+    
+    fn WriteSkinCommonMafia f mskins = (
+        for mskin in mskins do (
+            struct VGroupMafia (
+                numW1Verts = 0,
+                weights = #()
+            )
+            
+            local groups = #()
+            for i = 2 to mskin.jointInfo.count do (
+                groups[i] = VGroupMafia()
+            )
+            
+            local numW1Verts = 0
+            
+            for weight in mskin.weights do (
+                if weight.boneId == 1 then (
+                    numW1Verts += 1
+                )
+                else (
+                    local grp = groups[weight.boneid]
+                               
+                    if weight.weight == 1.0 then (
+                        grp.numW1verts += 1
+                    )
+                    else (
+                        append grp.weights weight.weight
+                    )
+                )
+            )
+            
+            WriteU8 f (mskin.jointInfo.count - 1)
+            WriteU32 f numW1Verts
+            WritePoint3 f mskin.jointInfo[1].dmin
+            WritePoint3 f mskin.jointInfo[1].dmax
+            
+            for i = 2 to groups.count do (
+                local grp = groups[i]
+                WriteMatrix f mskin.jointInfo[i].matrix
+                WriteU32 f grp.numW1Verts
+                WriteU32 f grp.weights.count
+                WriteU32 f (mskin.parentIds[i] - 1)
+                WritePoint3 f mskin.jointInfo[i].dmin
+                WritePoint3 f mskin.jointInfo[i].dmax
+                for weight in grp.weights do (
+                    WriteFloat f weight
+                )
+            )
         )
     )
     
     fn ReadSkinCommonChameleon f numlods version = (
         local numGroups = ReadU8 f
-        local ReadPoint = if version == #hd2 then ReadPoint4 else ReadPoint3  
+        local ReadPoint = if version == #hd2 then ReadPoint4 else ReadPoint3
         local dmin = ReadPoint f
         local dmax = ReadPoint f
         local parentIds = for i = 1 to numGroups collect (
             (ReadU8 f) + 1
         )        
+        
+        local parentIds2 = #()
                 
         for i = 1 to numGroups do (
             local matrix = ReadMatrix f
             local dmin = ReadPoint f
             local dmax = ReadPoint f
+            
+            parentIds2[i + 1] = parentIds[i]
         )
         
         for i = 1 to numlods collect (
@@ -774,56 +906,41 @@ rollout MafiaTools_4dsParser "" ( --module
             local weights = #()
             for j = 1 to numWeights do (
                 local boneId = (ReadU8 f) + 1
-                local weight = 1.0 / 255.0 * (ReadU8 f)     
+                local weight = 1.0 / 255.0 * (ReadU8 f)
                 
-                --format "%: boneId: %, weight: %\n" (j-1) boneId weight
-                
-                append joints #(parentIds[boneId-1], boneid)
-                append weights #(weight, 1.0 - weight)
+                append weights #(boneid, 1.0 - weight)
             )      
-            TSkinCommon joints:joints weights:weights      
+            TSkinCommon parentIds:parentIds2 weights:weights
         )
     )
     
-    -------------------------------------------------    
-    
-    struct TSkin (
-        numW0Verts,
-        dmin,
-        dmax,
-        vgroups = #()   --array of TSkinVertexGroup
-    )
-    
-    struct TSkinVertexGroup (
-        matrix,
-        numW1Verts,
-        boneId,   -- 0-based, TODO: make this 1-based to be consistent
-        dmin,
-        dmax,
-        weights = #()   --array of float
-    )    
-    
-    fn WriteSkinMafia f mskins = (
+    fn WriteSkinCommonChameleon f mskins version = (
+        local WritePoint = if version == #hd2 then WritePoint4 else WritePoint3
+        
+        WriteU8 f (mskins[1].jointInfo.count - 1)   --numGroups
+        WritePoint f mskins[1].jointInfo[1].dmin  --min
+        WritePoint f mskins[1].jointInfo[1].dmax   --max
+        local parentIds = for i = 2 to mskins[1].parentIds.count do (
+           WriteU8 f (mskins[1].parentIds[i] - 1)
+        )
+        
+        for i = 2 to mskins[1].jointInfo.count do (
+            WriteMatrix f mskins[1].jointInfo[i].matrix
+            WritePoint f mskins[1].jointInfo[i].dmin
+            WritePoint f mskins[1].jointInfo[i].dmax
+        )
+        
         for mskin in mskins do (
-            WriteU8 f mskin.vgroups.count
-            WriteU32 f mskin.numW0Verts
-            WritePoint3 f mskin.dmin
-            WritePoint3 f mskin.dmax
-
-            for grp in mskin.vgroups do (
-                WriteMatrix f grp.matrix
-
-                WriteU32 f grp.numW1Verts
-                WriteU32 f grp.weights.count
-                WriteU32 f grp.boneId
-                WritePoint3 f grp.dmin
-                WritePoint3 f grp.dmax
-
-                for weight in grp.weights do WriteFloat f weight
+            WriteU32 f mskin.weights.count
+            for weight in mskin.weights do (
+                WriteU8 f (weight.boneid - 1)
+                WriteU8 f ((1.0 - weight.weight) * 255)
             )
         )
     )
     
+    -------------------------------------------------    
+   
     --------------    
     
     fn ReadSkin f numlods version = (
@@ -835,8 +952,13 @@ rollout MafiaTools_4dsParser "" ( --module
         )
     )
 
-    fn WriteSkin f mskins = (
-        WriteSkinMafia f mskins
+    fn WriteSkin f mskins version = (
+        if version == #mafia then (
+            WriteSkinCommonMafia f mskins
+        )
+        else (
+            WriteSkinCommonChameleon f mskins version
+        )
     )
 
     -------------------------------------------------
@@ -906,17 +1028,23 @@ rollout MafiaTools_4dsParser "" ( --module
                 append morph.lods lod
             )
 
-            morph.dmin = ReadPoint3 f
-            morph.dmax = ReadPoint3 f
-            morph.center = ReadPoint3 f
-            morph.dist = ReadFloatSafe f
-            
-            if version == #hd2 then (ReadFloatSafe f; ReadFloatSafe f)   --todo: investigate
+            if version == #hd2 then (
+                morph.dmin = ReadPoint4 f
+                morph.dmax = ReadPoint4 f
+                morph.center = ReadPoint3 f
+                morph.dist = ReadFloatSafe f
+            )
+            else (            
+                morph.dmin = ReadPoint3 f
+                morph.dmax = ReadPoint3 f
+                morph.center = ReadPoint3 f
+                morph.dist = ReadFloatSafe f
+            )            
         )
         morph
     )
     
-    fn WriteMorph f morph = (
+    fn WriteMorph f morph version = (
         WriteU8 f morph.numTargets
         
         if morph.numTargets > 0 then (
@@ -943,10 +1071,18 @@ rollout MafiaTools_4dsParser "" ( --module
                 )
             )
             
-            WritePoint3 f morph.dmin
-            WritePoint3 f morph.dmax
-            WritePoint3 f morph.center
-            WriteFloat f morph.dist
+            if version == #hd2 then (
+                WritePoint4 f morph.dmin
+                WritePoint4 f morph.dmax
+                WritePoint3 f morph.center
+                WriteFloat f morph.dist
+            )
+            else (
+                WritePoint3 f morph.dmin
+                WritePoint3 f morph.dmax
+                WritePoint3 f morph.center
+                WriteFloat f morph.dist
+            )            
         )
     )
     
@@ -996,10 +1132,11 @@ rollout MafiaTools_4dsParser "" ( --module
         glows
     )
 
-    fn WriteGlow f mglows = (
+    fn WriteGlow f mglows version = (
         WriteU8 f mglows.count
         for mglow in mglows do (
             WriteFloat f mglow.position
+            if version != #mafia do WriteFloat f 0.0
             WriteU16 f mglow.matId
             if mglow.matId == 0 do throw "TGlow.matId cannot be zero"
         )
@@ -1021,14 +1158,13 @@ rollout MafiaTools_4dsParser "" ( --module
         local mirr = TMirror()
         
         local ReadPoint = if version == #hd2 then ReadPoint4 else ReadPoint3  
+        local ReadColor = if version == #hd2 then ReadColor4 else ReadColor3 
 
         mirr.dmin = ReadPoint f
         mirr.dmax = ReadPoint f
         for i = 1 to 4 do mirr.unknown[i] = ReadFloatSafe f        
         mirr.matrix = ReadMatrix f
         mirr.backColor = ReadColor f
-        
-        if version == #hd2 then ReadU32 f
         
         mirr.drawDistance = ReadFloatSafe f
 
@@ -1050,9 +1186,13 @@ rollout MafiaTools_4dsParser "" ( --module
         mirr
     )
     
-    fn WriteMirror f mirr = (
-        WritePoint3 f mirr.dmin
-        WritePoint3 f mirr.dmax
+    fn WriteMirror f mirr version = (
+        local WritePoint = if version == #hd2 then WritePoint4 else WritePoint3
+        local WriteColor = if version == #hd2 then WriteColor4 else WriteColor3
+        
+        
+        WritePoint f mirr.dmin
+        WritePoint f mirr.dmax
         
         for i = 1 to 4 do WriteFloat f mirr.unknown[i]
         
@@ -1066,7 +1206,7 @@ rollout MafiaTools_4dsParser "" ( --module
         
         for i = 1 to tr.numverts do (
             local vert = getVert tr i
-            WritePoint3 f vert
+            WritePoint f vert
         )
         
         for i = 1 to tr.numfaces do (
@@ -1093,9 +1233,11 @@ rollout MafiaTools_4dsParser "" ( --module
         mDummy
     )
     
-    fn WriteDummy f mdummy = (
-        WritePoint3 f mdummy.dmin
-        WritePoint3 f mdummy.dmax
+    fn WriteDummy f mdummy version = (
+        local WritePoint = if version == #hd2 then WritePoint4 else WritePoint3
+        
+        WritePoint f mdummy.dmin
+        WritePoint f mdummy.dmax
     )
     
     -------------------------------------------------
@@ -1169,7 +1311,7 @@ rollout MafiaTools_4dsParser "" ( --module
         msector
     )
     
-    fn WriteSector f sector = (
+    fn WriteSector f sector version = (
         WriteU32 f 2049    --unknown
         WriteU32 f 0       --unknown
 
@@ -1177,10 +1319,17 @@ rollout MafiaTools_4dsParser "" ( --module
 
         WriteU32 f smesh.numVerts
         WriteU32 f smesh.numFaces
+        
+        local WritePoint = if version == #hd2 then WritePoint4 else WritePoint3
+        
+        if version != #mafia then (
+            WritePoint f sector.dmin
+            WritePoint f sector.dmax
+        )
 
         for i = 1 to smesh.numVerts do (
             local vert = getVert smesh i
-            WritePoint3 f vert
+            WritePoint f vert
         )
 
         for i = 1 to smesh.numFaces do (
@@ -1188,8 +1337,10 @@ rollout MafiaTools_4dsParser "" ( --module
             WriteFace f face
         )
 
-        WritePoint3 f sector.dmin
-        WritePoint3 f sector.dmax
+        if version == #mafia then (
+            WritePoint f sector.dmin
+            WritePoint f sector.dmax
+        )
         WriteU8 f sector.portals.count
 
         for portal in sector.portals do (
@@ -1200,8 +1351,10 @@ rollout MafiaTools_4dsParser "" ( --module
             WriteFloat f portal.nearRange
             WriteFloat f portal.farRange
             
+            if version != #mafia then WriteU32 f 0           
+            
             for vertId = 1 to portal.mesh.numVerts do (
-                WritePoint3 f (getVert portal.mesh vertId)
+                WritePoint f (getVert portal.mesh vertId)
             )
         )
     )
@@ -1248,12 +1401,14 @@ rollout MafiaTools_4dsParser "" ( --module
         local mbone = TBone()
         if version == #mafia do 
             mbone.matrix = ReadMatrix f
+            
         mbone.boneId = (ReadU32 f) + 1
         mbone
     )
 
-    fn WriteBone f mbone = (
-        WriteMatrix f mbone.matrix
+    fn WriteBone f mbone version = (
+        if version == #mafia do 
+            WriteMatrix f mbone.matrix
 
         WriteU32 f (mbone.boneId - 1)
     )   
@@ -1283,13 +1438,15 @@ rollout MafiaTools_4dsParser "" ( --module
         TOccluder mesh:tr
     )
     
-    fn WriteOccluder f ocl = (
+    fn WriteOccluder f ocl version = (
         local tr = ocl.mesh
         WriteU32 f tr.numVerts
         WriteU32 f tr.numFaces 
         
+        local WritePoint = if version == #hd2 then WritePoint4 else WritePoint3        
+        
         for vertId = 1 to tr.numVerts do (
-            WritePoint3 f (getVert tr vertId)
+            WritePoint f (getVert tr vertId)
         )
         
         for faceId = 1 to tr.numFaces do (

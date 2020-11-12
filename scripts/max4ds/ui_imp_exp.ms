@@ -29,6 +29,12 @@
             0.9144,
             1609.344
         )
+        
+        local versionItems = #(
+            "29 - Mafia",
+            "41 - H&D2",
+            "42 - Chameleon, WoW, CE"
+        )
 
         local settings = ::MafiaTools_ImpExpSettings
         local util = ::MafiaTools_Util
@@ -49,6 +55,8 @@
             checkbox    cbCachedNorm    "Cached normals" checked:true
             checkbox    cbEditNorm      "Edit Normals modifier" checked:true
             checkbox    cbAllow5ds      "Has animation file" align:#left offset:[0,5]
+            dropdownlist ddlVersion     "Version:" items:versionItems selection:settings.versionSel
+            
             edittext    edtDirectory    "Directory:"   align:#left offset:[0,5]  text:""labelOnTop:true
             edittext    edtFilename     "Filename:"      align:#left  text:"" labelOnTop:true
             button      btnBrowse       "Browse..." align:#left width:70 across:2 
@@ -173,7 +181,13 @@
                     labelDone.text = "Exporting..."
                     local sel = ddlUnits.selection
                     local unitscl = unitMeterRatios[sel]
-                    local dur = exp.Export4ds filepath cbCachedNorm.checked cbEditNorm.checked unitscl cbAllow5ds.checked
+                    local versionSel = 
+                    local version = case ddlVersion.selection of (
+                        1: #mafia
+                        2: #hd2
+                        3: #chameleon
+                    )
+                    local dur = exp.Export4ds filepath cbCachedNorm.checked cbEditNorm.checked unitscl cbAllow5ds.checked version
                     labelDone.text = "Done in " + (dur as string) + " seconds"
                     clock.active = true
                 )
@@ -221,6 +235,7 @@
             settings.editNorm = cbEditNorm.checked
             settings.unitsSel = ddlUnits.selection	
             settings.allow5ds = cbAllow5ds.checked
+            settings.versionSel = ddlVersion.selection
         )
     )
 
@@ -228,7 +243,7 @@
         local pos = ::MafiaTools_ImpExpSettings.position
         local style = #(#style_titlebar, #style_border, #style_sysmenu)
         local w = 200
-        local h = 355
+        local h = 395
         if pos != undefined then (
             CreateDialog ImpExp w h pos.x pos.y style:style
         )
