@@ -1304,7 +1304,7 @@ rollout MafiaTools_4dsExport "" (   --module
         local scl = scaleMatrix [unitscale,unitscale,unitscale]
         local otrans = baseNode.objectTransform * inverse baseNode.transform * scl
 
-        --apply object offset to mesh        
+        --apply object offset to mesh
         util.TransformVerts tr otrans
 
         local size = 10.0 ^ 16   --this value is used in original skin vertex groups, so I'm using it here too
@@ -1406,8 +1406,14 @@ rollout MafiaTools_4dsExport "" (   --module
     )
     
     fn ExtractOccluder mnode unitscale = (
-        local mesh = copy mnode.basenode.mesh
-        parser.TOccluder mesh:mesh
+        local tr = copy mnode.basenode.mesh
+        
+        local scl = scaleMatrix [unitscale,unitscale,unitscale]
+        local otrans = mnode.basenode.objectTransform * inverse mnode.basenode.transform * scl
+
+        util.TransformVerts tr otrans        
+        
+        parser.TOccluder mesh:tr
     )
     
     fn ExtractObjects mnodeSet unitscale = (
