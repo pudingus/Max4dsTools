@@ -776,7 +776,7 @@ rollout MafiaTools_4dsParser "" ( --module
 
     struct TSkinCommon (
         parentIds = #(),
-        jointInfo = #(),   --todo: use this when reading
+        jointInfo = #(),   --todo: use this when reading, must have atleast 1 item, root bone must be first
         weights = #()    --array of #(boneId, weight)
     )
     

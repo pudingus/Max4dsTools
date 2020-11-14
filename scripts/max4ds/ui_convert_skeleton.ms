@@ -26,7 +26,7 @@ undo off (
                     local rootBone = imp.CreateBone()
                     rootBone.transform = skinMesh.transform
                     rootBone.name = skinMesh.name
-                    skinMesh.name = "_mesh"
+                    skinMesh.name = "_" + rootBone.name + ".skin"
                     skinMesh.parent = rootBone
                     
                     local children = copy skinMesh.children #noMap
@@ -70,11 +70,13 @@ undo off (
                         )
                     )
                     
+                    DestroyDialog ::ConvertSkeleton
                     messageBox "Done."
                 )
             )    
             
             if not found then (
+                DestroyDialog ::ConvertSkeleton
                 messageBox "Nothing to convert."
             )
         )

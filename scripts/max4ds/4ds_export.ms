@@ -669,6 +669,8 @@ rollout MafiaTools_4dsExport "" (   --module
     fn ExtractSkinLod splmesh boneNodes unitscale = (
         local weights = splmesh.weights    --todo: check if weights is undefined
         local lodmesh = splmesh.mesh
+        
+        if weights == undefined then weights = #()
     
         local size = 10.0 ^ 16    --this value is used in original 4ds files
         local mskin = parser.TSkinCommon()
@@ -677,13 +679,11 @@ rollout MafiaTools_4dsExport "" (   --module
         
         local rootbone = boneNodes[1]
         
-        for i = 1 to boneNodes.count do (            
+        for i = 1 to boneNodes.count do (
             local grp = parser.TJointInfo()
             
             grp.dmin = [size, size, size]
             grp.dmax = [-size, -size, -size]
-            
-            print boneNodes[i]
 
             if i != 1 then (  --skip matrix for root bone
                 local boneTF = boneNodes[i].transform
@@ -1094,7 +1094,7 @@ rollout MafiaTools_4dsExport "" (   --module
         faceVertNormals
     )
 
-    fn ExtractEditNormals normMod obj = (
+    fn ExtractEditNormals normMod obj lodmesh = (
         local faceVertNormals = #()
         max modify mode
         modpanel.setcurrentobject normMod node:obj
@@ -1129,7 +1129,7 @@ rollout MafiaTools_4dsExport "" (   --module
         if USE_EDIT_NORMALS then normMod = util.GetModByClass lodnode Edit_Normals
 
         if normMod != undefined then (
-            faceVertNormals = ExtractEditNormals normMod lodnode
+            faceVertNormals = ExtractEditNormals normMod lodnode lodmesh
         )
         else (
             local cmod
@@ -1198,7 +1198,7 @@ rollout MafiaTools_4dsExport "" (   --module
             if morphMod != undefined then
                 ExtractRegions morphMod lodmesh.numverts otrans unitscale
         
-        SplitVertices lodmesh faceVertNormals weights regions
+        if lodmesh.numverts > 0 then SplitVertices lodmesh faceVertNormals weights regions
 
 
         --apply transformation

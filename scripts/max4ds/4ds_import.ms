@@ -480,11 +480,15 @@ rollout MafiaTools_4dsImport "" (   --module
         
         mesh mesh:ocl.mesh wirecolor:(color 178 89 255)
     )
+    
+    local BAD_TYPES = #()
 
     fn CreateObjects mobjects filename unitscale materials = (
         local buffer = TWorldBuffer()
         
         local currentSkin
+        
+        BAD_TYPES = #()
 
         for i = 1 to mobjects.count do (
             local mobj = mobjects[i]
@@ -598,15 +602,47 @@ rollout MafiaTools_4dsImport "" (   --module
                         nnode = CreateGlow mglows mobj.name unitscale materials
                         Layers.AddTo nnode "Glows"
                     )
+                    7: (  --visual_projector
+                        local size = 1.0 * unitscale
+                        local boxsize = [size, size, size]
+                        nnode = dummy boxsize:boxsize
+                        
+                        BAD_TYPES[1] = "VISUAL_PROJECTOR"
+                        
+                        format "% : projector\n" mobj.name
+                        
+                        -- UNSUPPORTED
+                    )
                     8: (  --mirror
                         local mmirror = mobj.mirror
                         nnode = CreateMirror mmirror unitscale
+                    )
+                    9: (  --visual_emitor
+                        local size = 1.0 * unitscale
+                        local boxsize = [size, size, size]
+                        nnode = dummy boxsize:boxsize
+                        
+                        BAD_TYPES[2] = "VISUAL_EMITOR"
+                        
+                        format "% : emitor\n" mobj.name
+                        -- UNSUPPORTED
                     )
                     default: (
                         local size = 1.0 * unitscale
                         local boxsize = [size, size, size]
                         nnode = dummy boxsize:boxsize
                     )
+                )
+                2: (  --frame_light
+                    local size = 1.0 * unitscale
+                    local boxsize = [size, size, size]
+                    nnode = dummy boxsize:boxsize
+                    
+                    BAD_TYPES[3] = "FRAME_LIGHT"
+                    
+                    format "% : light\n" mobj.name
+                    
+                    -- UNSUPPORTED
                 )
                 5: ( --sector
                     local msector = mobj.sector
@@ -737,8 +773,13 @@ rollout MafiaTools_4dsImport "" (   --module
 
         local f = fopen file "rb"
         local parser = ::MafiaTools_4dsParser
-        local m4ds = parser.Read4ds f
-        fclose f
+        try (
+            local m4ds = parser.Read4ds f
+        )
+        catch (
+            messageBox (getCurrentException()) icon:#critical
+        )
+        try (fclose f) catch()
 
         if m4ds == undefined then (
             messageBox "This file cannot be imported. Unknown version or format." icon:#critical
@@ -769,6 +810,15 @@ rollout MafiaTools_4dsImport "" (   --module
             
             if savedMode != undefined do (
                 setCommandPanelTaskMode savedMode
+            )
+            
+            if BAD_TYPES.count > 0 then (
+                local types = ""
+                for type in BAD_TYPES where type != undefined do (
+                    types += type + "\n"
+                )
+                
+                messageBox ("Following object types were skipped:\n" + types) icon:#warning
             )
 
             #(dur, m4ds.allow5ds)
