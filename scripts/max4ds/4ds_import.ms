@@ -124,17 +124,17 @@ rollout MafiaTools_4dsImport "" (   --module
         for region in mmorph.lods[1].regions do (
             local regionMeshes = #()
 
-            for i = 2 to mmorph.numTargets do (
-                regionMeshes[i-1] = copy baseMesh
+            for i = 1 to mmorph.numTargets - 1 do (
+                regionMeshes[i] = copy baseMesh
             )
 
             for vert in region.vertices do (
                 local vertId = vert.index
 
-                for j = 2 to vert.points.count do (
-                    local point = vert.points[j]
+                for j = 1 to vert.points.count - 1 do (
+                    local point = vert.points[j + 1]
                     local pos = point.pos * unitscale
-                    setVert regionMeshes[j-1] vertId pos
+                    setVert regionMeshes[j] vertId pos
                 )
             )
             append meshes regionMeshes
@@ -149,34 +149,29 @@ rollout MafiaTools_4dsImport "" (   --module
         )
 
         local letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-        local regionId = 1
-        local marker = 1
+        
+        local channelsPerRegion = 10
 
         -- Keep this! For some reason BuildFromNode builds data only after
         -- certain morpher function is called first (SetName, IsActive, HasData and maybe other)
         WM3_MC_HasData tmod 1
         
-        for regionMeshes in meshes do (
+        for regionId = 1 to meshes.count do (
+            local regionMeshes = meshes[regionId]
             local regionLetter = letters[regionId]
-            WM3_CreateMarker tmod marker ("region " + regionLetter)
+            local channelId = (regionId - 1) * channelsPerRegion + 1
+            WM3_CreateMarker tmod channelId ("region " + regionLetter)
 
-            local targetId = 1
-
-            for targetMesh in regionMeshes do (
+            for i = 1 to regionMeshes.count do (
+                local targetMesh = regionMeshes[i]
                 local tnode = mesh mesh:targetMesh
-                local finalId = (marker + targetId - 1)
+                local channelId = (regionId - 1) * channelsPerRegion + i + 1
 
-                WM3_MC_BuildFromNode tmod finalId tnode
-                WM3_MC_SetName tmod finalId (regionLetter + " " + (targetId as string))
+                WM3_MC_BuildFromNode tmod channelId tnode
+                WM3_MC_SetName tmod channelId (regionLetter + " " + ((i + 1) as string))
                 
                 delete tnode
-
-                targetId += 1
             )            
-            
-            marker = (regionId * 10 + 1)
-            regionId += 1
         )
 
         WM3_SetCurrentMarker tmod 1

@@ -3,7 +3,7 @@
     if heapsize < set_heapsize then heapsize = set_heapsize
    
     global MafiaTools_version = "v0.7.0-preview"
-    global MafiaTools_scriptsPath = getFilenamePath (getThisScriptFilename())    
+    global MafiaTools_scriptsPath = getFilenamePath (getThisScriptFilename())
 
     global MafiaTools_ImpExpSettings
     (
@@ -26,7 +26,7 @@
         if doesFileExist file then (
             local path = getFilenamePath file
             local name = filenameFromPath file
-            local success = renameFile file (path + "\\" + name + "__off")            
+            local success = renameFile file (path + "\\" + name + "__off")
         )
     )
     
@@ -54,7 +54,7 @@
     filein "4ds_import.ms"
     filein "4ds_export.ms"
     
-    filein "ui_utility.ms"    
+    filein "ui_utility.ms"
 
 
     format "Max 4ds Tools % loaded\n" MafiaTools_version

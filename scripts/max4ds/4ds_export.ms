@@ -15,6 +15,8 @@ rollout MafiaTools_4dsExport "" (   --module
     local MAT_SET
     
     local BONE_IDS
+    
+    local WARN_MORPH
 
     struct TNode (
         baseNode,
@@ -309,8 +311,10 @@ rollout MafiaTools_4dsExport "" (   --module
             local type = nodeTypes[obj.inode.handle]
             if type == undefined then (
                 
-                -- if matchPattern obj.name pattern:strPattern then (
-                --     obj.name = replace obj.name 1 str.count "$viewbox"
+                -- if matchPattern obj.name pattern:strPattern do (
+                --     if obj.parent != undefined and isKindOf obj.parent GeometryClass do (
+                --         obj.name = replace obj.name 1 str.count "$viewbox"
+                --     )
                 -- )
             
                 type = GetNodeType obj
@@ -799,17 +803,17 @@ rollout MafiaTools_4dsExport "" (   --module
         local maxRegions = ( numChannels / channelsPerRegion ) as integer
 
         --collect morph meshes
-        for i = 1 to maxRegions do (
+        for regionId = 1 to maxRegions do (
             local regionInfo = TRegionInfo()
             for j = 1 to channelsPerRegion do (
-                local chanId = ((i - 1) * channelsPerRegion) + j
+                local chanId = ((regionId - 1) * channelsPerRegion) + j
                 local hasData = WM3_MC_HasData mrph chanId
                 local isValid = WM3_MC_IsValid mrph chanId
                 local isActive = WM3_MC_IsActive mrph chanId
 
                 local chanMesh
                 if hasData and isValid and isActive then (
-                    regionInfo.usedChannels[j+1] = true
+                    regionInfo.usedChannels[j] = true
 
                     local numpts = amin #((WM3_MC_NumPts mrph chanId), baseNumverts)
                     chanMesh = TriMesh()
@@ -819,7 +823,7 @@ rollout MafiaTools_4dsExport "" (   --module
                         setVert chanMesh vertId (pt * otrans)
                     )
                 )
-                regionInfo.channels[j+1] = chanMesh
+                regionInfo.channels[j] = chanMesh
             )
             append regions regionInfo
         )
@@ -857,8 +861,12 @@ rollout MafiaTools_4dsExport "" (   --module
                         local baseVert = getVert lodmesh vertOrder[vertId]
                         local chanVert = getVert chanMesh vertId
 
-                        if not close_enough_p3 baseVert chanVert 50 then (
+                        if not close_enough_p3 baseVert chanVert 50 do (
                             regionInfo.usedVerts[vertId] = true
+                            
+                            if chanId == 1 do (
+                                WARN_MORPH = true
+                            )
                         )
                     )
                 )
@@ -1621,6 +1629,8 @@ rollout MafiaTools_4dsExport "" (   --module
 
             gc light:true
 
+            WARN_MORPH = false
+            
             local used_start = (heapsize - heapfree) / 1024.0
 
             local m4ds = parser.T4ds()
@@ -1631,8 +1641,13 @@ rollout MafiaTools_4dsExport "" (   --module
             m4ds.objects = ExtractObjects mnodeSet unitscale
             m4ds.allow5ds = allow5ds
 
-            parser.Write4ds f m4ds version
-            fclose f
+            try (
+                parser.Write4ds f m4ds version
+            )
+            catch (
+                messageBox (getCurrentException()) icon:#critical
+            )
+            try (fclose f) catch ()
 
             dur = elapsed_since(st) / 1000.0
 
@@ -1642,9 +1657,11 @@ rollout MafiaTools_4dsExport "" (   --module
             gc light:true
 
             format "Exporting took % seconds\n" dur
-            --messageBox ("Exporting took " + (dur as string) + " seconds")
+            
+            if WARN_MORPH then (
+                messageBox "Morph channels 1, 11, 21 and so on should be empty." icon:#information
+            )
         )
-
 
         dur
     )

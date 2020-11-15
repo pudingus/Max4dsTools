@@ -99,6 +99,13 @@ rollout MafiaTools_4dsParser "" ( --module
         else result
     )
     
+    fn WriteFloatSafe f val = (
+        if not isKindOf val Number then throw "Write error. Value is not a number, got: " val
+        local result = WriteFloat f val
+        if result != true then throw "Unknown write error"
+        else result
+    )
+    
     -------------------------------------------------
     
     fn ReadText f = (
@@ -142,16 +149,16 @@ rollout MafiaTools_4dsParser "" ( --module
     )    
     
     fn WritePoint3 f p3 = (
-        WriteFloat f p3.x
-        WriteFloat f p3.z
-        WriteFloat f p3.y
+        WriteFloatSafe f p3.x
+        WriteFloatSafe f p3.z
+        WriteFloatSafe f p3.y
     )
     
     fn WritePoint4 f p3 = (
-        WriteFloat f p3.x
-        WriteFloat f p3.z
-        WriteFloat f p3.y
-        WriteFloat f 0.0
+        WriteFloatSafe f p3.x
+        WriteFloatSafe f p3.z
+        WriteFloatSafe f p3.y
+        WriteFloatSafe f 0.0
     )
     
     fn ReadPoint4 f = (
@@ -180,16 +187,16 @@ rollout MafiaTools_4dsParser "" ( --module
     )
     
     fn WriteColor3 f clr = (
-        WriteFloat f (clr.r / 255.0)
-        WriteFloat f (clr.g / 255.0)
-        WriteFloat f (clr.b / 255.0)
+        WriteFloatSafe f (clr.r / 255.0)
+        WriteFloatSafe f (clr.g / 255.0)
+        WriteFloatSafe f (clr.b / 255.0)
     )
     
     fn WriteColor4 f clr = (
-        WriteFloat f (clr.r / 255.0)
-        WriteFloat f (clr.g / 255.0)
-        WriteFloat f (clr.b / 255.0)
-        WriteFloat f 0.0
+        WriteFloatSafe f (clr.r / 255.0)
+        WriteFloatSafe f (clr.g / 255.0)
+        WriteFloatSafe f (clr.b / 255.0)
+        WriteFloatSafe f 0.0
     )
     
     -------------------------------------------------
@@ -213,17 +220,17 @@ rollout MafiaTools_4dsParser "" ( --module
     )
     
     fn WriteQuatWXYZ f q = (
-        WriteFloat f q.w
-        WriteFloat f q.x
-        WriteFloat f q.z
-        WriteFloat f q.y
+        WriteFloatSafe f q.w
+        WriteFloatSafe f q.x
+        WriteFloatSafe f q.z
+        WriteFloatSafe f q.y
     )
     
     fn WriteQuatXYZW f q = (
-        WriteFloat f q.x
-        WriteFloat f q.z
-        WriteFloat f q.y
-        WriteFloat f q.w
+        WriteFloatSafe f q.x
+        WriteFloatSafe f q.z
+        WriteFloatSafe f q.y
+        WriteFloatSafe f q.w
     )
     
     -------------------------------------------------
@@ -253,8 +260,8 @@ rollout MafiaTools_4dsParser "" ( --module
     )
     
     fn WriteUV f uv = (
-        WriteFloat f uv.x
-        WriteFloat f (1 - uv.y)
+        WriteFloatSafe f uv.x
+        WriteFloatSafe f (1 - uv.y)
     )
 
     -------------------------------------------------
@@ -282,7 +289,7 @@ rollout MafiaTools_4dsParser "" ( --module
         append rows #(mat3.row4.x, mat3.row4.z, mat3.row4.y, 1)
 
         for row in rows do (
-            for n = 1 to 4 do WriteFloat f row[n]
+            for n = 1 to 4 do WriteFloatSafe f row[n]
         )
     )
 
@@ -428,13 +435,13 @@ rollout MafiaTools_4dsParser "" ( --module
         else (
             WriteColor f mmat.specular
             WriteColor f mmat.emission
-            WriteFloat f mmat.specularity            
+            WriteFloatSafe f mmat.specularity            
         )        
         
-        WriteFloat f mmat.opacity
+        WriteFloatSafe f mmat.opacity
 
         if bit.get mmat.flags 20 then (     -- env map
-            WriteFloat f mmat.envMapAmount
+            WriteFloatSafe f mmat.envMapAmount
             WriteText f mmat.envMapName
         )
         local count = WriteText f mmat.diffMapName
@@ -604,7 +611,7 @@ rollout MafiaTools_4dsParser "" ( --module
             WritePoint3 f mobj.scl
         )
         
-        if version == #hd2 then WriteFloat f 0.0
+        if version == #hd2 then WriteFloatSafe f 0.0
         
         WriteU8 f mobj.cullFlags
         WriteText f mobj.name
@@ -741,7 +748,7 @@ rollout MafiaTools_4dsParser "" ( --module
         if mmesh.instanceId == 0 then (
             WriteU8 f mmesh.lods.count
             for lod in mmesh.lods do (
-                WriteFloat f lod.distance
+                WriteFloatSafe f lod.distance
                 
                 if version == #hd2 or version == #chameleon then (
                     WriteU32 f 0   --num extra data
@@ -875,7 +882,7 @@ rollout MafiaTools_4dsParser "" ( --module
                 WritePoint3 f mskin.jointInfo[i].dmin
                 WritePoint3 f mskin.jointInfo[i].dmax
                 for weight in grp.weights do (
-                    WriteFloat f weight
+                    WriteFloatSafe f weight
                 )
             )
         )
@@ -1075,13 +1082,13 @@ rollout MafiaTools_4dsParser "" ( --module
                 WritePoint4 f morph.dmin
                 WritePoint4 f morph.dmax
                 WritePoint3 f morph.center
-                WriteFloat f morph.dist
+                WriteFloatSafe f morph.dist
             )
             else (
                 WritePoint3 f morph.dmin
                 WritePoint3 f morph.dmax
                 WritePoint3 f morph.center
-                WriteFloat f morph.dist
+                WriteFloatSafe f morph.dist
             )            
         )
     )
@@ -1135,8 +1142,8 @@ rollout MafiaTools_4dsParser "" ( --module
     fn WriteGlow f mglows version = (
         WriteU8 f mglows.count
         for mglow in mglows do (
-            WriteFloat f mglow.position
-            if version != #mafia do WriteFloat f 0.0
+            WriteFloatSafe f mglow.position
+            if version != #mafia do WriteFloatSafe f 0.0
             WriteU16 f mglow.matId
             if mglow.matId == 0 do throw "TGlow.matId cannot be zero"
         )
@@ -1194,11 +1201,11 @@ rollout MafiaTools_4dsParser "" ( --module
         WritePoint f mirr.dmin
         WritePoint f mirr.dmax
         
-        for i = 1 to 4 do WriteFloat f mirr.unknown[i]
+        for i = 1 to 4 do WriteFloatSafe f mirr.unknown[i]
         
         WriteMatrix f mirr.matrix
         WriteColor f mirr.backColor
-        WriteFloat f mirr.drawDistance
+        WriteFloatSafe f mirr.drawDistance
         
         local tr = mirr.mesh
         WriteU32 f tr.numverts
@@ -1348,8 +1355,8 @@ rollout MafiaTools_4dsParser "" ( --module
             WriteU32 f 4   --unknown
             for i = 1 to 4 do WriteU32 f 0 --unknown
 
-            WriteFloat f portal.nearRange
-            WriteFloat f portal.farRange
+            WriteFloatSafe f portal.nearRange
+            WriteFloatSafe f portal.farRange
             
             if version != #mafia then WriteU32 f 0           
             
