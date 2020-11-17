@@ -359,11 +359,14 @@ rollout MafiaTools_4dsImport "" (   --module
             mat.alphaMapEnable = (bit.get flags 31)
             mat.colorKey = (bit.get flags 30)
             mat.additiveMixing = (bit.get flags 32)
+            mat.imageAlpha = (bit.get flags 25)
 
             mat.ambient = mmat.ambient
             mat.diffuse = mmat.diffuse
             mat.emission = mmat.emission
             mat.opacity = mmat.opacity*100
+            mat.glossiness = mmat.glossiness
+            mat.specular = mmat.specular
 
 
             if mat.envMapEnable then (

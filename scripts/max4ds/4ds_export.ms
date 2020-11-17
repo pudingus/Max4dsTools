@@ -265,12 +265,16 @@ rollout MafiaTools_4dsExport "" (   --module
                 flags += (bit.set 0 30 mat.colorKey)  --
                 flags += (bit.set 0 31 mat.alphaMapEnable)
                 flags += (bit.set 0 32 mat.additiveMixing)   --
+                flags += (bit.set 0 25 mat.imageAlpha)
 
                 mmat.flags = flags
 
                 mmat.ambient = mat.ambient
                 mmat.diffuse = mat.diffuse
                 mmat.emission = mat.emission
+                
+                mmat.specular = mat.specular
+                mmat.glossiness = mat.glossiness
 
                 mmat.opacity = mat.opacity / 100.0
 

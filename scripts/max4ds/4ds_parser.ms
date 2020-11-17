@@ -368,10 +368,10 @@ rollout MafiaTools_4dsParser "" ( --module
         flags,   --u32
         ambient,  --color (float[3])
         diffuse,  --color (=||=)
-        specular = white, --color (HD2, Chameleon only)
+        specular = black, --color (HD2, Chameleon only)
         emission,  --color
         opacity,  --float
-        specularity = 0.0,  --float (HD2, Chameleon only)
+        glossiness = 25.0,  --float (HD2, Chameleon only)
         envMapAmount,  --float
         envMapName, --pstring
         diffMapName,    --pstring
@@ -395,7 +395,7 @@ rollout MafiaTools_4dsParser "" ( --module
         else (
             mmat.specular = ReadColor f
             mmat.emission = ReadColor f
-            mmat.specularity = ReadFloatSafe f
+            mmat.glossiness = ReadFloatSafe f
         )
 
         mmat.opacity = ReadFloatSafe f
@@ -435,7 +435,7 @@ rollout MafiaTools_4dsParser "" ( --module
         else (
             WriteColor f mmat.specular
             WriteColor f mmat.emission
-            WriteFloatSafe f mmat.specularity            
+            WriteFloatSafe f mmat.glossiness            
         )        
         
         WriteFloatSafe f mmat.opacity
@@ -446,7 +446,7 @@ rollout MafiaTools_4dsParser "" ( --module
         )
         local count = WriteText f mmat.diffMapName
 
-        if count > 0 and bit.get mmat.flags 31 then (   -- alpha map
+        if count > 0 and (bit.get mmat.flags 31) and not (bit.get mmat.flags 25) then (   -- alpha map and not image alpha
             WriteText f mmat.alphaMapName
         )
 

@@ -15,6 +15,8 @@ remap:#(#(#isAnimatedM,#useMips,#useColoring,#useColorKey,#useAddBlend),#(#anima
         ambient         type:#color         ui:ambient          default:[25,25,25]
         diffuse         type:#color         ui:diffuse          default:[127,127,127]
         emission        type:#color         ui:emission
+        specular        type:#color         ui:cpSpecular       default:black
+        glossiness      type:#integer       ui:spnGlossiness    default:25
         opacity         type:#integer       ui:opacity          default:100
         diffuseMapEnable type:#boolean      ui:diffuseMapEnable
         'Diffuse Map'   type:#texturemap    ui:diffuseMap
@@ -45,12 +47,15 @@ remap:#(#(#isAnimatedM,#useMips,#useColoring,#useColorKey,#useAddBlend),#(#anima
         colorKey        type:#boolean       ui:colorKey         default:false   --30
         additiveMixing  type:#boolean       ui:additiveMixing   default:false   --32
         animatedAlpha   type:#boolean       ui:animatedAlpha    default:false
+        imageAlpha      type:#boolean       ui:chkImageAlpha    default:false   --25
 
         on ambient set val do delegate.ambient = val
         on diffuse set val do delegate.diffuse = val
-        on diffuse get val do delegate.diffuse
+        on diffuse get val do delegate.diffuse     --this is here so that multimaterial can update the color, I think
         on emission set val do delegate.selfIllumColor = val
+        on specular set val do delegate.specular = val
         on opacity set val do delegate.opacity = val
+        on glossiness set val do delegate.glossiness = val
         on diffuseMapEnable set val do (
             delegate.diffuseMapEnable = val
             Refresh()
@@ -190,9 +195,11 @@ remap:#(#(#isAnimatedM,#useMips,#useColoring,#useColorKey,#useAddBlend),#(#anima
     rollout params "4ds Material Parameters"
     (
         colorpicker ambient "Ambient" across:2
-        colorpicker emission "Emission"
+        colorpicker emission "Emissive"
         colorpicker diffuse "Diffuse" across:2   offset:[5,0]
-        spinner opacity "Opacity  " type:#integer align:#left fieldwidth:30 type:#integer
+        colorpicker cpSpecular "Specular" tooltip:"Not supported in Mafia"
+        spinner opacity "Opacity  " type:#integer align:#left fieldwidth:30 type:#integer  across:2
+        spinner spnGlossiness "Glossiness" type:#integer align:#left fieldwidth:30 type:#integer tooltip:"Not supported in Mafia"
 
         --label ui_diffuseMap           "Diffuse Map"
         label a ""
@@ -242,9 +249,10 @@ remap:#(#(#isAnimatedM,#useMips,#useColoring,#useColorKey,#useAddBlend),#(#anima
             checkbox colorKey       "Color key"         align:#left fieldwidth:48 across:2
             button genPreview       "Update preview"    align:#left height:17
             checkbox additiveMixing "Additive mixing"   align:#left fieldwidth:48
+            checkbox chkImageAlpha  "Image alpha" align:#left
         )
         label d ""
-        groupBox group1 "" pos:[160,124] width:120 height:75
+        groupBox group1 "" pos:[160,144] width:120 height:75
 
         on genPreview pressed do (
             if 'Diffuse Map' != undefined then (
@@ -260,6 +268,7 @@ remap:#(#(#isAnimatedM,#useMips,#useColoring,#useColorKey,#useAddBlend),#(#anima
 
     on create do (
         delegate.adLock = false
+        delegate.specularlevel = 70.0
     )
 
     on update do (
