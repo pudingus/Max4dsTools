@@ -940,8 +940,18 @@ rollout MafiaTools_4dsParser "" ( --module
         for mskin in mskins do (
             WriteU32 f mskin.weights.count
             for weight in mskin.weights do (
-                WriteU8 f (weight.boneid - 1)
-                WriteU8 f ((1.0 - weight.weight) * 255)
+                local boneid
+                local w
+                if weight.boneid == 1 then (  --todo:
+                    boneid = 2
+                    w = weight.weight
+                )
+                else (
+                    boneId = weight.boneid
+                    w = 1.0 - weight.weight
+                )
+                WriteU8 f (boneid - 1)
+                WriteU8 f (w * 255)
             )
         )
     )

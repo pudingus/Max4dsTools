@@ -61,11 +61,19 @@
 )
 callbacks.removeScripts #systemPostNew id:#MafiaTools
 callbacks.removeScripts #systemPostReset id:#MafiaTools
-callbacks.addScript #systemPostNew "PostReset()" id:#MafiaTools
-callbacks.addScript #systemPostReset "PostReset()" id:#MafiaTools
+callbacks.addScript #systemPostNew "MafiaTools_PostReset()" id:#MafiaTools
+callbacks.addScript #systemPostReset "MafiaTools_PostReset()" id:#MafiaTools
 
-fn PostReset = (
+fn MafiaTools_PostReset = (
     ::MafiaTools_ImpExpSettings.useImportedFilename = false
     ::MafiaTools_ImpExpSettings.allow5ds = false
     if ::ImpExp != undefined then ::ImpExp.cbAllow5ds.checked = false
 )
+
+
+fn MafiaTools_PreSave = (
+    setAppData rootNode 3298216 "0.7.0"
+)
+
+callbacks.removeScripts #filePreSave id:#MafiaTools
+callbacks.addScript #filePreSave "MafiaTools_PreSave()" id:#MafiaTools

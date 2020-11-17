@@ -659,7 +659,9 @@ rollout MafiaTools_4dsImport "" (   --module
                     local mbone = mobj.bone
                     nnode = CreateBone()
 
-                    currentSkin.boneNodes[mbone.boneId + 1] = nnode
+                    if currentSkin != undefined then (
+                        currentSkin.boneNodes[mbone.boneId + 1] = nnode
+                    )
                 )
                 12: (
                     local ocl = mobj.occluder

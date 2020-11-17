@@ -32,7 +32,7 @@
         
         local versionItems = #(
             "29 - Mafia",
-            "41 - H&D2",
+            "41 - Hidden & Dangerous 2",
             "42 - Chameleon, WoW, CE"
         )
 

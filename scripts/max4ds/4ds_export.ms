@@ -379,24 +379,22 @@ rollout MafiaTools_4dsExport "" (   --module
                     mnode.type = #singlemesh
                     mnodeSet.AddPointer obj id
                     
-                    local skinMod = util.GetModByClass obj Skin
-                    local bns = util.GetBoneNodes skinMod
-                    
                     local sortedBones = #()
                         
+                    local rootbone = rootBones[obj.inode.handle]                    
+                    
                     local boneId = 1
-                    for kobj in objects do (                            
-                        for boneNode in bns do (
-                            if kobj == boneNode then (
-                                append sortedBones boneNode
-                                
-                                BONE_IDS[boneNode.inode.handle] = boneId
-                                boneId += 1
-                            )
+                    for kobj in rootbone do (
+                        local handle = kobj.inode.handle
+                        local type = nodeTypes[handle]
+                        if type == #bone or type == #rootbone then (
+                            append sortedBones kobj
+                            
+                            BONE_IDS[handle] = boneId
+                            boneId += 1
                         )
                     )
                     mnode.bones = sortedBones
-                    
                 )
                 #singlemorph: (
                     local id = mnodeSet.GetIdByNode rootBones[obj.inode.handle]
@@ -407,20 +405,19 @@ rollout MafiaTools_4dsExport "" (   --module
                     mnode.type = #singlemorph
                     mnodeSet.AddPointer obj id
                     
-                    local skinMod = util.GetModByClass obj Skin
-                    local bns = util.GetBoneNodes skinMod
-                    
                     local sortedBones = #()
                     
+                    local rootbone = rootBones[obj.inode.handle]                    
+                    
                     local boneId = 1
-                    for kobj in objects do (                            
-                        for boneNode in bns do (
-                            if kobj == boneNode then (
-                                append sortedBones boneNode
-                                
-                                BONE_IDS[boneNode.inode.handle] = boneId
-                                boneId += 1
-                            )
+                    for kobj in rootbone do (
+                        local handle = kobj.inode.handle
+                        local type = nodeTypes[handle]
+                        if type == #bone or type == #rootbone then (
+                            append sortedBones kobj
+                            
+                            BONE_IDS[handle] = boneId
+                            boneId += 1
                         )
                     )
                     mnode.bones = sortedBones
@@ -671,7 +668,7 @@ rollout MafiaTools_4dsExport "" (   --module
     )
     
     fn ExtractSkinLod splmesh boneNodes unitscale = (
-        local weights = splmesh.weights    --todo: check if weights is undefined
+        local weights = splmesh.weights
         local lodmesh = splmesh.mesh
         
         if weights == undefined then weights = #()
@@ -966,6 +963,8 @@ rollout MafiaTools_4dsExport "" (   --module
         for i = 1 to mesh.numfaces do (
             local vertIds = getFace mesh i
             local rnormals = faceVertNormals[i]   --get normals for current face (1 per corner, => 3 in total)
+            if rnormals == undefined then rnormals = #([0,0,1], [0,0,1], [0,0,1])
+            
 
             local newVertIds = copy vertIds
 
@@ -1161,7 +1160,7 @@ rollout MafiaTools_4dsExport "" (   --module
         vertOrder
     )
     
-    fn ExtractSplitMesh lodnode rootbone unitscale bonenodes = (
+    fn ExtractSplitMesh lodnode rootbone unitscale bonenodes version = (
         local morphMod = util.GetModByClass lodnode Morpher
         --local values
         if morphMod != undefined then (
@@ -1224,7 +1223,7 @@ rollout MafiaTools_4dsExport "" (   --module
         ---if has skin
         
         local vertOrder
-        if weights != undefined then (
+        if weights != undefined and version == #mafia then (
             vertOrder = SortWeights weights
             lodmesh = SortMesh lodmesh vertOrder
         )
@@ -1266,7 +1265,10 @@ rollout MafiaTools_4dsExport "" (   --module
     fn ExtractBone mnode = (
         mbone = parser.TBone()
         local handle = mnode.baseNode.inode.handle
-        mbone.boneId = BONE_IDS[handle] - 1      --minus one to remove the root bone
+        mbone.boneId = 
+            if BONE_IDS[handle] == undefined then 1
+            else BONE_IDS[handle] - 1      --minus one to remove the root bone
+            
         mbone.matrix = matrix3 1
 
         mbone
@@ -1350,7 +1352,7 @@ rollout MafiaTools_4dsExport "" (   --module
         mirr
     )
     
-    fn ExtractCommon mnode mnodeSet mobj unitscale hasSkin:false hasMorph:false = (
+    fn ExtractCommon mnode mnodeSet mobj unitscale version hasSkin:false hasMorph:false = (
         local mmesh = parser.TMesh()
         
         local skinlods = #()
@@ -1367,7 +1369,7 @@ rollout MafiaTools_4dsExport "" (   --module
             mmesh.instanceId = 0
             local prevDist = 0.0       
             for lodnode in lodnodes do (        
-                local splmesh = ExtractSplitMesh lodnode rootbone unitscale mnode.bones
+                local splmesh = ExtractSplitMesh lodnode rootbone unitscale mnode.bones version
                 local mlod = ExtractLod lodnode splmesh.mesh
                 local skinlod = if rootbone != undefined then ExtractSkinLod splmesh mnode.bones unitscale
                 local morphlod = if splmesh.regions != undefined then ExtractMorphLod splmesh
@@ -1424,7 +1426,7 @@ rollout MafiaTools_4dsExport "" (   --module
         parser.TOccluder mesh:tr
     )
     
-    fn ExtractObjects mnodeSet unitscale = (
+    fn ExtractObjects mnodeSet unitscale version = (
         local mobjects = #()
 
         for mnode in mnodeSet.mnodes do (
@@ -1468,30 +1470,30 @@ rollout MafiaTools_4dsExport "" (   --module
                     mobj.objectType = 1
                     mobj.visualType = 0
                     
-                    ExtractCommon mnode mnodeSet mobj unitscale hasSkin:false hasMorph:false
+                    ExtractCommon mnode mnodeSet mobj unitscale version hasSkin:false hasMorph:false
                 )
                 #singlemesh: (
                     mobj.objectType = 1
                     mobj.visualType = 2
                     
-                    ExtractCommon mnode mnodeSet mobj unitscale hasSkin:true hasMorph:false
+                    ExtractCommon mnode mnodeSet mobj unitscale version hasSkin:true hasMorph:false
                 )
                 #singlemorph: (
                     mobj.objectType = 1
                     mobj.visualType = 3
                     
-                    ExtractCommon mnode mnodeSet mobj unitscale hasSkin:true hasMorph:true
+                    ExtractCommon mnode mnodeSet mobj unitscale version hasSkin:true hasMorph:true
                 )
                 #morph: (
                     mobj.objectType = 1
                     mobj.visualType = 5
                     
-                    ExtractCommon mnode mnodeSet mobj unitscale hasSkin:false hasMorph:true
+                    ExtractCommon mnode mnodeSet mobj unitscale version hasSkin:false hasMorph:true
                 )
                 #billboard: (
                     mobj.objectType = 1
                     mobj.visualType = 4
-                    ExtractCommon mnode mnodeSet mobj unitscale hasSkin:false hasMorph:false
+                    ExtractCommon mnode mnodeSet mobj unitscale version hasSkin:false hasMorph:false
                     mobj.billboard = ExtractBillboard mnode
                 )
                 #sector: (
@@ -1638,7 +1640,7 @@ rollout MafiaTools_4dsExport "" (   --module
 
             m4ds.materials = ExtractMaterials mmmm
             local mnodeSet = CollectNodes()
-            m4ds.objects = ExtractObjects mnodeSet unitscale
+            m4ds.objects = ExtractObjects mnodeSet unitscale version
             m4ds.allow5ds = allow5ds
 
             try (
@@ -1646,6 +1648,13 @@ rollout MafiaTools_4dsExport "" (   --module
             )
             catch (
                 messageBox (getCurrentException()) icon:#critical
+                format "*** % ***\n" (getCurrentException())
+                if getCurrentExceptionStackTrace != undefined then (
+                    format "%\n" (getCurrentExceptionStackTrace())
+                )
+                if getCurrentExceptionCallStack != undefined then (
+                    format "%\n" (getCurrentExceptionCallStack())
+                )
             )
             try (fclose f) catch ()
 
