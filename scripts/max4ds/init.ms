@@ -2,7 +2,7 @@
     local set_heapsize = 64 * 1024 * 1024  --64 MiB
     if heapsize < set_heapsize then heapsize = set_heapsize
    
-    global MafiaTools_version = "v0.7.0-preview"
+    global MafiaTools_version = "v0.7.0"
     global MafiaTools_scriptsPath = getFilenamePath (getThisScriptFilename())
 
     global MafiaTools_ImpExpSettings
@@ -72,7 +72,7 @@ fn MafiaTools_PostReset = (
 
 
 fn MafiaTools_PreSave = (
-    setAppData rootNode 3298216 "0.7.0"
+    setAppData rootNode 3298216 "1"
 )
 
 callbacks.removeScripts #filePreSave id:#MafiaTools
