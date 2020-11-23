@@ -925,7 +925,7 @@ rollout MafiaTools_4dsExport "" (   --module
             mmorph.dmin = vmin
             mmorph.dmax = vmax
             mmorph.center = (vmin + vmax) / 2
-            mmorph.dist = (distance vmin vmax) / 2
+            mmorph.radius = (distance vmin vmax) / 2
         )
 
         mmorph
@@ -1346,10 +1346,8 @@ rollout MafiaTools_4dsExport "" (   --module
             mirr.matrix = s * r * t
         )
 
-        mirr.unknown[1] = gp.mirrorUnk1
-        mirr.unknown[2] = gp.mirrorUnk2
-        mirr.unknown[3] = gp.mirrorUnk3
-        mirr.unknown[4] = gp.mirrorUnk4
+        mirr.center = (mirr.dmin + mirr.dmax) / 2
+        mirr.radius = (distance mirr.dmin mirr.dmax) / 2
         mirr.backColor = gp.mirrorColor
         mirr.drawDistance = gp.mirrorDist
 

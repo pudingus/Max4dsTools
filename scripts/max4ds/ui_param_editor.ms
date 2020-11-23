@@ -180,28 +180,8 @@ global MafParamEditor
 
     rollout rltMirror ""
     (
-        spinner spnUnk1 "Unknown 1: " range:[-9000000000,9000000000,0] type:#float align:#left
-        spinner spnUnk2 "Unknown 2: " range:[-9000000000,9000000000,0] type:#float align:#left
-        spinner spnUnk3 "Unknown 3: " range:[-9000000000,9000000000,0] type:#float align:#left
-        spinner spnUnk4 "Unknown 4: " range:[-9000000000,9000000000,0] type:#float align:#left
         colorpicker cpColor "Background color: " align:#left
         spinner spnDistance "Active range:" range:[-9000000000,9000000000,0] type:#float align:#left
-
-        on spnUnk1 changed val do (
-            gp.mirrorUnk1 = val
-        )
-
-        on spnUnk2 changed val do (
-            gp.mirrorUnk2 = val
-        )
-
-        on spnUnk3 changed val do (
-            gp.mirrorUnk3 = val
-        )
-
-        on spnUnk4 changed val do (
-            gp.mirrorUnk4 = val
-        )
 
         on cpColor changed val do (
             gp.mirrorColor = val
@@ -365,10 +345,6 @@ global MafParamEditor
         )
 
         if rltMirror.isDisplayed then (
-            rltMirror.spnUnk1.value = gp.mirrorUnk1
-            rltMirror.spnUnk2.value = gp.mirrorUnk2
-            rltMirror.spnUnk3.value = gp.mirrorUnk3
-            rltMirror.spnUnk4.value = gp.mirrorUnk4
             rltMirror.cpColor.color = gp.mirrorColor
             rltMirror.spnDistance.value = gp.mirrorDist
         )

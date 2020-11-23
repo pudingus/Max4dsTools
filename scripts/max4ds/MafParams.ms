@@ -30,10 +30,6 @@ remap:#(#(#userParams), #(#strParams))
         
         
         --Mirror
-        mirrorUnk1 type:#float default:0.0
-        mirrorUnk2 type:#float default:0.0
-        mirrorUnk3 type:#float default:0.0
-        mirrorUnk4 type:#float default:0.0
         mirrorColor type:#color
         mirrorDist type:#float default:100.0
         

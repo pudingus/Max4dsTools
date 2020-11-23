@@ -228,10 +228,6 @@ rollout MafiaTools_4dsImport "" (   --module
         Layers.AddTo nnode "Mirrors"
         
         local gp = GetMafParams nnode
-        gp.mirrorUnk1 = mirr.unknown[1]
-        gp.mirrorUnk2 = mirr.unknown[2]
-        gp.mirrorUnk3 = mirr.unknown[3]
-        gp.mirrorUnk4 = mirr.unknown[4]
         gp.mirrorColor = mirr.backColor
         gp.mirrorDist = mirr.drawDistance
         

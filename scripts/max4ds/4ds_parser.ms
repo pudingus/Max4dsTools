@@ -254,9 +254,9 @@ rollout MafiaTools_4dsParser "" ( --module
     -------------------------------------------------
     
     fn ReadUV f = (
-        local x = ReadFloatSafe f
-        local y = ReadFloatSafe f
-        [x, 1-y, 0]
+        local u = ReadFloatSafe f
+        local v = ReadFloatSafe f
+        [u, 1-v, 0]
     )
     
     fn WriteUV f uv = (
@@ -987,7 +987,7 @@ rollout MafiaTools_4dsParser "" ( --module
         dmin,
         dmax,
         center,
-        dist 
+        radius 
     )
     
     struct TMorphLod (
@@ -1048,15 +1048,14 @@ rollout MafiaTools_4dsParser "" ( --module
             if version == #hd2 then (
                 morph.dmin = ReadPoint4 f
                 morph.dmax = ReadPoint4 f
-                morph.center = ReadPoint3 f
-                morph.dist = ReadFloatSafe f
             )
             else (            
                 morph.dmin = ReadPoint3 f
                 morph.dmax = ReadPoint3 f
-                morph.center = ReadPoint3 f
-                morph.dist = ReadFloatSafe f
-            )            
+            )
+            
+            morph.center = ReadPoint3 f
+            morph.radius = ReadFloatSafe f
         )
         morph
     )
@@ -1091,15 +1090,14 @@ rollout MafiaTools_4dsParser "" ( --module
             if version == #hd2 then (
                 WritePoint4 f morph.dmin
                 WritePoint4 f morph.dmax
-                WritePoint3 f morph.center
-                WriteFloatSafe f morph.dist
             )
             else (
                 WritePoint3 f morph.dmin
                 WritePoint3 f morph.dmax
-                WritePoint3 f morph.center
-                WriteFloatSafe f morph.dist
-            )            
+            )
+            
+            WritePoint3 f morph.center
+            WriteFloatSafe f morph.radius
         )
     )
     
@@ -1164,7 +1162,8 @@ rollout MafiaTools_4dsParser "" ( --module
     struct TMirror (
         dmin,  --p3
         dmax,  --p3
-        unknown = #(), --float[4]
+        center, --p3
+        radius, --float
         matrix,   --matrix3
         backColor,  --float[3]
         drawDistance,  --float
@@ -1179,10 +1178,11 @@ rollout MafiaTools_4dsParser "" ( --module
 
         mirr.dmin = ReadPoint f
         mirr.dmax = ReadPoint f
-        for i = 1 to 4 do mirr.unknown[i] = ReadFloatSafe f        
+        mirr.center = ReadPoint3 f
+        mirr.radius = ReadFloatSafe f
+        
         mirr.matrix = ReadMatrix f
         mirr.backColor = ReadColor f
-        
         mirr.drawDistance = ReadFloatSafe f
 
         local tr = TriMesh()        
@@ -1210,8 +1210,8 @@ rollout MafiaTools_4dsParser "" ( --module
         
         WritePoint f mirr.dmin
         WritePoint f mirr.dmax
-        
-        for i = 1 to 4 do WriteFloatSafe f mirr.unknown[i]
+        WritePoint3 f mirr.center
+        WriteFloatSafe f mirr.radius
         
         WriteMatrix f mirr.matrix
         WriteColor f mirr.backColor
