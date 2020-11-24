@@ -12,6 +12,7 @@ rollout MafiaTools_4dsParser "" ( --module
     local ReadMirror
     local ReadDummy
     local ReadSector
+    local ReadPortal
     local ReadTarget
     local ReadBone
     local ReadOccluder
@@ -27,6 +28,7 @@ rollout MafiaTools_4dsParser "" ( --module
     local WriteSkin
     local WriteBillboard
     local WriteSector
+    local WritePortal
     local WriteDummy
     local WriteTarget
     local WriteBone
@@ -1260,23 +1262,29 @@ rollout MafiaTools_4dsParser "" ( --module
     -------------------------------------------------
     
     struct TSector (
-        mesh,
+        flags1,
+        flags2,
         dmin,
         dmax,
+        mesh,
         portals = #() --array of TPortal
     )
 
     struct TPortal (
+        flags,
         nearRange,
         farRange,
+        normal,
+        magic,
+        unknown,
         mesh
     )
     
     fn ReadSector f version = (
         local msector = TSector()
 
-        ReadU32 f --always 2049
-        ReadU32 f --always 0
+        msector.flags1 = ReadU32 f --always 2049
+        msector.flags2 = ReadU32 f --always 0
 
         local tr = TriMesh()        
         tr.numVerts = ReadU32 f
@@ -1308,29 +1316,46 @@ rollout MafiaTools_4dsParser "" ( --module
         local numPortals = ReadU8 f
 
         for i = 1 to numPortals do (
-            local mportal = TPortal()
-            local trp = TriMesh()
-            trp.numVerts = ReadU8 f
-            for j = 1 to 5 do ReadU32 f
-            mportal.nearRange = ReadFloatSafe f
-            mportal.farRange = ReadFloatSafe f
-            
-            if version != #mafia then ReadU32 f
-
-            for vertId = 1 to trp.numVerts do (
-                setVert trp vertId (ReadPoint f)
-            )
-            mportal.mesh = trp
-            append msector.portals mportal
+            append msector.portals (ReadPortal f version)
         )
-
 
         msector
     )
     
+    fn ReadPortal f version = (
+        local portal = TPortal()
+        local tr = TriMesh()
+        tr.numVerts = ReadU8 f        
+        
+        if version == #mafia then (
+            portal.flags = ReadU32 f
+            portal.nearRange = ReadFloatSafe f
+            portal.farRange = ReadFloatSafe f
+        )
+        
+        portal.normal = ReadPoint3 f
+        portal.magic = ReadFloatSafe f
+        
+        if version != #mafia then (
+            portal.flags = ReadU32 f
+            portal.nearRange = ReadFloatSafe f
+            portal.farRange = ReadFloatSafe f
+            portal.unknown = ReadU32 f
+        )
+        
+        local ReadPoint = if version == #hd2 then ReadPoint4 else ReadPoint3  
+
+        for vertId = 1 to tr.numVerts do (
+            setVert tr vertId (ReadPoint f)
+        )
+        portal.mesh = tr
+        
+        portal
+    )
+    
     fn WriteSector f sector version = (
-        WriteU32 f 2049    --unknown
-        WriteU32 f 0       --unknown
+        WriteU32 f sector.flags1
+        WriteU32 f sector.flags2
 
         local smesh = sector.mesh
 
@@ -1361,18 +1386,34 @@ rollout MafiaTools_4dsParser "" ( --module
         WriteU8 f sector.portals.count
 
         for portal in sector.portals do (
-            WriteU8 f portal.mesh.numVerts
-            WriteU32 f 4   --unknown
-            for i = 1 to 4 do WriteU32 f 0 --unknown
-
-            WriteFloatSafe f portal.nearRange
-            WriteFloatSafe f portal.farRange
-            
-            if version != #mafia then WriteU32 f 0           
-            
-            for vertId = 1 to portal.mesh.numVerts do (
-                WritePoint f (getVert portal.mesh vertId)
-            )
+            WritePortal f portal version
+        )
+    )
+    
+    fn WritePortal f portal version = (
+        WriteU8 f portal.mesh.numverts        
+        
+        if version != #mafia then (
+            WritePoint3 f portal.normal
+            WriteFloatSafe f portal.magic
+        )
+        
+        WriteU32 f portal.flags
+        WriteFloatSafe f portal.nearRange
+        WriteFloatSafe f portal.farRange
+        
+        if version == #mafia then (
+            WritePoint3 f portal.normal
+            WriteFloatSafe f portal.magic
+        )
+        
+        if version != #mafia then WriteFloatSafe f portal.unknown
+        
+        
+        local WritePoint = if version == #hd2 then WritePoint4 else WritePoint3
+        
+        for vertId = 1 to portal.mesh.numVerts do (
+            WritePoint f (getVert portal.mesh vertId)
         )
     )
     

@@ -20,9 +20,8 @@ remap:#(#(#userParams), #(#strParams))
         lodDist type:#float default:0.0
 
         --Portal
-        nearRange type:#float default:0.0
-        farRange type:#float default:10.0
-
+        portalFlags type:#integer default:4
+        portalNearRange type:#float default:0.0
 
         --Billboard
         rotAxis type:#integer default:1
@@ -33,5 +32,15 @@ remap:#(#(#userParams), #(#strParams))
         mirrorColor type:#color
         mirrorDist type:#float default:100.0
         
+        
+        --don't use these names, they ment different things in previous versions
+        /*
+            nearRange type:#float default:0.0
+            farRange type:#float default:10.0
+            mirrorUnk1 type:#float default:0.0
+            mirrorUnk2 type:#float default:0.0
+            mirrorUnk3 type:#float default:0.0
+            mirrorUnk4 type:#float default:0.0        
+        */
     )
 )

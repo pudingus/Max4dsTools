@@ -284,8 +284,8 @@ rollout MafiaTools_4dsImport "" (   --module
             local gp = GetMafParams portalNode
 
             gp.objectType = "Portal"
-            gp.nearRange = mportal.nearRange
-            gp.farRange = mportal.farRange
+            gp.portalFlags = mportal.flags
+            gp.portalNearRange = mportal.nearRange
 
             Layers.AddTo portalNode "Portals"
 

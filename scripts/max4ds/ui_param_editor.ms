@@ -143,7 +143,7 @@ global MafParamEditor
     rollout rltLod ""
     (
         label lblLodDist "Fadeout distance (meters):" align:#left
-        spinner lodDist align:#left fieldwidth:70 range:[-9000000000,9000000000,10] scale:1 type:#float
+        spinner lodDist align:#left fieldwidth:70 range:[-3.4e38, 3.4e38, 0] scale:1 type:#float
 
         on lodDist changed val do (
             gp.lodDist = val
@@ -152,15 +152,23 @@ global MafParamEditor
 
     rollout rltPortal ""
     (
-        spinner nearRange "Near range:" range:[-9000000000,9000000000,0] align:#left fieldwidth:50 type:#float
-        spinner farRange "Far range:  " range:[-9000000000,9000000000,0] align:#left fieldwidth:50 type:#float
-
-        on nearRange changed val do (
-            gp.nearRange = val
+        checkbox chkEnabled "Enabled"
+        spinner spnFlags "Flags:" align:#left type:#integer range:[0, 65535, 0] fieldwidth:45
+        spinner spnNearRange "Near range:" range:[-3.4e38, 3.4e38, 0] scale:0.5 align:#left fieldwidth:50 type:#float
+        
+        on chkEnabled changed val do (
+            gp.portalFlags = bit.set gp.portalFlags 3 val
+            spnFlags.value = gp.portalFlags
+        )
+        
+        on spnFlags changed val do (
+            gp.portalFlags = val
+            
+            chkEnabled.checked = bit.get val 3
         )
 
-        on farRange changed val do (
-            gp.farRange = val
+        on spnNearRange changed val do (
+            gp.portalNearRange = val
         )
     )
 
@@ -181,7 +189,7 @@ global MafParamEditor
     rollout rltMirror ""
     (
         colorpicker cpColor "Background color: " align:#left
-        spinner spnDistance "Active range:" range:[-9000000000,9000000000,0] type:#float align:#left
+        spinner spnDistance "Active range:" range:[-3.4e38, 3.4e38,0] type:#float align:#left
 
         on cpColor changed val do (
             gp.mirrorColor = val
@@ -335,8 +343,12 @@ global MafParamEditor
         )
 
         if rltPortal.isDisplayed then (
-            rltPortal.nearRange.value = gp.nearRange
-            rltPortal.farRange.value = gp.farRange
+            rltPortal.spnFlags.value = gp.portalFlags
+            rltPortal.spnNearRange.value = gp.portalNearRange
+            
+            local flags = gp.portalFlags
+            
+            rltPortal.chkEnabled.checked = bit.get flags 3
         )
 
         if rltBbrd.isDisplayed then (

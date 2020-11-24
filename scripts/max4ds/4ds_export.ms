@@ -462,6 +462,8 @@ rollout MafiaTools_4dsExport "" (   --module
 
     fn ExtractSector mnode unitscale = (
         local sector = parser.TSector()
+        sector.flags1 = 2049
+        sector.flags2 = 0
         sector.mesh = snapshotAsMesh mnode.baseNode
         sector.dmin = mnode.baseNode.min * unitscale
         sector.dmax = mnode.baseNode.max * unitscale
@@ -470,16 +472,20 @@ rollout MafiaTools_4dsExport "" (   --module
 
         for portalNode in mnode.portals do (
             local portal = parser.TPortal()
-            local gp = custAttributes.get portalNode MafParams_def baseObject:false
 
-            if gp == undefined then (
-                portal.nearRange = 0.0
-                portal.farRange = 10.0
+            portal.flags = 4
+            portal.nearRange = 0
+            portal.farRange = 0
+            portal.normal = [0,0,0]
+            portal.magic = 0
+            portal.unknown = 0
+            
+            local gp = custAttributes.get portalNode MafParams_def baseObject:false
+            if gp != undefined then (
+                portal.nearRange = gp.portalNearRange
+                portal.flags = gp.portalFlags
             )
-            else (
-                portal.nearRange = gp.nearRange
-                portal.farRange = gp.farRange
-            )
+            
             local vertIds = polyop.getFaceVerts portalNode 1
             
             local tr = TriMesh()
