@@ -675,7 +675,7 @@ rollout MafiaTools_4dsImport "" (   --module
             ) 
             
 
-            if mobj.cullFlags == 16 then (
+            if not bit.get mobj.cullFlags 1 then (
                 Layers.AddTo nnode "Disabled"
             )
 

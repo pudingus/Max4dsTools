@@ -87,12 +87,21 @@ global MafParamEditor
     (
         spinner renderFlags "Render flags:" range:[0,255,0] type:#integer align:#left fieldwidth:30 enabled:false across:2
         spinner renderFlags2 "" range:[0,255,0] type:#integer fieldwidth:30 enabled:false
-        checkbox depthBias "Depth bias" across:2
-        checkbox shadowed "Shadowed"
-        checkbox texProj "Tex. proj." across:2 tooltip:"Texture projection"
-        checkbox noFog "No fog"
+        checkbox chkDepthBias "Depth bias" across:2
+        checkbox chkShadowed "Shadowed"
+        checkbox chkTexProj "Tex. proj." across:2 tooltip:"Texture projection"
+        checkbox chkNoFog "No fog"
 
-        spinner cullFlags "Culling flags:  " range:[0,255,0]  type:#integer align:#left fieldwidth:50 tooltip:"9=normal, 125=sector, \n61=wall, 29=in portal, \n16=disabled, 17=disabled"
+        spinner spnCullFlags "Culling flags:  " range:[0,255,0] offset:[0,10] type:#integer align:#left fieldwidth:50
+        checkbox chkEnabled "" tooltip:"(1) Enabled" width:15 align:#left across:8 
+        checkbox chkUnknown2 "" tooltip:"(2) Unknown" width:15 align:#left
+        checkbox chkUnknown3 "" tooltip:"(3) Unknown" width:15 align:#left
+        checkbox chkUnknown4 "" tooltip:"(4) Unknown" width:15 align:#left
+        checkbox chkUnknown5 "" tooltip:"(5) Unknown" width:15 align:#left
+        checkbox chkUnknown6 "" tooltip:"(6) Unknown" width:15 align:#left
+        checkbox chkUnknown7 "" tooltip:"(7) Unknown" width:15 align:#left
+        checkbox chkUnknown8 "" tooltip:"(8) Unknown" width:15 align:#left
+        
         label paramsLabel "String params:" align:#left
         edittext strParams "" align:#left width:140 height:30
 
@@ -105,38 +114,89 @@ global MafParamEditor
 
             local flags = val
 
-            depthBias.checked = bit.get flags 1
-            shadowed.checked = bit.get flags 2
-            texProj.checked = bit.get flags 6
-            noFog.checked = bit.get flags 8
+            chkDepthBias.checked = bit.get flags 1
+            chkShadowed.checked = bit.get flags 2
+            chkTexProj.checked = bit.get flags 6
+            chkNoFog.checked = bit.get flags 8
         )
 
-        on cullFlags changed val do (
+        on spnCullFlags changed val do (
             gp.cullFlags = val
+            
+            local cullFlags = gp.cullFlags
+            
+            chkEnabled.checked = bit.get cullFlags 1
+            chkUnknown2.checked = bit.get cullFlags 2
+            chkUnknown3.checked = bit.get cullFlags 3
+            chkUnknown4.checked = bit.get cullFlags 4
+            chkUnknown5.checked = bit.get cullFlags 5
+            chkUnknown6.checked = bit.get cullFlags 6
+            chkUnknown7.checked = bit.get cullFlags 7
+            chkUnknown8.checked = bit.get cullFlags 8
         )
 
         on strParams changed val do (
             gp.strParams = val
         )
 
-        on depthBias changed val do (
+        on chkDepthBias changed val do (
             gp.renderFlags2 = bit.set gp.renderFlags2 1 val
             renderFlags2.value = gp.renderFlags2
         )
 
-        on shadowed changed val do (
+        on chkShadowed changed val do (
             gp.renderFlags2 = bit.set gp.renderFlags2 2 val
             renderFlags2.value = gp.renderFlags2
         )
 
-        on texProj changed val do (
+        on chkTexProj changed val do (
             gp.renderFlags2 = bit.set gp.renderFlags2 6 val
             renderFlags2.value = gp.renderFlags2
         )
 
-        on noFog changed val do (
+        on chkNoFog changed val do (
             gp.renderFlags2 = bit.set gp.renderFlags2 8 val
             renderFlags2.value = gp.renderFlags2
+        )
+        
+        on chkEnabled changed val do (
+            gp.cullFlags = bit.set gp.cullFlags 1 val
+            spnCullFlags.value = gp.cullFlags
+        )
+        
+        on chkUnknown2 changed val do (
+            gp.cullFlags = bit.set gp.cullFlags 2 val
+            spnCullFlags.value = gp.cullFlags
+        )
+        
+        on chkUnknown3 changed val do (
+            gp.cullFlags = bit.set gp.cullFlags 3 val
+            spnCullFlags.value = gp.cullFlags
+        )
+        
+        on chkUnknown4 changed val do (
+            gp.cullFlags = bit.set gp.cullFlags 4 val
+            spnCullFlags.value = gp.cullFlags
+        )
+        
+        on chkUnknown5 changed val do (
+            gp.cullFlags = bit.set gp.cullFlags 5 val
+            spnCullFlags.value = gp.cullFlags
+        )
+        
+        on chkUnknown6 changed val do (
+            gp.cullFlags = bit.set gp.cullFlags 6 val
+            spnCullFlags.value = gp.cullFlags
+        )
+        
+        on chkUnknown7 changed val do (
+            gp.cullFlags = bit.set gp.cullFlags 7 val
+            spnCullFlags.value = gp.cullFlags
+        )
+        
+        on chkUnknown8 changed val do (
+            gp.cullFlags = bit.set gp.cullFlags 8 val
+            spnCullFlags.value = gp.cullFlags
         )
     )
 
@@ -239,10 +299,10 @@ global MafParamEditor
         DisableControls #(
             rltObject.renderFlags,
             rltObject.renderFlags2,
-            rltObject.depthBias,
-            rltObject.shadowed,
-            rltObject.texProj,
-            rltObject.noFog
+            rltObject.chkDepthBias,
+            rltObject.chkShadowed,
+            rltObject.chkTexProj,
+            rltObject.chkNoFog
         )
     )
 
@@ -324,7 +384,7 @@ global MafParamEditor
         if rltObject.isDisplayed then (
             rltObject.renderFlags.value = gp.renderFlags
             rltObject.renderFlags2.value = gp.renderFlags2
-            rltObject.cullFlags.value = gp.cullFlags
+            rltObject.spnCullFlags.value = gp.cullFlags
 
             if gp.strParams != undefined then (
                 rltObject.strParams.text = gp.strParams
@@ -332,10 +392,21 @@ global MafParamEditor
 
             local flags = gp.renderFlags2
 
-            rltObject.depthBias.checked = bit.get flags 1
-            rltObject.shadowed.checked = bit.get flags 2
-            rltObject.texProj.checked = bit.get flags 6
-            rltObject.noFog.checked = bit.get flags 8
+            rltObject.chkDepthBias.checked = bit.get flags 1
+            rltObject.chkShadowed.checked = bit.get flags 2
+            rltObject.chkTexProj.checked = bit.get flags 6
+            rltObject.chkNoFog.checked = bit.get flags 8
+            
+            local cullFlags = gp.cullFlags
+            
+            rltObject.chkEnabled.checked = bit.get cullFlags 1
+            rltObject.chkUnknown2.checked = bit.get cullFlags 2
+            rltObject.chkUnknown3.checked = bit.get cullFlags 3
+            rltObject.chkUnknown4.checked = bit.get cullFlags 4
+            rltObject.chkUnknown5.checked = bit.get cullFlags 5
+            rltObject.chkUnknown6.checked = bit.get cullFlags 6
+            rltObject.chkUnknown7.checked = bit.get cullFlags 7
+            rltObject.chkUnknown8.checked = bit.get cullFlags 8
         )
 
         if rltLod.isDisplayed then (
