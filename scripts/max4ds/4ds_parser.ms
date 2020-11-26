@@ -1119,8 +1119,8 @@ rollout MafiaTools_4dsParser "" ( --module
     )
     
     fn WriteBillboard f mbillboard = (
-        WriteU8 f (mbillboard.rotAxis - 1)
-        WriteU32 f (mbillboard.rotMode - 1)
+        WriteU32 f (mbillboard.rotAxis - 1)
+        WriteU8 f (mbillboard.rotMode - 1)
     )
     
     -------------------------------------------------    

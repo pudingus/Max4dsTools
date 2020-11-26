@@ -31,8 +31,8 @@ remap:#(#(#isAnimatedM,#useMips,#useColoring,#useColorKey,#useAddBlend),#(#anima
         colored         type:#boolean       ui:colored          default:false   --28
         mipMapping      type:#boolean       ui:mipMapping       default:true    --24
         animatedDiffuse type:#boolean       ui:animatedDiffuse  default:false   --27  --animovaná textura difuze
-        animFrames      type:#integer       ui:animFrames       default:1
-        animPeriod      type:#integer       ui:animPeriod       default:1
+        animFrames      type:#integer       ui:animFrames       default:0
+        animPeriod      type:#integer       ui:animPeriod       default:50
 
         --20 - Environment Map
         envOverlay      type:#boolean       ui:envOverlay       default:true    --9
@@ -214,11 +214,11 @@ remap:#(#(#isAnimatedM,#useMips,#useColoring,#useColorKey,#useAddBlend),#(#anima
             checkbox animatedDiffuse    "Animated"      align:#left
 
             checkbox colored            "Colored"       across:2
-            spinner animFrames          "Frames"        range:[0,1000,1] align:#left fieldwidth:40 type:#integer    offset:[3,2]
+            spinner animFrames          "Frames     "   range:[0,100,0] align:#left fieldwidth:40 type:#integer    offset:[3,2] tooltip:"Total number of frames"
 
 
             checkbox mipMapping         "Mip mapping"   align:#left across:2
-            spinner animPeriod          "Period "       range:[0,3600000,1] align:#left fieldwidth:40 type:#integer offset:[5,0]
+            spinner animPeriod          "Delay (ms)"    range:[0,3600000,0] align:#left fieldwidth:40 type:#integer offset:[2,0] tooltip:"Delay between frames in milliseconds"
             label afasfa ""
         )
 
@@ -252,7 +252,7 @@ remap:#(#(#isAnimatedM,#useMips,#useColoring,#useColorKey,#useAddBlend),#(#anima
             checkbox chkImageAlpha  "Image alpha" align:#left
         )
         label d ""
-        groupBox group1 "" pos:[160,144] width:120 height:75
+        groupBox group1 "" pos:[160,144] width:130 height:75
 
         on genPreview pressed do (
             if 'Diffuse Map' != undefined then (

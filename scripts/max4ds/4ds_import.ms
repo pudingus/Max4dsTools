@@ -5,6 +5,9 @@ rollout MafiaTools_4dsImport "" (   --module
     local Layers = ::MafiaTools_Layers    
     local util = ::MafiaTools_Util
     -----------
+    
+    local BAD_TYPES = #()
+    
 
     fn GetMafParams nnode = (
         custAttributes.add nnode MafParams_def baseObject:false
@@ -120,6 +123,10 @@ rollout MafiaTools_4dsImport "" (   --module
     fn CreateMorph mmorph mmesh nnode unitscale = (
         local baseMesh = mmesh.lods[1].mesh
         local meshes = #()
+        
+        if mmorph.lods.count > 1 then (
+            BAD_TYPES[4] = "Morph lods"
+        )
 
         for region in mmorph.lods[1].regions do (
             local regionMeshes = #()
@@ -474,8 +481,6 @@ rollout MafiaTools_4dsImport "" (   --module
         
         mesh mesh:ocl.mesh wirecolor:(color 178 89 255)
     )
-    
-    local BAD_TYPES = #()
 
     fn CreateObjects mobjects filename unitscale materials = (
         local buffer = TWorldBuffer()

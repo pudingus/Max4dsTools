@@ -235,7 +235,7 @@ global MafParamEditor
     rollout rltBbrd ""
     (
         radiobuttons rotMode "Rotation mode:" labels:#("All axes", "Single axis:") align:#left columns:1
-        dropdownlist rotAxis "" items:#("X", "Y", "Z") offset:[20,0] width:50
+        dropdownlist rotAxis "" items:#("X", "Z", "Y") offset:[20,0] width:50
 
         on rotMode changed val do (
             gp.rotMode = val
@@ -573,7 +573,7 @@ global MafParamEditor
         )
     )
     else (
-        floater = newRolloutFloater title 190 470
+        floater = newRolloutFloater title 190 490
     )
 
     if floater.open then (
