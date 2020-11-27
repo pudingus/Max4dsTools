@@ -17,6 +17,7 @@ rollout MafiaTools_4dsExport "" (   --module
     local BONE_IDS
     
     local WARN_MORPH
+    local WARN_PORTAL
 
     struct TNode (
         baseNode,
@@ -366,6 +367,10 @@ rollout MafiaTools_4dsExport "" (   --module
                     if obj.parent != undefined then (
                         local parentMnode = mnodeSet.GetByNode obj.parent
                         append parentMnode.portals obj
+                        
+                        if classof obj != Editable_Poly and classof obj != PolyMeshObject then (
+                            throw "Portals must be Editable Poly!"
+                        )
                     )
                 )
                 #lod: (
@@ -504,19 +509,28 @@ rollout MafiaTools_4dsExport "" (   --module
                 portal.flags = gp.portalFlags
             )
             
-            local vertIds = polyop.getFaceVerts portalNode 1
+            local numFaces = polyop.getNumFaces portalNode
             
             local tr = TriMesh()
-            tr.numVerts = vertIds.count
-
-            local newVertId = 1
-            for id in vertIds do (
-                
-                if version == #mafia then local vert = polyop.getVert portalNode id
-                else local vert = in coordsys local polyop.getVert portalNode id
-                setVert tr newVertId (vert * unitscale)
-                newVertId += 1
+            
+            if numFaces > 0 then (
+                local vertIds = polyop.getFaceVerts portalNode 1            
+                tr.numVerts = vertIds.count
+    
+                local newVertId = 1
+                for id in vertIds do (
+                    if version == #mafia then local vert = polyop.getVert portalNode id
+                    else local vert = in coordsys local polyop.getVert portalNode id
+                    setVert tr newVertId (vert * unitscale)
+                    newVertId += 1
+                )
             )
+            
+            if numFaces > 1 then (
+                format "% (%) has more than 1 face! numFaces: %\n" portalNode.name mnode.baseNode.name numFaces
+                WARN_PORTAL = true
+            )
+
             portal.mesh = tr
             append sector.portals portal
         )
@@ -1674,6 +1688,7 @@ rollout MafiaTools_4dsExport "" (   --module
             gc light:true
 
             WARN_MORPH = false
+            WARN_PORTAL = false
             
             local used_start = (heapsize - heapfree) / 1024.0
 
@@ -1711,6 +1726,10 @@ rollout MafiaTools_4dsExport "" (   --module
             
             if WARN_MORPH then (
                 messageBox "Morph channels 1, 11, 21 and so on should be empty." icon:#information
+            )
+            
+            if WARN_PORTAL then (
+                messageBox "Some portals have more than 1 face. Extra faces were skipped.\nMore info in the MAXScript Listener (F11)" icon:#warning
             )
         )
 
