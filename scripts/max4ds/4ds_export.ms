@@ -588,8 +588,11 @@ rollout MafiaTools_4dsExport "" (   --module
         local weights
         
         if bskin != undefined then (
-            max modify mode
-            modPanel.setCurrentObject bskin
+            local maxver = (maxVersion())[1]
+            if maxver < 22000 then (
+                max modify mode
+                modPanel.setCurrentObject bskin
+            )
 
             local xskin = skin_makeCache bskin
 
@@ -1686,7 +1689,23 @@ rollout MafiaTools_4dsExport "" (   --module
             local st = timestamp()
 
             gc light:true
-
+            
+            --save selection
+            local savedSel = getCurrentSelection()
+            local savedPanel = getCommandPanelTaskMode()
+            
+            if savedPanel == #modify then (
+                local savedSubSel = subObjectLevel
+                local savedMod = modPanel.getCurrentObject()
+                
+                if savedMod != undefined and classof savedMod == Skin then (
+                    local savedBoneId = skinOps.GetSelectedBone savedMod
+                )
+            )
+            -----------------------
+            
+            clearSelection()
+            
             WARN_MORPH = false
             WARN_PORTAL = false
             
@@ -1714,6 +1733,34 @@ rollout MafiaTools_4dsExport "" (   --module
                 )
             )
             try (fclose f) catch ()
+            
+            
+            --restore selection
+
+            local dontSelect = false
+            setCommandPanelTaskMode savedPanel
+            if savedPanel == #modify then (
+                if savedMod != undefined then (
+                    modPanel.setCurrentObject savedMod
+                    if savedSubSel != undefined then (
+                        subObjectLevel = savedSubSel
+                    )
+                    if savedBoneId != undefined then (
+                        skinOps.SelectBone savedMod savedBoneId
+                    )
+                    dontSelect = true
+                )
+            )            
+            if dontSelect == false then (
+                if savedSel.count == 0 then (
+                    clearSelection()
+                )
+                else (
+                    select savedSel
+                )
+            )
+            --------------------
+            
 
             dur = elapsed_since(st) / 1000.0
 
