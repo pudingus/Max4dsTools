@@ -500,7 +500,7 @@ rollout MafiaTools_4dsExport "" (   --module
             portal.nearRange = 0
             portal.farRange = 0
             portal.normal = [0,0,0]
-            portal.magic = 0
+            portal.dotp = 0
             portal.unknown = 0
             
             local gp = custAttributes.get portalNode MafParams_def baseObject:false
@@ -524,6 +524,10 @@ rollout MafiaTools_4dsExport "" (   --module
                     setVert tr newVertId (vert * unitscale)
                     newVertId += 1
                 )
+                
+                local normal = polyop.getFaceNormal portalNode 1
+                portal.normal = -normal
+                portal.dotp = dot (getVert tr 1) normal
             )
             
             if numFaces > 1 then (

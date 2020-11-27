@@ -1275,7 +1275,7 @@ rollout MafiaTools_4dsParser "" ( --module
         nearRange,
         farRange,
         normal,
-        magic,
+        dotp,
         unknown,
         mesh
     )
@@ -1334,7 +1334,7 @@ rollout MafiaTools_4dsParser "" ( --module
         )
         
         portal.normal = ReadPoint3 f
-        portal.magic = ReadFloatSafe f
+        portal.dotp = ReadFloatSafe f
         
         if version != #mafia then (
             portal.flags = ReadU32 f
@@ -1395,7 +1395,7 @@ rollout MafiaTools_4dsParser "" ( --module
         
         if version != #mafia then (
             WritePoint3 f portal.normal
-            WriteFloatSafe f portal.magic
+            WriteFloatSafe f portal.dotp
         )
         
         WriteU32 f portal.flags
@@ -1404,7 +1404,7 @@ rollout MafiaTools_4dsParser "" ( --module
         
         if version == #mafia then (
             WritePoint3 f portal.normal
-            WriteFloatSafe f portal.magic
+            WriteFloatSafe f portal.dotp
         )
         
         if version != #mafia then WriteFloatSafe f portal.unknown
