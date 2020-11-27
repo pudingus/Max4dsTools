@@ -667,7 +667,7 @@ rollout MafiaTools_4dsImport "" (   --module
                         currentSkin.boneNodes[mbone.boneId + 1] = nnode
                     )
                 )
-                12: (
+                12: (  --occluder
                     local ocl = mobj.occluder
                     nnode = CreateOccluder ocl unitscale
                     Layers.AddTo nnode "Occluders"
@@ -699,6 +699,7 @@ rollout MafiaTools_4dsImport "" (   --module
                 nnode.transform = s * r * t * nnode.parent.transform
             )
             else (
+                nnode.parent = undefined   --needed because instanced meshes by default inherit parent from the main instance 
                 nnode.transform = s * r * t
             )
 

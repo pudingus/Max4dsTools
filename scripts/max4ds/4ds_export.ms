@@ -460,15 +460,33 @@ rollout MafiaTools_4dsExport "" (   --module
         mnodeSet
     )
 
-    fn ExtractSector mnode unitscale = (
+    fn ExtractSector mnode unitscale version = (
         local sector = parser.TSector()
         sector.flags1 = 2049
         sector.flags2 = 0
-        sector.mesh = snapshotAsMesh mnode.baseNode
-        sector.dmin = mnode.baseNode.min * unitscale
-        sector.dmax = mnode.baseNode.max * unitscale
+        if version == #mafia then (
+            sector.mesh = snapshotAsMesh mnode.baseNode
+            sector.dmin = mnode.baseNode.min * unitscale
+            sector.dmax = mnode.baseNode.max * unitscale
+            
+            util.TransformVerts sector.mesh unitscale
+        )
+        else (
+            sector.mesh = copy mnode.baseNode.mesh
+            sector.dmin = in coordsys local mnode.baseNode.min * unitscale
+            sector.dmax = in coordsys local mnode.baseNode.max * unitscale
+            
+            local baseNode = mnode.baseNode
+            
+            local scl = scaleMatrix [unitscale,unitscale,unitscale]
+            local otrans = baseNode.objectTransform * inverse baseNode.transform * scl
+    
+            --apply object offset to mesh
+            util.TransformVerts sector.mesh otrans
+        )
+
       
-        util.TransformVerts sector.mesh unitscale
+        
 
         for portalNode in mnode.portals do (
             local portal = parser.TPortal()
@@ -493,7 +511,9 @@ rollout MafiaTools_4dsExport "" (   --module
 
             local newVertId = 1
             for id in vertIds do (
-                local vert = polyop.getVert portalNode id
+                
+                if version == #mafia then local vert = polyop.getVert portalNode id
+                else local vert = in coordsys local polyop.getVert portalNode id
                 setVert tr newVertId (vert * unitscale)
                 newVertId += 1
             )
@@ -1455,14 +1475,26 @@ rollout MafiaTools_4dsExport "" (   --module
 
             mobj.name = mnode.baseNode.name
             mobj.parentId = mnodeSet.GetIDByNode mnode.baseNode.parent
+            
+            if version == #mafia then (
 
-            if (baseNode.parent != undefined) and (GetNodeType baseNode.parent == #sector) then (
-                in coordsys world
-                (
-                    mobj.offset = mnode.baseNode.pos * unitscale
-                    mobj.scl = mnode.baseNode.scale
-                    mobj.rot = mnode.baseNode.rotation
+                if (baseNode.parent != undefined) and (GetNodeType baseNode.parent == #sector) then (
+                    in coordsys world
+                    (
+                        mobj.offset = mnode.baseNode.pos * unitscale
+                        mobj.scl = mnode.baseNode.scale
+                        mobj.rot = mnode.baseNode.rotation
+                    )
                 )
+                else (
+                    in coordsys parent
+                    (
+                        mobj.offset = mnode.baseNode.pos * unitscale
+                        mobj.scl = mnode.baseNode.scale
+                        mobj.rot = mnode.baseNode.rotation
+                    )
+                )
+            
             )
             else (
                 in coordsys parent
@@ -1507,11 +1539,13 @@ rollout MafiaTools_4dsExport "" (   --module
                 #sector: (
                     mobj.objectType = 5
                     if gp == undefined then mobj.cullFlags = 125
-                    mobj.sector = ExtractSector mnode unitscale
+                    mobj.sector = ExtractSector mnode unitscale version
 
-                    mobj.offset = [0,0,0]
-                    mobj.scl = [1,1,1]
-                    mobj.rot = [0,0,0,1]
+                    if version == #mafia then (
+                        mobj.offset = [0,0,0]
+                        mobj.scl = [1,1,1]
+                        mobj.rot = [0,0,0,1]
+                    )
                 )
                 #dummy: (
                     mobj.objectType = 6
