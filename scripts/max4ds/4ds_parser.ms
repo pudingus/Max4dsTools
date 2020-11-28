@@ -1127,6 +1127,7 @@ rollout MafiaTools_4dsParser "" ( --module
 
     struct TGlow (
         position,  --float, screen offset
+        unknown = 0.0, --float, only HD2 and Chameleon
         
         -- u16, 0 == no_texture, 1..N == materials
         -- zero is invalid here, crashes the game
@@ -1140,7 +1141,7 @@ rollout MafiaTools_4dsParser "" ( --module
         for i = 1 to numGlows do (
             local glow = TGlow()
             glow.position = ReadFloatSafe f
-            if version != #mafia do ReadFloatSafe f
+            if version != #mafia do glow.unknown = ReadFloatSafe f
             glow.matId = ReadU16 f
 
             append glows glow
@@ -1422,16 +1423,14 @@ rollout MafiaTools_4dsParser "" ( --module
     -------------------------------------------------
 
     struct TTarget (
-        unk1,
-        unk2,
+        flags,   --u16
         linkIds = #()   --array of u16, 1-based ids
     )    
 
     fn ReadTarget f = (
         local mTarget = TTarget()
 
-        mTarget.unk1 = ReadU8 f
-        mTarget.unk2 = ReadU8 f
+        mTarget.flags = ReadU16 f
         local numLinks = ReadU8 f
 
         for i = 1 to numLinks do (
@@ -1442,7 +1441,7 @@ rollout MafiaTools_4dsParser "" ( --module
     )
 
     fn WriteTarget f mtarget = (
-        WriteU16 f 0
+        WriteU16 f mtarget.flags
         WriteU8 f mtarget.linkIds.count
 
         for linkId in mtarget.linkIds do (

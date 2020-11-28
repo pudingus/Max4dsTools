@@ -313,9 +313,12 @@ rollout MafiaTools_4dsImport "" (   --module
     -- returns Node
     fn CreateTarget mtarget unitscale = (
         local nnode = Target4ds()
+        nnode.flags = mtarget.flags
         nnode.wirecolor = color 28 122 210
         nnode.viewportSize = 0.1 * unitscale
         hide nnode
+        
+        Layers.AddTo nnode "Targets"
 
         nnode
     )

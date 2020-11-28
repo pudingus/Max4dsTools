@@ -7,6 +7,7 @@ replaceUI:true
 (
     parameters pblock rollout:TargetRoll
     (
+        flags type:#integer default:1 ui:spnFlags
         nodes type:#nodeTab tabSizeVariable:true
     )
     parameters pblock2 rollout:TargetViewportRoll
@@ -19,9 +20,11 @@ replaceUI:true
     )
     rollout TargetRoll "Target Parameters"
     (
+        spinner spnFlags "Flags: " type:#integer range:[0, 65535, 0] align:#left fieldwidth:90
+        label lblNodes "Targeting nodes: " align:#left offset:[0,10]
         pickbutton pbAdd "Add" across:2 align:#left width:50
         button btnRemove "Remove" align:#right width:70
-        listbox lbNodes "Targeting nodes" height:6
+        listbox lbNodes "" height:6
 
         on pbAdd picked val do (
             undo "Add targeting node" on (

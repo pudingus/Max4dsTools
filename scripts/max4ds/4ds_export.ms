@@ -1335,6 +1335,7 @@ rollout MafiaTools_4dsExport "" (   --module
 
     fn ExtractTarget mnode mnodeSet = (
         local mtarget = parser.TTarget()
+        mtarget.flags = mnode.basenode.flags
 
         for linkedNode in mnode.basenode.nodes do (
             append mtarget.linkIds (mnodeSet.GetIDByNode linkedNode)
