@@ -22,6 +22,8 @@ remap:#(#(#userParams), #(#strParams))
         --Portal
         portalFlags type:#integer default:4
         portalNearRange type:#float default:0.0
+        portalFarRange type:#float default:0.0
+        portalUnknown type:#float default:0.0
 
         --Billboard
         rotAxis type:#integer default:1
@@ -31,6 +33,10 @@ remap:#(#(#userParams), #(#strParams))
         --Mirror
         mirrorColor type:#color
         mirrorDist type:#float default:100.0
+        
+        --Sector
+        sectorFlags1 type:#integer default:2049
+        sectorFlags2 type:#integer default:0
         
         
         --don't use these names, they ment different things in previous versions

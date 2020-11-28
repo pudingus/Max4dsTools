@@ -273,6 +273,10 @@ rollout MafiaTools_4dsImport "" (   --module
 
         nodes[1] = mesh mesh:msector.mesh
         nodes[1].wirecolor = (color 255 199 0)
+        
+        local sgp = GetMafParams nodes[1]
+        sgp.sectorFlags1 = msector.flags1
+        sgp.sectorFlags2 = msector.flags2
 
         local portalId = 0
         for mportal in msector.portals do (
@@ -293,6 +297,9 @@ rollout MafiaTools_4dsImport "" (   --module
             gp.objectType = "Portal"
             gp.portalFlags = mportal.flags
             gp.portalNearRange = mportal.nearRange
+            gp.portalFarRange = mportal.farRange
+            gp.portalUnknown = mportal.unknown
+            
 
             Layers.AddTo portalNode "Portals"
 

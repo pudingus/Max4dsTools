@@ -1276,7 +1276,7 @@ rollout MafiaTools_4dsParser "" ( --module
         farRange,
         normal,
         dotp,
-        unknown,
+        unknown = 0.0,   --only HD2, Chameleon
         mesh
     )
     
@@ -1340,7 +1340,7 @@ rollout MafiaTools_4dsParser "" ( --module
             portal.flags = ReadU32 f
             portal.nearRange = ReadFloatSafe f
             portal.farRange = ReadFloatSafe f
-            portal.unknown = ReadU32 f
+            portal.unknown = ReadFloatSafe f
         )
         
         local ReadPoint = if version == #hd2 then ReadPoint4 else ReadPoint3  
@@ -1407,7 +1407,9 @@ rollout MafiaTools_4dsParser "" ( --module
             WriteFloatSafe f portal.dotp
         )
         
-        if version != #mafia then WriteFloatSafe f portal.unknown
+        if version != #mafia then (
+            WriteFloatSafe f portal.unknown
+        )
         
         
         local WritePoint = if version == #hd2 then WritePoint4 else WritePoint3

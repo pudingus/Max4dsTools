@@ -215,6 +215,8 @@ global MafParamEditor
         checkbox chkEnabled "Enabled"
         spinner spnFlags "Flags:" align:#left type:#integer range:[0, 65535, 0] fieldwidth:45
         spinner spnNearRange "Near range:" range:[-3.4e38, 3.4e38, 0] scale:0.5 align:#left fieldwidth:50 type:#float
+        spinner spnFarRange "Far range:" range:[-3.4e38, 3.4e38, 0] scale:0.5 align:#left fieldwidth:50 type:#float
+        spinner spnUnknown "Unknown:" range:[-3.4e38, 3.4e38, 0] scale:0.5 align:#left fieldwidth:50 type:#float tooltip:"Only version 41 and 42"
         
         on chkEnabled changed val do (
             gp.portalFlags = bit.set gp.portalFlags 3 val
@@ -229,6 +231,14 @@ global MafParamEditor
 
         on spnNearRange changed val do (
             gp.portalNearRange = val
+        )
+        
+        on spnFarRange changed val do (
+            gp.portalFarRange = val
+        )
+        
+        on spnUnknown changed val do (
+            gp.portalUnknown = val
         )
     )
 
@@ -259,6 +269,20 @@ global MafParamEditor
             gp.mirrorDist = val
         )
     )
+    
+    rollout rltSector ""
+    (
+        spinner spnFlags1 "Flags1: " fieldwidth:80 type:#integer range:[-4294967295, 4294967295, 0] align:#left
+        spinner spnFlags2 "Flags2: " fieldwidth:80 type:#integer range:[-4294967295, 4294967295, 0] align:#left
+        
+        on spnFlags1 changed val do (
+            gp.sectorFlags1 = val
+        )
+        
+        on spnFlags2 changed val do (
+            gp.sectorFlags2 = val
+        )
+    )
 
     fn OnDeselected = (
         MafParamEditor.objectName.text = ""
@@ -268,7 +292,7 @@ global MafParamEditor
         MafParamEditor.addParams.enabled = false
     )
 
-    local availableRlts = #(rltLod, rltPortal, rltBbrd, rltMirror)
+    local availableRlts = #(rltLod, rltPortal, rltBbrd, rltMirror, rltSector)
 
 --     struct TView (
 --
@@ -329,6 +353,8 @@ global MafParamEditor
         else if stricmp strsel "sector" == 0 then (
             EnableControls rltObject.controls
             SetNonVisual()
+            
+            requestedRlts = #(rltSector)
         )
         else if stricmp strsel "portal" == 0 then (
             DisableControls rltObject.controls
@@ -416,6 +442,8 @@ global MafParamEditor
         if rltPortal.isDisplayed then (
             rltPortal.spnFlags.value = gp.portalFlags
             rltPortal.spnNearRange.value = gp.portalNearRange
+            rltPortal.spnFarRange.value = gp.portalFarRange
+            rltPortal.spnUnknown.value = gp.portalUnknown
             
             local flags = gp.portalFlags
             
@@ -430,6 +458,11 @@ global MafParamEditor
         if rltMirror.isDisplayed then (
             rltMirror.cpColor.color = gp.mirrorColor
             rltMirror.spnDistance.value = gp.mirrorDist
+        )
+        
+        if rltSector.isDisplayed then (
+            rltSector.spnFlags1.value = gp.sectorFlags1
+            rltSector.spnFlags2.value = gp.sectorFlags2
         )
     )
 
@@ -455,6 +488,7 @@ global MafParamEditor
             for c in rltPortal.controls do c.visible = true
             for c in rltBbrd.controls do c.visible = true
             for c in rltMirror.controls do c.visible = true
+            for c in rltSector.controls do c.visible = true
 
             visible = true
         )
@@ -474,6 +508,7 @@ global MafParamEditor
         for c in rltPortal.controls do c.visible = false
         for c in rltBbrd.controls do c.visible = false
         for c in rltMirror.controls do c.visible = false
+        for c in rltSector.controls do c.visible = false
 
         visible = false
     )

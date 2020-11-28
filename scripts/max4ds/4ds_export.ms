@@ -369,7 +369,8 @@ rollout MafiaTools_4dsExport "" (   --module
                         append parentMnode.portals obj
                         
                         if classof obj != Editable_Poly and classof obj != PolyMeshObject then (
-                            throw "Portals must be Editable Poly!"
+                            select obj
+                            throw "Portals must be Editable Poly! " obj.name
                         )
                     )
                 )
@@ -490,6 +491,11 @@ rollout MafiaTools_4dsExport "" (   --module
             util.TransformVerts sector.mesh otrans
         )
 
+        local sgp = custAttributes.get mnode.baseNode MafParams_def baseObject:false
+        if sgp != undefined then (
+            sector.flags1 = sgp.sectorFlags1
+            sector.flags2 = sgp.sectorFlags2
+        )
       
         
 
@@ -505,8 +511,10 @@ rollout MafiaTools_4dsExport "" (   --module
             
             local gp = custAttributes.get portalNode MafParams_def baseObject:false
             if gp != undefined then (
-                portal.nearRange = gp.portalNearRange
                 portal.flags = gp.portalFlags
+                portal.nearRange = gp.portalNearRange
+                portal.farRange = gp.portalFarRange
+                portal.unknown = gp.portalUnknown
             )
             
             local numFaces = polyop.getNumFaces portalNode
@@ -1780,7 +1788,7 @@ rollout MafiaTools_4dsExport "" (   --module
             )
             
             if WARN_PORTAL then (
-                messageBox "Some portals have more than 1 face. Extra faces were skipped.\nMore info in the MAXScript Listener (F11)" icon:#warning
+                messageBox "Some portals have more than 1 face. Extra faces were ignored.\nMore info in the MAXScript Listener (F11)" icon:#warning
             )
         )
 
