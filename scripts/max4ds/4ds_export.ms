@@ -472,16 +472,11 @@ rollout MafiaTools_4dsExport "" (   --module
         sector.flags2 = 0
         if version == #mafia then (
             sector.mesh = snapshotAsMesh mnode.baseNode
-            sector.dmin = mnode.baseNode.min * unitscale
-            sector.dmax = mnode.baseNode.max * unitscale
             
             util.TransformVerts sector.mesh unitscale
         )
         else (
             sector.mesh = copy mnode.baseNode.mesh
-            sector.dmin = in coordsys local mnode.baseNode.min * unitscale
-            sector.dmax = in coordsys local mnode.baseNode.max * unitscale
-            
             local baseNode = mnode.baseNode
             
             local scl = scaleMatrix [unitscale,unitscale,unitscale]
@@ -496,7 +491,15 @@ rollout MafiaTools_4dsExport "" (   --module
             sector.flags1 = sgp.sectorFlags1
             sector.flags2 = sgp.sectorFlags2
         )
-      
+        
+        local size = 1.0e16
+        sector.dmin = [size, size, size]
+        sector.dmax = [-size, -size, -size]
+        
+        for vertId = 1 to sector.mesh.numverts do (
+            local vert = getVert sector.mesh vertId
+            MinMax sector.dmin sector.dmax vert
+        )
         
 
         for portalNode in mnode.portals do (

@@ -1127,7 +1127,7 @@ rollout MafiaTools_4dsParser "" ( --module
 
     struct TGlow (
         position,  --float, screen offset
-        unknown = 0.0, --float, only HD2 and Chameleon
+        unknown = 1.0, --float, only HD2 and Chameleon
         
         -- u16, 0 == no_texture, 1..N == materials
         -- zero is invalid here, crashes the game
@@ -1154,7 +1154,7 @@ rollout MafiaTools_4dsParser "" ( --module
         WriteU8 f mglows.count
         for mglow in mglows do (
             WriteFloatSafe f mglow.position
-            if version != #mafia do WriteFloatSafe f 0.0
+            if version != #mafia do WriteFloatSafe f mglow.unknown
             WriteU16 f mglow.matId
             if mglow.matId == 0 do throw "TGlow.matId cannot be zero"
         )
