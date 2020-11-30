@@ -94,6 +94,7 @@
                         --setCommandPanelTaskMode #create
                         delete $*
                         layers.Clear()
+                        UpdateSceneMaterialLib()
                         gc()
                     )
                     local sel = ddlUnits.selection
