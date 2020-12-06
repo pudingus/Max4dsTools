@@ -364,10 +364,15 @@ rollout MafiaTools_4dsParser "" ( --module
         WriteU8 f (if m4ds.allow5ds then 1 else 0)
     )
 
-    -------------------------------------------------    
+    -------------------------------------------------
     
     struct TMaterial (
-        flags,   --u32
+        envTile = 1,  --u8
+        envMode = 0,
+        envType = 0,
+        disabled = false,
+        addEffect = false,
+        flags,   --u16
         ambient,  --color (float[3])
         diffuse,  --color (=||=)
         specular = black, --color (HD2, Chameleon only)
@@ -383,48 +388,88 @@ rollout MafiaTools_4dsParser "" ( --module
     )
     
     fn ReadMaterial f version = (
-        local mmat = TMaterial()
-        mmat.flags = ReadU32 f
+        local mat = TMaterial()
+        mat.envTile = ReadU8 f
+        local envFlags = ReadU8 f
+        mat.flags = ReadU16 f
+        
+        local envMode = 0
+        envMode = bit.set envMode 1 (bit.get envFlags 1)
+        envMode = bit.set envMode 2 (bit.get envFlags 2)
+        envMode = bit.set envMode 3 (bit.get envFlags 3)
+        mat.envMode = envMode + 1
+        
+        mat.disabled = bit.get envFlags 4
+        
+        local envType = 0
+        envType = bit.set envType 1 (bit.get envFlags 5)
+        envType = bit.set envType 2 (bit.get envFlags 6)
+        envType = bit.set envType 3 (bit.get envFlags 7)
+        mat.envType = envType + 1
+        
+        mat.addEffect = bit.get envFlags 8
         
         local ReadColor = if version == #mafia then ReadColor3 else ReadColor4
         
-        mmat.ambient = ReadColor f
-        mmat.diffuse = ReadColor f
+        mat.ambient = ReadColor f
+        mat.diffuse = ReadColor f
         
         if version == #mafia then (
-            mmat.emission = ReadColor f
+            mat.emission = ReadColor f
         )
         else (
-            mmat.specular = ReadColor f
-            mmat.emission = ReadColor f
-            mmat.glossiness = ReadFloatSafe f
+            mat.specular = ReadColor f
+            mat.emission = ReadColor f
+            mat.glossiness = ReadFloatSafe f
         )
 
-        mmat.opacity = ReadFloatSafe f
-        if bit.get mmat.flags 20 then (  --env map enabled
-            mmat.envMapAmount = ReadFloatSafe f
-            mmat.envMapName = ReadText f
+        mat.opacity = ReadFloatSafe f
+        local envEnabled = bit.get mat.flags 4
+        local imageAlpha = bit.get mat.flags 9
+        local animatedDiffuse = bit.get mat.flags 11
+        local alphaEnabled = bit.get mat.flags 15
+        
+        if envEnabled then (
+            mat.envMapAmount = ReadFloatSafe f
+            mat.envMapName = ReadText f
         )
-        mmat.diffMapName = ReadText f
-        if (mmat.diffMapName != undefined) and (bit.get mmat.flags 31) and not (bit.get mmat.flags 25) then (
-            mmat.alphaMapName = ReadText f
+        mat.diffMapName = ReadText f
+        if mat.diffMapName != undefined and alphaEnabled and not imageAlpha then (
+            mat.alphaMapName = ReadText f
         )
 
-        if bit.get mmat.flags 27 then (
-            mmat.animFrames = ReadU32 f
+        if animatedDiffuse then (
+            mat.animFrames = ReadU32 f
             ReadU16 f
-            mmat.animPeriod = ReadU32 f
+            mat.animPeriod = ReadU32 f
             ReadU32 f
             ReadU32 f
         )
         
-        --format "mat diff: %, env: %, alpha: % \n" mmat.diffMapName mmat.envMapName mmat.alphaMapName 
+        --format "mat diff: %, env: %, alpha: % \n" mat.diffMapName mat.envMapName mat.alphaMapName 
         
-        mmat
+        mat
     )
     
     fn WriteMaterial f mmat version = (
-        WriteU32 f mmat.flags
+        WriteU8 f mmat.envTile
+        
+        local envFlags = 0
+        local envMode = mmat.envMode - 1
+        local envType = mmat.envType - 1
+        envFlags = bit.set envFlags 1 (bit.get envMode 1)
+        envFlags = bit.set envFlags 2 (bit.get envMode 2)
+        envFlags = bit.set envFlags 3 (bit.get envMode 3)
+        envFlags = bit.set envFlags 4 mmat.disabled
+        envFlags = bit.set envFlags 5 (bit.get envType 1)
+        envFlags = bit.set envFlags 6 (bit.get envType 2)
+        envFlags = bit.set envFlags 7 (bit.get envType 3)
+        envFlags = bit.set envFlags 8 mmat.addEffect
+        
+        WriteU8 f envFlags
+
+        
+        WriteU16 f mmat.flags
         
         local WriteColor = if version == #mafia then WriteColor3 else WriteColor4       
         
@@ -441,18 +486,28 @@ rollout MafiaTools_4dsParser "" ( --module
         )        
         
         WriteFloatSafe f mmat.opacity
+        
+        local envEnabled = bit.get mmat.flags 4
+        local imageAlpha = bit.get mmat.flags 9
+        local animatedDiffuse = bit.get mmat.flags 11
+        local alphaEnabled = bit.get mmat.flags 15
+        
+        
+        local colorKey = bit.get mmat.flags 14
+        local additive = bit.get mmat.flags 16
+        
 
-        if bit.get mmat.flags 20 then (     -- env map
+        if envEnabled then (
             WriteFloatSafe f mmat.envMapAmount
             WriteText f mmat.envMapName
         )
         local count = WriteText f mmat.diffMapName
 
-        if count > 0 and (bit.get mmat.flags 31) and not (bit.get mmat.flags 25) then (   -- alpha map and not image alpha
+        if count > 0 and alphaEnabled and not imageAlpha and not colorKey and not additive then (
             WriteText f mmat.alphaMapName
         )
 
-        if bit.get mmat.flags 27 then (     -- animated
+        if animatedDiffuse then (
             WriteU32 f mmat.animFrames
             WriteU16 f 0
             WriteU32 f mmat.animPeriod

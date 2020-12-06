@@ -343,36 +343,36 @@ rollout MafiaTools_4dsImport "" (   --module
         
         for m = 1 to mmats.count do (
             local mmat = mmats[m]
+            --disables set handlers, they are re-enabled after instatiation (in Mat4ds 'postCreate')
+            ::mat4ds_disable_set = true     
             local mat = Mat4ds()
             mat.name = "4dsMat"+(m as string)
 
             local flags = mmat.flags
+            
 
-            --Diffuse Map
-            mat.diffuseMapEnable = (bit.get flags 19)
-
-            mat.colored = (bit.get flags 28)
-            mat.mipMapping = (bit.get flags 24)
-            mat.twoSided = (bit.get flags 29)
-            mat.animatedDiffuse = (bit.get flags 27)
-            mat.animatedAlpha = (bit.get flags 26)
-
-            --Environment Map
-            mat.envMapEnable = (bit.get flags 20)
-
-            mat.envOverlay = (bit.get flags 9)
-            mat.envMultiply = (bit.get flags 10)
-            mat.envAdditive = (bit.get flags 11)
-            mat.YProj = (bit.get flags 13)
-            mat.YDetail = (bit.get flags 14)
-            mat.ZDetail = (bit.get flags 15)
-
-            --Additional Effect
-            mat.addEffect = (bit.get flags 16)
-            mat.alphaMapEnable = (bit.get flags 31)
-            mat.colorKey = (bit.get flags 30)
-            mat.additiveMixing = (bit.get flags 32)
-            mat.imageAlpha = (bit.get flags 25)
+            mat.envTile = mmat.envTile
+            mat.envMode = mmat.envMode
+            mat.envType = mmat.envType
+            mat.addEffect = mmat.addEffect
+            
+            mat.tileU = not bit.get flags 1
+            mat.tileV = not bit.get flags 2
+            mat.diffuseMapEnable = bit.get flags 3
+            mat.envMapEnable = bit.get flags 4
+            mat.unknown5 = bit.get flags 5
+            mat.unknown6 = bit.get flags 6
+            mat.unknown7 = bit.get flags 7
+            mat.mipMapping = bit.get flags 8
+           
+            mat.imageAlpha = bit.get flags 9
+            mat.animatedAlpha = bit.get flags 10
+            mat.animatedDiffuse = bit.get flags 11
+            mat.colored = bit.get flags 12
+            mat.twoSided = bit.get flags 13
+            mat.colorKey = bit.get flags 14
+            mat.alphaMapEnable = bit.get flags 15
+            mat.additiveMixing = bit.get flags 16
 
             mat.ambient = mmat.ambient
             mat.diffuse = mmat.diffuse
@@ -779,9 +779,11 @@ rollout MafiaTools_4dsImport "" (   --module
         
         local st = timestamp()
 
-        gc light:true
+        --gc light:true
 
         local used_start = (heapsize - heapfree) / 1024.0
+        
+        local fileStart = timestamp()
 
         local f = fopen file "rb"
         local parser = ::MafiaTools_4dsParser
@@ -792,6 +794,10 @@ rollout MafiaTools_4dsImport "" (   --module
             messageBox (getCurrentException()) icon:#critical
         )
         try (fclose f) catch()
+        
+        local fileDur = (elapsed_since fileStart) / 1000.0
+        
+        format "Reading: %\n" fileDur   
 
         if m4ds == undefined then (
             messageBox "This file cannot be imported. Unknown version or format." icon:#critical
@@ -799,21 +805,37 @@ rollout MafiaTools_4dsImport "" (   --module
         )
         else (
             with redraw off (
+                local matStart = timestamp()
                 local materials = CreateMaterials m4ds.materials filename
+                local matDur = (elapsed_since matStart) / 1000.0
+                format "Materials: %\n" matDur                
+                
+                local objStart = timestamp()
+                
                 local buffer = CreateObjects m4ds.objects filename unitscale materials
 
                 LinkTargets buffer.targetBuffer buffer.mafiaNodes
                 CreateSkins buffer.skinBuffer
                 Layers.Hide #("Disabled")
                 --Layers.HideLods #{1..9}
+                
+                local objDur = (elapsed_since objStart) / 1000.0
+                
+                format "Objects: %\n" objDur
             )
 
+            local redrawStart = timestamp()
             CompleteRedraw()
+            
+            local redrawDur = (elapsed_since redrawStart) / 1000.0
+            format "Redrawing: %\n" redrawDur   
+            
+            
 
             local used_end = (heapsize - heapfree) / 1024.0
             format "memory used ~ % KiB\n" (used_end - used_start)
 
-            gc light:true
+            --gc light:true
 
             local dur = elapsed_since(st) / 1000.0
 

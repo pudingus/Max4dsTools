@@ -238,36 +238,36 @@ rollout MafiaTools_4dsExport "" (   --module
             )
 
             if classof mat == Mat4ds then  (
-                local mmat = parser.TMaterial()
+                local mmat = parser.TMaterial()               
 
-                local flags = 0
-                flags += (bit.set 0 1 true)
-
+                mmat.envTile = mat.envTile
+                
                 if mat.envMapEnable and (mat.envMap != undefined) then (
-                    flags += (bit.set 0 9 mat.envOverlay)
-                    flags += (bit.set 0 10 mat.envMultiply)
-                    flags += (bit.set 0 11 mat.envAdditive)
-                    flags += (bit.set 0 13 mat.YProj)
-                    flags += (bit.set 0 14 mat.YDetail)
-                    flags += (bit.set 0 15 mat.ZDetail)
+                    mmat.envMode = mat.envMode
+                    mmat.envType = mat.envType
                 )
-
-                flags += (bit.set 0 16 mat.addEffect)
-
-                flags += (bit.set 0 19 mat.diffuseMapEnable)
-                flags += (bit.set 0 20 mat.envMapEnable)
-
-                flags += (bit.set 0 24 mat.mipMapping)   --
-
-                flags += (bit.set 0 26 mat.animatedAlpha)
-                flags += (bit.set 0 27 mat.animatedDiffuse)
-                flags += (bit.set 0 28 mat.colored)  --
-                flags += (bit.set 0 29 mat.twoSided)
-                flags += (bit.set 0 30 mat.colorKey)  --
-                flags += (bit.set 0 31 mat.alphaMapEnable)
-                flags += (bit.set 0 32 mat.additiveMixing)   --
-                flags += (bit.set 0 25 mat.imageAlpha)
-
+                
+                local flags = 0
+                flags = bit.set flags 1 (not mat.tileU)
+                flags = bit.set flags 2 (not mat.tileV)
+                flags = bit.set flags 3 mat.diffuseMapEnable
+                flags = bit.set flags 4 mat.envMapEnable                
+                flags = bit.set flags 5 mat.unknown5
+                flags = bit.set flags 6 mat.unknown6
+                flags = bit.set flags 7 mat.unknown7
+                flags = bit.set flags 8 mat.mipMapping
+                
+                flags = bit.set flags 9 mat.imageAlpha
+                flags = bit.set flags 10 mat.animatedAlpha
+                flags = bit.set flags 11 mat.animatedDiffuse
+                flags = bit.set flags 12 mat.colored
+                flags = bit.set flags 13 mat.twoSided
+                flags = bit.set flags 14 mat.colorKey
+                flags = bit.set flags 15 mat.alphaMapEnable
+                flags = bit.set flags 16 mat.additiveMixing
+                
+                mmat.addEffect = mat.addEffect
+                
                 mmat.flags = flags
 
                 mmat.ambient = mat.ambient
@@ -1704,7 +1704,7 @@ rollout MafiaTools_4dsExport "" (   --module
 
             local st = timestamp()
 
-            gc light:true
+            --gc light:true
             
             --save selection
             local savedSel = getCurrentSelection()
@@ -1783,7 +1783,7 @@ rollout MafiaTools_4dsExport "" (   --module
             local used_end = (heapsize - heapfree) / 1024.0
             format "memory used ~ % KiB\n" (used_end - used_start)
 
-            gc light:true
+            --gc light:true
 
             format "Exporting took % seconds\n" dur
             
