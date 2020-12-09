@@ -1687,24 +1687,31 @@ rollout MafiaTools_4dsExport "" (   --module
         )
         else #unsupported
     )
+    
+    struct TSettings (
+        useCachedNormals = true,
+        useEditNormals = true,
+        allow5ds = false,
+        version = #Mafia
+    )
 
-    fn Export4ds file cachedNorm editNorm unitscale allow5ds version = (
-
-        USE_CACHED_NORMALS = cachedNorm
-        USE_EDIT_NORMALS = editNorm
-
-        local dur = 0.0
+    fn Export4ds file settings: unitscale:1.0 progHandler: = (
+        if settings == unsupplied then settings = TSettings()
+        
+        USE_CACHED_NORMALS = settings.useCachedNormals
+        USE_EDIT_NORMALS = settings.useEditNormals
 
         local f = fopen file "wb"
         if f == undefined then (
+            if progHandler != unsupplied do progHandler 0 "Error"
             messageBox "Error. Could not write to file."
         )
         else (
             format "exporting: %\n" file
 
             local st = timestamp()
-
-            --gc light:true
+            
+            if progHandler != unsupplied do progHandler 0 "Exporting..."
             
             --save selection
             local savedSel = getCurrentSelection()
@@ -1732,11 +1739,11 @@ rollout MafiaTools_4dsExport "" (   --module
 
             m4ds.materials = ExtractMaterials mmmm
             local mnodeSet = CollectNodes()
-            m4ds.objects = ExtractObjects mnodeSet unitscale version
-            m4ds.allow5ds = allow5ds
+            m4ds.objects = ExtractObjects mnodeSet unitscale settings.version
+            m4ds.allow5ds = settings.allow5ds
 
             try (
-                parser.Write4ds f m4ds version
+                parser.Write4ds f m4ds settings.version
             )
             catch (
                 messageBox (getCurrentException()) icon:#critical
@@ -1778,12 +1785,12 @@ rollout MafiaTools_4dsExport "" (   --module
             --------------------
             
 
-            dur = elapsed_since(st) / 1000.0
+            local dur = elapsed_since(st) / 1000.0
 
             local used_end = (heapsize - heapfree) / 1024.0
             format "memory used ~ % KiB\n" (used_end - used_start)
-
-            --gc light:true
+            
+            if progHandler != unsupplied do progHandler 100 ("Done in " + (dur as string) + " seconds")
 
             format "Exporting took % seconds\n" dur
             
@@ -1795,7 +1802,5 @@ rollout MafiaTools_4dsExport "" (   --module
                 messageBox "Some portals have more than 1 face. Extra faces were ignored.\nMore info in the MAXScript Listener (F11)" icon:#warning
             )
         )
-
-        dur
     )
 )

@@ -107,7 +107,7 @@ remap:#(
             )
         )
         on diffuseMapEnable set val do (
-            if ::mat4ds_disable_set != true do (                
+            if ::mat4ds_disable_set != true do (
                 delegate.diffuseMapEnable = val
                 RefreshAlpha()
             )
@@ -119,8 +119,9 @@ remap:#(
                 SetMapTile map tileU tileV
                 
                 delegate.diffuseMap = map
-                if map != undefined then diffuseMapEnable = true
-                else diffuseMapEnable = false
+                diffuseMapEnable = 
+                    if map != undefined then true
+                    else false
             )
         )
         on envMapEnable set val do (
@@ -136,8 +137,9 @@ remap:#(
         on 'Env Map' set map do (
             if ::mat4ds_disable_set != true do (
                 delegate.reflectionMap = map
-                if map != undefined then envMapEnable = true
-                else envMapEnable = false
+                envMapEnable = 
+                    if map != undefined then true
+                    else false
             )
         )
         on alphaMapEnable set val do (
@@ -152,8 +154,9 @@ remap:#(
                 SetMapTile map tileU tileV
                 
                 if not (colorKey or imageAlpha or additiveMixing) then (
-                    if map != undefined then alphaMapEnable = true
-                    else alphaMapEnable = false
+                    alphaMapEnable = 
+                        if map != undefined then true
+                        else false
                 )
             )
         )

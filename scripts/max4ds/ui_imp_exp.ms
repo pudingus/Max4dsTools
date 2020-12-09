@@ -63,7 +63,8 @@
             button      btnExport       "Export" align:#right width:70
         )
         timer       clock   interval:5000 active:false
-        label       labelDone         "" offset:[0,10]
+        progressBar prgProgress offset:[0,5]
+        label       labelDone         "" 
 
         fn ddlUnits_select sel = (
             lblSclI.text = (1/unitMeterRatios[sel]) as string
@@ -71,6 +72,12 @@
         )
 
         on ddlUnits selected sel do ddlUnits_select sel
+        
+        fn OnProgress perc status = (
+            labelDone.text = status
+            prgProgress.value = perc
+            progressUpdate perc
+        )
 
         fn StartImport del:false = (
             local settings = ::MafiaTools_ImpExpSettings
@@ -88,34 +95,28 @@
                     local imp = ::MafiaTools_4dsImport
                     settings.importPath = file
                     settings.useImportedFilename = true
-                    labelDone.text = "Importing..."
                     if del then (
                         if numsubobjectlevels != undefined then subobjectlevel = 0
-                        --setCommandPanelTaskMode #create
                         delete $*
                         layers.Clear()
-                        UpdateSceneMaterialLib()
+                        local maxver = (maxVersion())[1]
+                        if maxVer >= 20000 do UpdateSceneMaterialLib()
                         gc()
                     )
                     local sel = ddlUnits.selection
                     local unitscl = 1 / unitMeterRatios[sel]
-                    local result = imp.Import4ds file unitscl
+                    local allow5ds = imp.Import4ds file unitscale:unitscl progHandler:OnProgress
                     
-                    if result != undefined then (
-                        local dur = result[1]
-                        local allow5ds = result[2]
-                        
+                    clock.active = true
+                    
+                    if allow5ds != undefined then (                        
                         if del then (
                             cbAllow5ds.checked = allow5ds
                         )
                         else (
                             if cbAllow5ds.checked == false then cbAllow5ds.checked = allow5ds
                         )
-
-                        labelDone.text = "Done in " + (dur as string) + " seconds"
-                        clock.active = true
                     )
-                    else labelDone.text = ""
                 )
             )
         )
@@ -179,7 +180,6 @@
                     )
                     
                     local filepath = pathConfig.appendPath dir filename
-                    labelDone.text = "Exporting..."
                     local sel = ddlUnits.selection
                     local unitscl = unitMeterRatios[sel]
                     local versionSel = 
@@ -188,8 +188,14 @@
                         2: #hd2
                         3: #chameleon
                     )
-                    local dur = exp.Export4ds filepath cbCachedNorm.checked cbEditNorm.checked unitscl cbAllow5ds.checked version
-                    labelDone.text = "Done in " + (dur as string) + " seconds"
+                    local expSettings = 
+                        exp.TSettings \
+                            useCachedNormals:cbCachedNorm.checked \
+                            useEditNormals:cbEditNorm.checked \
+                            allow5ds:cbAllow5ds.checked \
+                            version:version
+                    
+                    exp.Export4ds filepath settings:expSettings unitscale:unitscl progHandler:OnProgress
                     clock.active = true
                 )
             )
@@ -244,7 +250,7 @@
         local pos = ::MafiaTools_ImpExpSettings.position
         local style = #(#style_titlebar, #style_border, #style_sysmenu)
         local w = 200
-        local h = 395
+        local h = 420--395
         if pos != undefined then (
             CreateDialog ImpExp w h pos.x pos.y style:style
         )

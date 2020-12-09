@@ -764,27 +764,28 @@ rollout MafiaTools_4dsImport "" (   --module
             )
         )
     )
-
-    fn Import4ds file unitscale = (
+    
+    fn Import4ds file unitscale:1.0 progHandler: = (
+        -- switch away from modify panel, for performance
         local mode = getCommandPanelTaskMode()
         local savedMode
         if mode == #modify then (
             savedMode = mode
             setCommandPanelTaskMode #create
         )
+        -----------------------------
 
         filename = getFilenameFile file
-
         format "importing: %\n" file
         
-        local st = timestamp()
-
-        --gc light:true
-
-        local used_start = (heapsize - heapfree) / 1024.0
+        local showProgress = true
+            
+        local progress = 0
+        if progHandler != unsupplied do progHandler progress "Reading..."
         
+        local st = timestamp()        
         local fileStart = timestamp()
-
+        
         local f = fopen file "rb"
         local parser = ::MafiaTools_4dsParser
         try (
@@ -796,19 +797,28 @@ rollout MafiaTools_4dsImport "" (   --module
         try (fclose f) catch()
         
         local fileDur = (elapsed_since fileStart) / 1000.0
-        
-        format "Reading: %\n" fileDur   
 
         if m4ds == undefined then (
+            if progHandler != unsupplied do progHandler 0 "Error"
             messageBox "This file cannot be imported. Unknown version or format." icon:#critical
             undefined
         )
         else (
             with redraw off (
                 local matStart = timestamp()
+                
+                if showProgress do (
+                    progress += 12            
+                    if progHandler != unsupplied do progHandler progress "Creating materials..."
+                )
+                
                 local materials = CreateMaterials m4ds.materials filename
+                
                 local matDur = (elapsed_since matStart) / 1000.0
-                format "Materials: %\n" matDur                
+                if showProgress do (
+                    progress += 16
+                    if progHandler != unsupplied do progHandler progress "Creating objects..."
+                )
                 
                 local objStart = timestamp()
                 
@@ -820,27 +830,35 @@ rollout MafiaTools_4dsImport "" (   --module
                 --Layers.HideLods #{1..9}
                 
                 local objDur = (elapsed_since objStart) / 1000.0
-                
-                format "Objects: %\n" objDur
+                if showProgress do (                 
+                    progress += 60
+                    if progHandler != unsupplied do progHandler progress "Redrawing..."
+                )
             )
 
             local redrawStart = timestamp()
-            CompleteRedraw()
-            
+            redrawViews()
             local redrawDur = (elapsed_since redrawStart) / 1000.0
-            format "Redrawing: %\n" redrawDur   
             
+            local totalDur = fileDur + matDur + objDur + redrawDur
+            local dur = (elapsed_since st) / 1000.0
             
 
-            local used_end = (heapsize - heapfree) / 1024.0
-            format "memory used ~ % KiB\n" (used_end - used_start)
-
-            --gc light:true
-
-            local dur = elapsed_since(st) / 1000.0
-
-            local message = "Importing took " + (dur as string) + " seconds\n"
-            format message
+            progress = 100
+            if progHandler != unsupplied do (
+                progHandler progress ("Done in " + (dur as string) + " seconds")
+            )            
+            
+            local stats = stringstream ""
+            
+            format "Reading: % (%\%)\n" fileDur (fileDur / totalDur * 100) to:stats
+            format "Materials: % (%\%)\n" matDur (matDur / totalDur * 100) to:stats
+            format "Objects: % (%\%)\n" objDur (objDur / totalDur * 100) to:stats
+            format "Redrawing: % (%\%)\n" redrawDur (redrawDur / totalDur * 100) to:stats
+            format "Pendur: %\n" pendDur to:stats
+            format "Total: %\n" totalDur to:stats
+            format "Total + overhead: %\n" dur to:stats
+            format "%" (stats as string)
             
             if savedMode != undefined do (
                 setCommandPanelTaskMode savedMode
@@ -855,7 +873,7 @@ rollout MafiaTools_4dsImport "" (   --module
                 messageBox ("Following object types were skipped:\n" + types) icon:#warning
             )
 
-            #(dur, m4ds.allow5ds)
+            m4ds.allow5ds
         )
     )
 )
