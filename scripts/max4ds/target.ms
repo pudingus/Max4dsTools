@@ -5,12 +5,13 @@ category:"4ds Tools"
 extends:point
 replaceUI:true
 (
-    parameters pblock rollout:TargetRoll
+    parameters pblock rollout:rltTarget
     (
         flags type:#integer default:1 ui:spnFlags
         nodes type:#nodeTab tabSizeVariable:true
     )
-    parameters pblock2 rollout:TargetViewportRoll
+    
+    parameters pblock2 rollout:rltViewport
     (
         viewportSize type:#float default:1 ui:spnSize
         
@@ -18,10 +19,11 @@ replaceUI:true
             delegate.size = val
         )
     )
-    rollout TargetRoll "Target Parameters"
+    
+    rollout rltTarget "Target Parameters"
     (
         spinner spnFlags "Flags: " type:#integer range:[0, 65535, 0] align:#left fieldwidth:90
-        label lblNodes "Targeting nodes: " align:#left offset:[0,10]
+        label lblNodes "Targeting nodes: " align:#left offset:[0, 10]
         pickbutton pbAdd "Add" across:2 align:#left width:50
         button btnRemove "Remove" align:#right width:70
         listbox lbNodes "" height:6
@@ -51,54 +53,62 @@ replaceUI:true
             )
         )
         
-        fn Reload sender = (          
+        fn Reload sender param = (
             
             local items = #()
             for obj in sender.nodes do (
                 local name = 
                     if isValidNode obj then obj.name
-                    else "<deleted>"                
+                    else "<deleted>"
                 append items name
             )
-            sender.TargetRoll.lbNodes.items = items
+            sender.rltTarget.lbNodes.items = items
         )
 
-        on TargetRoll open do (
-            Reload this
+        on rltTarget open do (
+            Reload this undefined
             
             local events = ::Max4ds_Events
-            
-            events.AddListener events.SceneUndo Reload this
-            events.AddListener events.SceneRedo Reload this
+            events.AddHandler #sceneUndo Reload this
+            events.AddHandler #sceneRedo Reload this
         )
         
-        on TargetRoll close do (        
+        on rltTarget close do (
             local events = ::Max4ds_Events
-                
-            events.RemoveListener events.SceneUndo Reload
-            events.RemoveListener events.SceneRedo Reload
+            events.RemoveHandler #sceneUndo Reload
+            events.RemoveHandler #sceneRedo Reload
         )
-
     )
-    rollout TargetViewportRoll "Viewport"
+    
+    rollout rltViewport "Viewport"
     (
-        spinner spnSize "Viewport size: " type:#float range:[0,90000,0]
+        spinner spnSize "Viewport size: " type:#float range:[0, 3.4e38, 0]
     )
+    
     tool create
     (
         on mousePoint click do
         (
-            $.wirecolor = color 28 122 210
             nodeTM.translation = gridPoint;#stop
         )
     )
+    
+    local afterCreate = false
+    
+    on attachedToNode node do (
+        if afterCreate then (
+            node.wirecolor = color 28 122 210
+        )
+        afterCreate = false
+    )
 
     on create do (
+        afterCreate = true
+        
         delegate.size = viewportSize
         delegate.centermarker = true
         delegate.axistripod  = false
         delegate.cross = false
         delegate.box = true
-        -- nnode.constantscreensize = true
     )
 )

@@ -193,10 +193,6 @@ rollout MafiaTools_4dsImport "" (   --module
 
     fn CreateGlow mglows name unitscale materials = (
         local nnode = Glow4ds()
-        nnode.wirecolor = color 248 128 0
-        nnode.boxmode = true
-        nnode.renderable = false
-
         nnode.viewportSize = 0.1 * unitscale
 
         local usedMats = #{}
@@ -314,7 +310,6 @@ rollout MafiaTools_4dsImport "" (   --module
     fn CreateTarget mtarget unitscale = (
         local nnode = Target4ds()
         nnode.flags = mtarget.flags
-        nnode.wirecolor = color 28 122 210
         nnode.viewportSize = 0.1 * unitscale
         hide nnode
         

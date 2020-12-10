@@ -1,7 +1,6 @@
-global OnNodeRenamed
-global OnSelectionChanged
-global floater
-global MafParamEditor
+global Max4ds_ParamFloater
+
+
 (
     --imports
     local util = ::MafiaTools_Util
@@ -15,40 +14,42 @@ global MafParamEditor
     local OnDeselected
 
     local visible = false
+    
+    local OnSelectionChanged
 
-    rollout MafParamEditor "4ds Object Parameters"
+    rollout rltParams "4ds Object Parameters"
     (
-        timer timerDeselected interval:50 active:false
+        timer tmrDeselected interval:50 active:false
 
-        on timerDeselected tick do (
+        on tmrDeselected tick do (
             --format "DESELECTED!\n"
-            timerDeselected.active = false
+            tmrDeselected.active = false
             OnDeselected()
         )
 
-        label objectName "" align:#left
-        button addParams "Add" align:#left pos:[10,25] tooltip:"Add parameters"
-        button removeParams "Remove" align:#left pos:[50,25] tooltip:"Remove parameters"
-        label objectTypeLabel "Object type:" across:2 offset:[0,3] align:#left
-        dropdownlist objectType "" align:#left width:80  items:#("Dummy")
+        label lblObjectName "" align:#left
+        button btnAddParams "Add" align:#left pos:[10,25] tooltip:"Add parameters"
+        button btnRmoveParams "Remove" align:#left pos:[50,25] tooltip:"Remove parameters"
+        label lblObjectType "Object type:" across:2 offset:[0,3] align:#left
+        dropdownlist ddlObjectType "" align:#left width:80  items:#("Dummy")
 
-        on objectType selected i do (
-            local strsel = objectType.items[i]
+        on ddlObjectType selected i do (
+            local strsel = ddlObjectType.items[i]
 
             if gp != undefined then gp.objectType = strsel
 
             OpenSelection strsel
         )
 
-        on addParams pressed do (
+        on btnAddParams pressed do (
             local obj = selection[1]
             if obj != undefined then (
 
                 custAttributes.add obj MafParams_def baseObject:false
                 gp = custAttributes.get obj MafParams_def baseObject:false
 
-                local sel = objectType.selection
-                local strsel = objectType.items[sel]
+                local sel = ddlObjectType.selection
+                local strsel = ddlObjectType.items[sel]
 
                 gp.objectType = strsel
 
@@ -57,12 +58,12 @@ global MafParamEditor
                 )
 
                 EnabledMode()
-                MafParamEditor.objectType.selection = 1
+                ddlObjectType.selection = 1
                 OpenSelection strsel
             )
         )
 
-        on removeParams pressed do (
+        on btnRmoveParams pressed do (
             local obj = selection[1]
             if obj != undefined then (
 
@@ -71,22 +72,32 @@ global MafParamEditor
                     custAttributes.delete obj MafParams_def baseObject:false
 
                     DisabledMode()
-                    MafParamEditor.addParams.enabled = true
+                    btnAddParams.enabled = true
                 )
             )
         )
+        
+        on rltParams open do (
+            --format "open\n"
+            
+            local events = ::Max4ds_Events
+            events.AddHandler #selectionSetChanged OnSelectionChanged rltParams
+            events.AddHandler #nodeRenamed OnSelectionChanged rltParams
+        )
 
-        on MafParamEditor close do (
-            --print "close"
-            callbacks.removeScripts #selectionSetChanged id:#selChangedID
-            callbacks.removeScripts #nodeRenamed id:#nodeRenamedID
+        on rltParams close do (
+            --format "close\n"
+            
+            local events = ::Max4ds_Events
+            events.RemoveHandler #selectionSetChanged OnSelectionChanged
+            events.RemoveHandler #nodeRenamed OnSelectionChanged
         )
     )
 
     rollout rltObject ""
     (
-        spinner renderFlags "Render flags:" range:[0,255,0] type:#integer align:#left fieldwidth:30 enabled:false across:2
-        spinner renderFlags2 "" range:[0,255,0] type:#integer fieldwidth:30 enabled:false
+        spinner spnRenderFlags "Render flags:" range:[0,255,0] type:#integer align:#left fieldwidth:30 enabled:false across:2
+        spinner spnRenderFlags2 "" range:[0,255,0] type:#integer fieldwidth:30 enabled:false
         checkbox chkDepthBias "Depth bias" across:2
         checkbox chkShadowed "Shadowed"
         checkbox chkTexProj "Tex. proj." across:2 tooltip:"Texture projection"
@@ -102,14 +113,14 @@ global MafParamEditor
         checkbox chkUnknown7 "" tooltip:"(7) Unknown" width:15 align:#left
         checkbox chkUnknown8 "" tooltip:"(8) Unknown" width:15 align:#left
         
-        label paramsLabel "String params:" align:#left
-        edittext strParams "" align:#left width:140 height:30
+        label lblStringParams "String params:" align:#left
+        edittext edtStringParams "" align:#left width:140 height:30
 
-        on renderFlags changed val do (
+        on spnRenderFlags changed val do (
             gp.renderFlags = val
         )
 
-        on renderFlags2 changed val do (
+        on spnRenderFlags2 changed val do (
             gp.renderFlags2 = val
 
             local flags = val
@@ -135,28 +146,28 @@ global MafParamEditor
             chkUnknown8.checked = bit.get cullFlags 8
         )
 
-        on strParams changed val do (
+        on edtStringParams changed val do (
             gp.strParams = val
         )
 
         on chkDepthBias changed val do (
             gp.renderFlags2 = bit.set gp.renderFlags2 1 val
-            renderFlags2.value = gp.renderFlags2
+            spnRenderFlags2.value = gp.renderFlags2
         )
 
         on chkShadowed changed val do (
             gp.renderFlags2 = bit.set gp.renderFlags2 2 val
-            renderFlags2.value = gp.renderFlags2
+            spnRenderFlags2.value = gp.renderFlags2
         )
 
         on chkTexProj changed val do (
             gp.renderFlags2 = bit.set gp.renderFlags2 6 val
-            renderFlags2.value = gp.renderFlags2
+            spnRenderFlags2.value = gp.renderFlags2
         )
 
         on chkNoFog changed val do (
             gp.renderFlags2 = bit.set gp.renderFlags2 8 val
-            renderFlags2.value = gp.renderFlags2
+            spnRenderFlags2.value = gp.renderFlags2
         )
         
         on chkEnabled changed val do (
@@ -203,9 +214,9 @@ global MafParamEditor
     rollout rltLod ""
     (
         label lblLodDist "Fadeout distance (meters):" align:#left
-        spinner lodDist align:#left fieldwidth:70 range:[-3.4e38, 3.4e38, 0] scale:1 type:#float
+        spinner spnLodDist align:#left fieldwidth:70 range:[-3.4e38, 3.4e38, 0] scale:1 type:#float
 
-        on lodDist changed val do (
+        on spnLodDist changed val do (
             gp.lodDist = val
         )
     )
@@ -244,14 +255,14 @@ global MafParamEditor
 
     rollout rltBbrd ""
     (
-        radiobuttons rotMode "Rotation mode:" labels:#("All axes", "Single axis:") align:#left columns:1
-        dropdownlist rotAxis "" items:#("X", "Z", "Y") offset:[20,0] width:50
+        radiobuttons rdoRotMode "Rotation mode:" labels:#("All axes", "Single axis:") align:#left columns:1
+        dropdownlist ddlRotAxis "" items:#("X", "Z", "Y") offset:[20,0] width:50
 
-        on rotMode changed val do (
+        on rdoRotMode changed val do (
             gp.rotMode = val
         )
 
-        on rotAxis selected i do (
+        on ddlRotAxis selected i do (
             gp.rotAxis = i
         )
     )
@@ -285,19 +296,14 @@ global MafParamEditor
     )
 
     fn OnDeselected = (
-        MafParamEditor.objectName.text = ""
+        rltParams.lblObjectName.text = ""
 
         DisabledMode()
 
-        MafParamEditor.addParams.enabled = false
+        rltParams.btnAddParams.enabled = false
     )
 
     local availableRlts = #(rltLod, rltPortal, rltBbrd, rltMirror, rltSector)
-
---     struct TView (
---
---     )
-
 
     fn AddAndRemoveRlts floater addRlts removeRlts = (
         for rlt in removeRlts do (
@@ -321,8 +327,8 @@ global MafParamEditor
 
     fn SetNonVisual = (
         DisableControls #(
-            rltObject.renderFlags,
-            rltObject.renderFlags2,
+            rltObject.spnRenderFlags,
+            rltObject.spnRenderFlags2,
             rltObject.chkDepthBias,
             rltObject.chkShadowed,
             rltObject.chkTexProj,
@@ -405,15 +411,15 @@ global MafParamEditor
             if not containsItem displayedRlts rlt then append rltsToAdd rlt
         )
 
-        AddAndRemoveRlts floater rltsToAdd rltsToRemove
+        AddAndRemoveRlts ::Max4ds_ParamFloater rltsToAdd rltsToRemove
 
         if rltObject.isDisplayed then (
-            rltObject.renderFlags.value = gp.renderFlags
-            rltObject.renderFlags2.value = gp.renderFlags2
+            rltObject.spnRenderFlags.value = gp.renderFlags
+            rltObject.spnRenderFlags2.value = gp.renderFlags2
             rltObject.spnCullFlags.value = gp.cullFlags
 
             if gp.strParams != undefined then (
-                rltObject.strParams.text = gp.strParams
+                rltObject.edtStringParams.text = gp.strParams
             )
 
             local flags = gp.renderFlags2
@@ -436,7 +442,7 @@ global MafParamEditor
         )
 
         if rltLod.isDisplayed then (
-            rltLod.lodDist.value = gp.lodDist
+            rltLod.spnLodDist.value = gp.lodDist
         )
 
         if rltPortal.isDisplayed then (
@@ -451,8 +457,8 @@ global MafParamEditor
         )
 
         if rltBbrd.isDisplayed then (
-            rltBbrd.rotMode.state = gp.rotMode
-            rltBbrd.rotAxis.selection = gp.rotAxis
+            rltBbrd.rdoRotMode.state = gp.rotMode
+            rltBbrd.ddlRotAxis.selection = gp.rotAxis
         )
 
         if rltMirror.isDisplayed then (
@@ -467,19 +473,19 @@ global MafParamEditor
     )
 
     fn SetSelectionStr sel = (
-        local items = MafParamEditor.objectType.items
+        local items = rltParams.ddlObjectType.items
 
         local id = findItem items sel
         if id == 0 then id = 1
 
-        MafParamEditor.objectType.selection = id
+        rltParams.ddlObjectType.selection = id
     )
 
     fn EnabledMode = (
-        MafParamEditor.addParams.enabled = false
-        MafParamEditor.removeParams.enabled = true
-        MafParamEditor.objectType.enabled = true
-        MafParamEditor.objectTypeLabel.enabled = true
+        rltParams.btnAddParams.enabled = false
+        rltParams.btnRmoveParams.enabled = true
+        rltParams.ddlObjectType.enabled = true
+        rltParams.lblObjectType.enabled = true
 
         if not visible then (
             --format "REVIS \n"
@@ -495,13 +501,13 @@ global MafParamEditor
     )
 
     fn DisabledMode = (
-        --MafParamEditor.addParams.enabled = true
-        MafParamEditor.removeParams.enabled = false
+        --rltParams.btnAddParams.enabled = true
+        rltParams.btnRmoveParams.enabled = false
 
-        MafParamEditor.objectTypeLabel.enabled = false
-        MafParamEditor.objectType.enabled = false
+        rltParams.lblObjectType.enabled = false
+        rltParams.ddlObjectType.enabled = false
 
-        MafParamEditor.objectType.selection = 1
+        rltParams.ddlObjectType.selection = 1
 
         for c in rltObject.controls do c.visible = false
         for c in rltLod.controls do c.visible = false
@@ -513,28 +519,28 @@ global MafParamEditor
         visible = false
     )
 
-    fn OnSelectionChanged =
+    fn OnSelectionChanged sender param =
     (
         local obj = selection[1]
 
         -- Workaround for performance reasons - when selecting in scene explorer,
         -- callback fires twice, once with 'undefined', then with correct object.
         if obj == undefined then (
-            MafParamEditor.timerDeselected.active = true
+            sender.tmrDeselected.active = true
         )
         else (
-            MafParamEditor.timerDeselected.active = false
+            sender.tmrDeselected.active = false
         )
 
 
         if selection.count >= 2 then (
-            MafParamEditor.objectName.text = ""
+            sender.lblObjectName.text = ""
             DisabledMode()
-            MafParamEditor.addParams.enabled = false
+            sender.btnAddParams.enabled = false
         )
         else if selection.count == 1 then (
             local exp = ::MafiaTools_4dsExport
-            MafParamEditor.objectName.text = obj.name
+            sender.lblObjectName.text = obj.name
 
             local items = #()
 
@@ -556,13 +562,12 @@ global MafParamEditor
                 #occluder:      items = #("Mesh", "Billboard", "Mirror", "Occluder")
                 default:        items = #("Dummy")
             )
-            MafParamEditor.objectType.items = items
+            sender.ddlObjectType.items = items
 
             gp = custAttributes.get obj MafParams_def baseObject:false
 
             if gp != undefined then (
-                local items = MafParamEditor.objectType.items
-                --format "gp.objectType: %\n" gp.objectType
+                local items = sender.ddlObjectType.items
                 if findItem items gp.objectType == 0 then gp.objectType = items[1]
 
                 EnabledMode()
@@ -573,8 +578,7 @@ global MafParamEditor
                 local count = InstanceMgr.GetInstances obj &instances
 
 
-                if instances[count] == obj then (
-                    --format "MASTER INSTANCE\n"
+                if instances[count] == obj then (  --main instance
                     for c in rltLod.controls do c.visible = true
                 )
                 else (
@@ -584,18 +588,15 @@ global MafParamEditor
             )
             else (  --no custom attributes
                 DisabledMode()
-                MafParamEditor.addParams.enabled = true                
+                sender.btnAddParams.enabled = true                
             )
         )
 
     )
-
-    fn OnNodeRenamed = (
-        OnSelectionChanged()
-    )
-
-
+    
     local title = "4ds Object Parameters"
+    
+    local floater = ::Max4ds_ParamFloater
 
     if floater != undefined then (
         if floater.open then (
@@ -612,15 +613,13 @@ global MafParamEditor
     )
 
     if floater.open then (
-        callbacks.addScript #selectionSetChanged "OnSelectionChanged()" id:#selChangedID
-        callbacks.addScript #nodeRenamed "OnNodeRenamed()" id:#nodeRenamedID
-
-        addRollout MafParamEditor floater
+        addRollout rltParams floater
         addRollout rltObject floater
 
         for c in rltObject.controls do c.visible = false
 
-        OnSelectionChanged()
+        OnSelectionChanged rltParams undefined
     )
 
+    ::Max4ds_ParamFloater = floater
 )

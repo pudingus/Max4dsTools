@@ -1,32 +1,23 @@
-fn MatNotification = (    
-    --very nasty hack  
-    $.notify = 1  
-)
-
 plugin SimpleObject Glow4ds
 name:"4ds Glow"
 classID:#(0x4ec442f4, 0x6cf47395)
 category:"4ds Tools"
 (
-    local GlowRoll
     parameters pblock
     (
         matIds type:#intTab tabSizeVariable:true
         positions type:#floatTab tabSizeVariable:true
         notify type:#integer
-        
-        on notify set val do (          
-            GlowRoll.tmrCooldown.active = true
-        )
     )
-    parameters pblock2 rollout:GlowViewportRoll
+    
+    parameters pblock2 rollout:rltViewport
     (
         viewportSize type:#float default:1 ui:spnSize
     )
+    
     local savedSel
 
-
-    rollout GlowRoll "Glow Parameters"
+    rollout rltGlow "Glow Parameters"
     (
         button btnAdd "Add" across:2 align:#left width:50
         button btnRemove "Remove" align:#right width:70
@@ -34,8 +25,8 @@ category:"4ds Tools"
 
 
         imgTag imgMat "Material preview:" width:40 height:40 opacity:1.0 transparent:white align:#left across:2
-        spinner spnPosition "Position" type:#float align:#right range:[-900000,900000,0] fieldWidth:40 offset:[0,18] enabled:false
-        dropdownlist ddlMats enabled:false 
+        spinner spnPosition "Position" type:#float align:#right range:[-3.4e38, 3.4e38 ,0] fieldWidth:40 offset:[0, 18] enabled:false
+        dropdownlist ddlMats enabled:false tooltip:"Material"
         
         timer tmrCooldown interval:400 active:false
 
@@ -82,8 +73,6 @@ category:"4ds Tools"
                 else lstGlows_select sel
             )
         )
-
-
         
         fn BuildMatItems mat = (
             local items = #()
@@ -164,13 +153,18 @@ category:"4ds Tools"
             )
         )
         
-        on ddlMats selected sel do ddlMats_select sel       
+        on ddlMats selected sel do ddlMats_select sel
 
-        on GlowRoll open do (
+        fn OnMatAdded sender param = (
+            sender.tmrCooldown.active = true
+        )
+        
+        on rltGlow open do (
             if $ != undefined then
                 ddlMats.items = BuildMatItems $.mat
-            callbacks.removeScripts #mtlRefAdded id:#MafiaTools
-            callbacks.addScript #mtlRefAdded "::MatNotification()" id:#MafiaTools
+            
+            local events = ::Max4ds_Events
+            events.AddHandler #mtlRefAdded OnMatAdded rltGlow
             
             local count = matIds.count
 
@@ -184,14 +178,16 @@ category:"4ds Tools"
             lstGlows_select savedSel
         )
 
-        on GlowRoll close do (
+        on rltGlow close do (
             savedSel = lstGlows.selection
-            callbacks.removeScripts #mtlRefAdded id:#MafiaTools
+            
+            local events = ::Max4ds_Events
+            events.RemoveHandler #mtlRefAdded OnMatAdded
         )
     )    
     
-    rollout GlowViewportRoll "Viewport" (
-        spinner spnSize "Viewport size: " type:#float range:[0,90000,0]       
+    rollout rltViewport "Viewport" (
+        spinner spnSize "Viewport size: " type:#float range:[0, 3.4e38, 0]
     )
     
     on buildMesh do (
@@ -206,16 +202,29 @@ category:"4ds Tools"
     (
         on mousePoint click do
         (
-            $.wirecolor = color 248 128 0
-            $.boxmode = true
-            $.renderable = false
+            nodeTM.translation = gridPoint;#stop
+        )
+    )
+    
+    local afterCreate = false
+    
+    on create do (
+        afterCreate = true
+    )
+    
+    on attachedToNode node do (
+        if afterCreate then (
+            node.wirecolor = color 248 128 0
+            node.boxmode = true
+            node.renderable = false
             
             local multi = multimaterial()
             for i = 1 to multi.numsubs do (
                 multi[i] = undefined
             )          
-            $.material = multi
-            nodeTM.translation = gridPoint;#stop            
+            node.material = multi
         )
+        
+        afterCreate = false
     )
 )

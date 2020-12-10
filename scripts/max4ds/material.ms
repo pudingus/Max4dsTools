@@ -72,7 +72,8 @@ remap:#(
         additiveMixing  type:#boolean       ui:chkAdditiveMixing   default:false   --16
         animatedAlpha   type:#boolean       ui:chkAnimatedAlpha    default:false   --10
 
-        on ambient set val do (            
+        on ambient set val do (
+            --format "ambient set \n"
             if ::mat4ds_disable_set != true do (   --the condition is like this because 'mat4ds_disable_set' could be undefined
                 delegate.ambient = val
             )
@@ -483,6 +484,11 @@ remap:#(
         )        
     )
     
+--     local hello = (
+--         format "init\n"
+--         true
+--     )
+    
     on create do (
         delegate.adLock = false
         delegate.specularlevel = 70.0
@@ -504,4 +510,8 @@ remap:#(
         ::mat4ds_disable_set = undefined
         --format "post load \n"
     )
+    
+--     on clone org do (
+--         format "on clone\n"
+--     )
 )

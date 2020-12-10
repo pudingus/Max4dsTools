@@ -1,48 +1,79 @@
-callbacks.removeScripts #sceneUndo id:#Max4ds_Events
-callbacks.addScript #sceneUndo "Max4ds_Events.Handle Max4ds_Events.SceneUndo" id:#Max4ds_Events
+callbacks.removeScripts id:#Max4ds_Events
 
-callbacks.removeScripts #sceneRedo id:#Max4ds_Events
-callbacks.addScript #sceneRedo "Max4ds_Events.Handle Max4ds_Events.SceneRedo" id:#Max4ds_Events
-
-rollout Max4ds_Events "" (   --module
-    fn Handle event = (
-        for i = 1 to event.listeners.count do (
-            event.listeners[i] event.args[i]
+rollout Max4ds_Events "" (   --module    
+    local eventIds = #()
+    local eventNames = #()
+    local eventHandlers = #()   --array of array
+    local eventSenders = #()    --array of array
+  
+    fn Fire eventId = (
+        local param = callbacks.notificationParam()
+        for i = 1 to eventHandlers[eventId].count do (
+            local handler = eventHandlers[eventId][i]
+            local sender = eventSenders[eventId][i]            
+            handler sender param
         )
     )
     
-    rollout SceneUndo "" (
-        local listeners = #()
-        local args = #()
-    )
-    
-    rollout SceneRedo "" (
-        local listeners = #()
-        local args = #()
-    )
-
-    fn AddListener event listener arg1 = (
-        ::Max4ds_Events.RemoveListener event listener
-        if listener != undefined then (
-            append event.listeners listener
-            append event.args arg1
-            --format "Add listener (%) \n" event
-        )
-        else (
-            --format "failed to add listener\n"
-        )
-    )
-
-    fn RemoveListener event listener = (
-        local id = findItem event.listeners listener
+    fn AddHandler eventName handler sender = (
+        local nameid = findItem eventNames eventName
         
-        if id != 0 then (
-            deleteItem event.listeners id
-            deleteItem event.args id
-            --format "Remove listener (%)\n" event     
+        local id
+        if nameid == 0 then (            
+            id = eventHandlers.count + 1
+            eventHandlers[id] = #()
+            eventSenders[id] = #()
+            append eventNames eventName
+            append eventIds id
+            
+            callbacks.addScript eventName ("Max4ds_Events.Fire " + id as string) id:#Max4ds_Events
         )
         else (
-            --format "failed to remove listener\n"
+            id = eventIds[nameid]
+        )
+        
+        append eventHandlers[id] handler
+        append eventSenders[id] sender
+    )
+    
+    fn RemoveHandler eventName handler = (
+        local nameid = findItem eventNames eventName
+        
+        if nameId != 0 then (
+            local id = eventIds[nameId]
+            local handlerId = findItem eventHandlers[id] handler
+            
+            if handlerId != 0 then (
+                deleteItem eventHandlers[id] handlerId
+                deleteItem eventSenders[id] handlerId
+                
+                if eventHandlers[id].count == 0 then (
+                    deleteItem eventNames nameid
+                    deleteItem eventIds nameId
+                    
+                    callbacks.removeScripts eventName id:#Max4ds_Events
+                )
+                
+                --cleanup
+                
+                local done = false
+                
+                for i = eventHandlers.count to 1 by -1 while not done do (
+                    if eventHandlers[i].count == 0 then deleteItem eventHandlers i
+                    else done = true
+                )
+            )
         )
     )
+
+    fn ListHandlers = (
+        for eventId = 1 to eventHandlers.count do (
+            format "%: " eventId
+            for handler in eventHandlers[eventId] do (
+                format "%, " handler
+            )
+            format "\n"
+        )
+    )
+
 )
