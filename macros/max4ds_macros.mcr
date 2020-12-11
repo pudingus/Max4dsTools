@@ -5,7 +5,7 @@ buttonText:"4ds Imp/Exp"
 toolTip:"4ds Import Export..."
 (
     on execute do (
-        filein (::MafiaTools_scriptsPath + "ui_imp_exp.ms")
+        ::Max4ds_ImpExp.Toggle()
     )
 )
 
@@ -16,7 +16,7 @@ buttonText:"4ds Params"
 toolTip:"4ds Object Parameters..."
 (
     on execute do (
-        filein (::MafiaTools_scriptsPath + "ui_param_editor.ms")
+        ::Max4ds_ParamEditor.Toggle()
     )
 )
 
@@ -27,7 +27,7 @@ buttonText:"4ds Weights"
 toolTip:"Find weight conflicts..."
 (
     on execute do (
-        filein (::MafiaTools_scriptsPath + "ui_find_weights.ms")
+        ::Max4ds_FindWeights.Toggle()
     )
 )
 
@@ -38,6 +38,6 @@ buttonText:"4ds Conv.Skel"
 toolTip:"Convert old skeleton..."
 (
     on execute do (
-        filein (::MafiaTools_scriptsPath + "ui_convert_skeleton.ms")
+        ::Max4ds_ConvertSkeleton.Toggle()
     )
 )

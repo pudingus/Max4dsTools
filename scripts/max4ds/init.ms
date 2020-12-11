@@ -2,25 +2,8 @@
     local set_heapsize = 64 * 1024 * 1024  --64 MiB
     if heapsize < set_heapsize then heapsize = set_heapsize
    
-    global MafiaTools_version = "v0.8.0-preview"
-    global MafiaTools_scriptsPath = getFilenamePath (getThisScriptFilename())
-
-    global MafiaTools_ImpExpSettings
-    (
-        struct settings (
-            importPath,
-            exportPath,
-            exportFilename,
-            position,
-            editNorm,
-            cachedNorm,
-            unitsSel = 4,
-            useImportedFilename = false,
-            allow5ds,
-            versionSel = 1
-        )
-        ::MafiaTools_ImpExpSettings = settings()
-    )
+    global Max4ds_version = "v0.8.0-preview"
+    global Max4ds_scriptsPath = getFilenamePath (getThisScriptFilename())
     
     fn DisableScript file = (
         if doesFileExist file then (
@@ -38,7 +21,6 @@
     
     filein "events.ms"
     
-        
     --scriptedPlugins
     filein "material.ms"
     filein "MafParams.ms"
@@ -54,26 +36,22 @@
     filein "4ds_import.ms"
     filein "4ds_export.ms"
     
+    filein "ui_imp_exp.ms"
+    filein "ui_param_editor.ms"
+    filein "ui_find_weights.ms"
+    filein "ui_convert_skeleton.ms"
+    
     filein "ui_utility.ms"
+    
+    
+    fn PreSave = (
+        setAppData rootNode 3298216 "1"
+    )
+    
+    local events = ::Max4ds_Events
+    events.removeHandler #filePreSave PreSave
+    events.addHandler #filePreSave PreSave
+    
 
-
-    format "Max 4ds Tools % loaded\n" MafiaTools_version
+    format "Max 4ds Tools % loaded\n" Max4ds_version
 )
-callbacks.removeScripts #systemPostNew id:#MafiaTools
-callbacks.removeScripts #systemPostReset id:#MafiaTools
-callbacks.addScript #systemPostNew "MafiaTools_PostReset()" id:#MafiaTools
-callbacks.addScript #systemPostReset "MafiaTools_PostReset()" id:#MafiaTools
-
-fn MafiaTools_PostReset = (
-    ::MafiaTools_ImpExpSettings.useImportedFilename = false
-    ::MafiaTools_ImpExpSettings.allow5ds = false
-    if ::ImpExp != undefined then ::ImpExp.cbAllow5ds.checked = false
-)
-
-
-fn MafiaTools_PreSave = (
-    setAppData rootNode 3298216 "1"
-)
-
-callbacks.removeScripts #filePreSave id:#MafiaTools
-callbacks.addScript #filePreSave "MafiaTools_PreSave()" id:#MafiaTools

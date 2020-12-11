@@ -1,5 +1,4 @@
-
-rollout MafiaTools_Layers "" (  --module
+rollout Max4ds_Layers "" (  --module
 
     fn AddTo obj layerName = (
         local layer = LayerManager.getLayerFromName layerName

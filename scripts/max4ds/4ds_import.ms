@@ -1,9 +1,8 @@
-
-rollout MafiaTools_4dsImport "" (   --module
+rollout Max4ds_4dsImport "" (   --module
 
     --imports--
-    local Layers = ::MafiaTools_Layers    
-    local util = ::MafiaTools_Util
+    local Layers = ::Max4ds_Layers    
+    local util = ::Max4ds_Util
     -----------
     
     local BAD_TYPES = #()
@@ -782,7 +781,7 @@ rollout MafiaTools_4dsImport "" (   --module
         local fileStart = timestamp()
         
         local f = fopen file "rb"
-        local parser = ::MafiaTools_4dsParser
+        local parser = ::Max4ds_4dsParser
         try (
             local m4ds = parser.Read4ds f
         )

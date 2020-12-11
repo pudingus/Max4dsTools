@@ -1,20 +1,32 @@
-undo off (
+rollout Max4ds_ConvertSkeleton "" (  --module
     
-    local destroyed = false
-    if ::ConvertSkeleton != undefined and ::ConvertSkeleton.open do (
-        DestroyDialog ::ConvertSkeleton
-        destroyed = true
-    )
+    local rltConvertSkeleton
     
+    fn Toggle = (
+        local destroyed = false
+        if rltConvertSkeleton != undefined and rltConvertSkeleton.open do (
+            DestroyDialog rltConvertSkeleton
+            destroyed = true
+        )
+        
+        
+        
+        if not destroyed do (
+            local style = #(#style_resizing, #style_titlebar, #style_sysmenu)
+            local w = 200
+            local h = 75
+            
+            CreateDialog rltConvertSkeleton width:w height:h style:style
+        )        
+    )    
     
-    rollout ConvertSkeleton "Convert old skeleton"
-    (
+    rollout rltConvertSkeleton "Convert old skeleton" (
         label lblInfo "This tool converts old 0.4.x skeleton \nformat to the new one." height:30 align:#left
         button btnConvert "Convert" width:70
         
         on btnConvert pressed do (
-            local util = ::MafiaTools_util   
-            local exp = ::MafiaTools_4dsExport
+            local util = ::Max4ds_Util   
+            local exp = ::Max4ds_4dsExport
     
             local found = false
             for obj in objects while not found do (
@@ -22,7 +34,7 @@ undo off (
                 if obj.parent == undefined and (type == #singlemesh or type == #singlemorph) then (
                     found = true
                     local skinMesh = obj
-                    local imp = ::MafiaTools_4dsImport
+                    local imp = ::Max4ds_4dsImport
                     local rootBone = imp.CreateBone()
                     rootBone.transform = skinMesh.transform
                     rootBone.name = skinMesh.name
@@ -70,23 +82,15 @@ undo off (
                         )
                     )
                     
-                    DestroyDialog ::ConvertSkeleton
+                    DestroyDialog rltConvertSkeleton
                     messageBox "Done."
                 )
             )    
             
             if not found then (
-                DestroyDialog ::ConvertSkeleton
+                DestroyDialog rltConvertSkeleton
                 messageBox "Nothing to convert."
             )
         )
-    )
-    
-    if not destroyed do (
-        local style = #(#style_resizing, #style_titlebar, #style_sysmenu)
-        local w = 200
-        local h = 75
-        
-        CreateDialog ConvertSkeleton width:w height:h style:style        
     )
 )

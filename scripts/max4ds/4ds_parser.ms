@@ -1,4 +1,4 @@
-rollout MafiaTools_4dsParser "" ( --module
+rollout Max4ds_4dsParser "" ( --module
     
     local ReadMatrix
     local ReadHeader

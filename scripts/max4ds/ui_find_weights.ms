@@ -1,20 +1,41 @@
-(
-
-         
-    local maxver = (maxVersion())[1]     
-    if maxver == 16000 and isProperty skinops #getbonenamebylistid and (::M4dsTools_FindWeights_warned == undefined) do (
-        messageBox "Please install Service Pack 6. \nBone selecting is bugged in 3ds Max 2014 SP0-SP3"
-        ::M4dsTools_FindWeights_warned = true
-    )
-
-    local destroyed = false
-    if ::FindWeights != undefined and ::FindWeights.isDisplayed do (
-        DestroyDialog ::FindWeights
-        destroyed = true
-    )
-
-    global M4dsTools_FindWeights_pos
+rollout Max4ds_FindWeights "" ( --module
     
+    local rltFindWeights
+    
+    local warned = false
+    local position
+    
+    fn Toggle = (
+        local maxver = (maxVersion())[1]
+        if maxver == 16000 and isProperty skinops #getbonenamebylistid and not warned do (
+            messageBox "Please install Service Pack 6. \nBone selecting is bugged in 3ds Max 2014 SP0-SP3"
+            warned = true
+        )
+    
+        local destroyed = false
+        if rltFindWeights != undefined and rltFindWeights.isDisplayed do (
+            DestroyDialog rltFindWeights
+            destroyed = true
+        )
+        
+        
+        
+        
+        
+        if not destroyed do (
+            local pos = position
+            local style = #(#style_resizing, #style_titlebar, #style_sysmenu)
+            local w = 240
+            local h = 360
+            if pos != undefined then (
+                CreateDialog rltFindWeights width:w height:h pos:pos style:style
+            )
+            else (
+                CreateDialog rltFindWeights width:w height:h style:style
+            )
+        )
+    )
+        
     fn traverseUp lowNode highNode = (   --finding nodes inside hierarchy between lownode and highnode
         local nodes = #()
         while lowNode != undefined and lowNode.parent != highNode  do (
@@ -27,9 +48,8 @@
         nodes
     )
 
-    rollout FindWeights "Find weight conflicts"
-    (        
-        local util = ::MafiaTools_Util        
+    rollout rltFindWeights "Find weight conflicts" (        
+        local util = ::Max4ds_Util        
         
         button btnFind "Find" width:70
         
@@ -41,8 +61,8 @@
         button btnTransfer2 "r_arm  ->  r_shoulder" enabled:false
         button btnTable "Open Weight Table" offset:[0,10] enabled:false
         
-        on FindWeights close do (
-            M4dsTools_FindWeights_pos = GetDialogPos FindWeights
+        on rltFindWeights close do (
+            position = GetDialogPos rltFindWeights
         )
 
         on btnTable pressed do (            
@@ -391,19 +411,6 @@
 
                 -- deleteItem groups sel
             )
-        )
-    )
-
-    if not destroyed do (
-        local pos = ::M4dsTools_FindWeights_pos
-        local style = #(#style_resizing, #style_titlebar, #style_sysmenu)
-        local w = 240
-        local h = 360
-        if pos != undefined then (
-            CreateDialog FindWeights width:w height:h pos:pos style:style
-        )
-        else (
-            CreateDialog FindWeights width:w height:h style:style
         )
     )
 )

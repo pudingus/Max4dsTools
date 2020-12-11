@@ -1,11 +1,59 @@
-(
-    local destroyed = false
-    if ::ImpExp != undefined and ::ImpExp.isDisplayed then (
-        DestroyDialog ::ImpExp
-        destroyed = true
+rollout Max4ds_ImpExp "" (  --module
+    
+    local settings = (
+        struct settings (
+            importPath,
+            exportPath,
+            exportFilename,
+            position,
+            editNorm,
+            cachedNorm,
+            unitsSel = 4,
+            useImportedFilename = false,
+            allow5ds,
+            versionSel = 1
+        )
+        settings()
+    ) 
+    
+    local rltImpExp
+    
+    local events = ::Max4ds_Events
+    
+    fn PostReset scope: = (
+        scope.settings.useImportedFilename = false
+        scope.settings.allow5ds = false
+        scope.rltImpExp.cbAllow5ds.checked = false
+    )
+    
+    local onCompile = (
+        events.AddHandler #systemPostNew PostReset scope:::Max4ds_ImpExp
+        events.AddHandler #systemPostReset PostReset scope:::Max4ds_ImpExp
+    )
+    
+    fn Toggle = (
+        local destroyed = false
+        if rltImpExp != undefined and rltImpExp.isDisplayed then (
+            DestroyDialog rltImpExp
+            destroyed = true
+        )
+        
+        
+        if not destroyed then (
+            local pos = settings.position
+            local style = #(#style_titlebar, #style_border, #style_sysmenu)
+            local w = 200
+            local h = 420--395
+            if pos != undefined then (
+                CreateDialog rltImpExp w h pos.x pos.y style:style
+            )
+            else (
+                CreateDialog rltImpExp w h style:style
+            )
+        )
     )
 
-    rollout ImpExp "4ds Import/Export" (
+    rollout rltImpExp "4ds Import/Export" (
         local unitItems = #(
             "Milimeters",
             "Centimeters",
@@ -35,9 +83,8 @@
             "41 - Hidden & Dangerous 2",
             "42 - Chameleon, WoW, CE"
         )
-
-        local settings = ::MafiaTools_ImpExpSettings
-        local util = ::MafiaTools_Util
+        
+        local util = ::Max4ds_Util
 
         label lblUnits "Units:" offset:[0,3] align:#left across:2
         dropdownList ddlUnits    align:#right width:140  items:unitItems height:11 selection:settings.unitsSel
@@ -80,7 +127,6 @@
         )
 
         fn StartImport del:false = (
-            local settings = ::MafiaTools_ImpExpSettings
             local proceed = true
             if del then (
                 proceed = CheckForSave()
@@ -91,8 +137,8 @@
                 if prev_name == undefined then prev_name = ""
                 local file = getOpenFileName types:"4ds Model (*.4ds)|*.4ds|All files (*.*)|*.*" historyCategory:"4dsImport" filename:prev_name
                 if file != undefined then (
-                    local layers = ::MafiaTools_Layers
-                    local imp = ::MafiaTools_4dsImport
+                    local layers = ::Max4ds_Layers
+                    local imp = ::Max4ds_4dsImport
                     settings.importPath = file
                     settings.useImportedFilename = true
                     if del then (
@@ -130,13 +176,10 @@
         )
         
         on edtFilename changed val do (
-            local settings = ::MafiaTools_ImpExpSettings
             settings.useImportedFilename = false
         )
 
         on btnBrowse pressed do (
-            local settings = ::MafiaTools_ImpExpSettings
-            
             local filename            
             if settings.useImportedFilename and settings.importPath != undefined then (
                 filename = getFilenameFile settings.importPath
@@ -164,7 +207,7 @@
             local dir = edtDirectory.text
 
             if doesFileExist dir then (
-                local exp = ::MafiaTools_4dsExport
+                local exp = ::Max4ds_4dsExport
                 local filename = edtFilename.text
                 if util.isStringEmpty filename then (
                     messageBox "Provide a filename."
@@ -208,9 +251,7 @@
             clock.active = false
         )
 
-        on ImpExp open do (
-            local settings = ::MafiaTools_ImpExpSettings
-
+        on rltImpExp open do (
             if settings.exportPath != undefined then (
                 edtDirectory.text = settings.exportPath
             )
@@ -232,30 +273,16 @@
             ddlUnits_select settings.unitsSel
         )
 
-        on ImpExp close do (
-            local settings = ::MafiaTools_ImpExpSettings
+        on rltImpExp close do (
             --print "close"
             settings.exportPath = edtDirectory.text
             settings.exportFilename = edtFilename.text
-            settings.position = GetDialogPos ImpExp
+            settings.position = GetDialogPos rltImpExp
             settings.cachedNorm = cbCachedNorm.checked
             settings.editNorm = cbEditNorm.checked
             settings.unitsSel = ddlUnits.selection	
             settings.allow5ds = cbAllow5ds.checked
             settings.versionSel = ddlVersion.selection
-        )
-    )
-
-    if not destroyed then (
-        local pos = ::MafiaTools_ImpExpSettings.position
-        local style = #(#style_titlebar, #style_border, #style_sysmenu)
-        local w = 200
-        local h = 420--395
-        if pos != undefined then (
-            CreateDialog ImpExp w h pos.x pos.y style:style
-        )
-        else (
-            CreateDialog ImpExp w h style:style
         )
     )
 )

@@ -53,24 +53,23 @@ replaceUI:true
             )
         )
         
-        fn Reload sender param = (
-            
+        fn Reload scope: = (            
             local items = #()
-            for obj in sender.nodes do (
+            for obj in scope.nodes do (
                 local name = 
                     if isValidNode obj then obj.name
                     else "<deleted>"
                 append items name
             )
-            sender.rltTarget.lbNodes.items = items
+            scope.rltTarget.lbNodes.items = items
         )
 
         on rltTarget open do (
-            Reload this undefined
+            Reload scope:this
             
             local events = ::Max4ds_Events
-            events.AddHandler #sceneUndo Reload this
-            events.AddHandler #sceneRedo Reload this
+            events.AddHandler #sceneUndo Reload scope:this
+            events.AddHandler #sceneRedo Reload scope:this
         )
         
         on rltTarget close do (

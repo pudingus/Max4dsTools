@@ -1,9 +1,7 @@
-global Max4ds_ParamFloater
+rollout Max4ds_ParamEditor "" (  --module
 
-
-(
     --imports
-    local util = ::MafiaTools_Util
+    local util = ::Max4ds_Util
     local containsItem = util.containsItem
     ---------
 
@@ -12,13 +10,11 @@ global Max4ds_ParamFloater
     local DisabledMode
     local OpenSelection
     local OnDeselected
-
     local visible = false
-    
     local OnSelectionChanged
+    local floater
 
-    rollout rltParams "4ds Object Parameters"
-    (
+    rollout rltParams "4ds Object Parameters" (
         timer tmrDeselected interval:50 active:false
 
         on tmrDeselected tick do (
@@ -81,8 +77,8 @@ global Max4ds_ParamFloater
             --format "open\n"
             
             local events = ::Max4ds_Events
-            events.AddHandler #selectionSetChanged OnSelectionChanged rltParams
-            events.AddHandler #nodeRenamed OnSelectionChanged rltParams
+            events.AddHandler #selectionSetChanged OnSelectionChanged scope:rltParams
+            events.AddHandler #nodeRenamed OnSelectionChanged scope:rltParams
         )
 
         on rltParams close do (
@@ -94,8 +90,7 @@ global Max4ds_ParamFloater
         )
     )
 
-    rollout rltObject ""
-    (
+    rollout rltObject "" (
         spinner spnRenderFlags "Render flags:" range:[0,255,0] type:#integer align:#left fieldwidth:30 enabled:false across:2
         spinner spnRenderFlags2 "" range:[0,255,0] type:#integer fieldwidth:30 enabled:false
         checkbox chkDepthBias "Depth bias" across:2
@@ -211,8 +206,7 @@ global Max4ds_ParamFloater
         )
     )
 
-    rollout rltLod ""
-    (
+    rollout rltLod "" (
         label lblLodDist "Fadeout distance (meters):" align:#left
         spinner spnLodDist align:#left fieldwidth:70 range:[-3.4e38, 3.4e38, 0] scale:1 type:#float
 
@@ -221,8 +215,7 @@ global Max4ds_ParamFloater
         )
     )
 
-    rollout rltPortal ""
-    (
+    rollout rltPortal "" (
         checkbox chkEnabled "Enabled"
         spinner spnFlags "Flags:" align:#left type:#integer range:[0, 65535, 0] fieldwidth:45
         spinner spnNearRange "Near range:" range:[-3.4e38, 3.4e38, 0] scale:0.5 align:#left fieldwidth:50 type:#float
@@ -253,8 +246,7 @@ global Max4ds_ParamFloater
         )
     )
 
-    rollout rltBbrd ""
-    (
+    rollout rltBbrd "" (
         radiobuttons rdoRotMode "Rotation mode:" labels:#("All axes", "Single axis:") align:#left columns:1
         dropdownlist ddlRotAxis "" items:#("X", "Z", "Y") offset:[20,0] width:50
 
@@ -267,8 +259,7 @@ global Max4ds_ParamFloater
         )
     )
 
-    rollout rltMirror ""
-    (
+    rollout rltMirror "" (
         colorpicker cpColor "Background color: " align:#left
         spinner spnDistance "Active range:" range:[-3.4e38, 3.4e38,0] type:#float align:#left
 
@@ -281,8 +272,7 @@ global Max4ds_ParamFloater
         )
     )
     
-    rollout rltSector ""
-    (
+    rollout rltSector "" (
         spinner spnFlags1 "Flags1: " fieldwidth:80 type:#integer range:[-4294967295, 4294967295, 0] align:#left
         spinner spnFlags2 "Flags2: " fieldwidth:80 type:#integer range:[-4294967295, 4294967295, 0] align:#left
         
@@ -342,9 +332,7 @@ global Max4ds_ParamFloater
         )
     )
 
-
     fn OpenSelection strsel = (
-
         local requestedRlts = #()
         if stricmp strsel "mesh" == 0 then (
             EnableControls rltObject.controls
@@ -411,7 +399,7 @@ global Max4ds_ParamFloater
             if not containsItem displayedRlts rlt then append rltsToAdd rlt
         )
 
-        AddAndRemoveRlts ::Max4ds_ParamFloater rltsToAdd rltsToRemove
+        AddAndRemoveRlts floater rltsToAdd rltsToRemove
 
         if rltObject.isDisplayed then (
             rltObject.spnRenderFlags.value = gp.renderFlags
@@ -519,28 +507,27 @@ global Max4ds_ParamFloater
         visible = false
     )
 
-    fn OnSelectionChanged sender param =
-    (
+    fn OnSelectionChanged scope: = (
         local obj = selection[1]
 
         -- Workaround for performance reasons - when selecting in scene explorer,
         -- callback fires twice, once with 'undefined', then with correct object.
         if obj == undefined then (
-            sender.tmrDeselected.active = true
+            scope.tmrDeselected.active = true
         )
         else (
-            sender.tmrDeselected.active = false
+            scope.tmrDeselected.active = false
         )
 
 
         if selection.count >= 2 then (
-            sender.lblObjectName.text = ""
+            scope.lblObjectName.text = ""
             DisabledMode()
-            sender.btnAddParams.enabled = false
+            scope.btnAddParams.enabled = false
         )
         else if selection.count == 1 then (
-            local exp = ::MafiaTools_4dsExport
-            sender.lblObjectName.text = obj.name
+            local exp = ::Max4ds_4dsExport
+            scope.lblObjectName.text = obj.name
 
             local items = #()
 
@@ -562,12 +549,12 @@ global Max4ds_ParamFloater
                 #occluder:      items = #("Mesh", "Billboard", "Mirror", "Occluder")
                 default:        items = #("Dummy")
             )
-            sender.ddlObjectType.items = items
+            scope.ddlObjectType.items = items
 
             gp = custAttributes.get obj MafParams_def baseObject:false
 
             if gp != undefined then (
-                local items = sender.ddlObjectType.items
+                local items = scope.ddlObjectType.items
                 if findItem items gp.objectType == 0 then gp.objectType = items[1]
 
                 EnabledMode()
@@ -588,38 +575,38 @@ global Max4ds_ParamFloater
             )
             else (  --no custom attributes
                 DisabledMode()
-                sender.btnAddParams.enabled = true                
+                scope.btnAddParams.enabled = true                
             )
         )
 
     )
     
-    local title = "4ds Object Parameters"
     
-    local floater = ::Max4ds_ParamFloater
-
-    if floater != undefined then (
-        if floater.open then (
-            closeRolloutFloater floater
+    fn Toggle = (
+        local title = "4ds Object Parameters"
+    
+        if floater != undefined then (
+            if floater.open then (
+                closeRolloutFloater floater
+            )
+            else (
+                local pos = floater.pos
+                local size = floater.size
+                floater = newRolloutFloater title size[1] size[2] pos[1] pos[2]
+            )
         )
         else (
-            local pos = floater.pos
-            local size = floater.size
-            floater = newRolloutFloater title size[1] size[2] pos[1] pos[2]
+            floater = newRolloutFloater title 190 490
+        )
+    
+        if floater.open then (
+            addRollout rltParams floater
+            addRollout rltObject floater
+    
+            for c in rltObject.controls do c.visible = false
+    
+            OnSelectionChanged scope:rltParams
         )
     )
-    else (
-        floater = newRolloutFloater title 190 490
-    )
 
-    if floater.open then (
-        addRollout rltParams floater
-        addRollout rltObject floater
-
-        for c in rltObject.controls do c.visible = false
-
-        OnSelectionChanged rltParams undefined
-    )
-
-    ::Max4ds_ParamFloater = floater
 )

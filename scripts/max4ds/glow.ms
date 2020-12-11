@@ -155,8 +155,8 @@ category:"4ds Tools"
         
         on ddlMats selected sel do ddlMats_select sel
 
-        fn OnMatAdded sender param = (
-            sender.tmrCooldown.active = true
+        fn OnMatAdded scope: = (
+            scope.tmrCooldown.active = true
         )
         
         on rltGlow open do (
@@ -164,7 +164,7 @@ category:"4ds Tools"
                 ddlMats.items = BuildMatItems $.mat
             
             local events = ::Max4ds_Events
-            events.AddHandler #mtlRefAdded OnMatAdded rltGlow
+            events.AddHandler #mtlRefAdded OnMatAdded scope:rltGlow
             
             local count = matIds.count
 

@@ -1,8 +1,8 @@
-rollout MafiaTools_4dsExport "" (   --module
+rollout Max4ds_4dsExport "" (   --module
 
     --imports------------
-    local parser = ::MafiaTools_4dsParser
-    local util = ::MafiaTools_Util
+    local parser = ::Max4ds_4dsParser
+    local util = ::Max4ds_Util
     ---------------------    
     
     --forward function declarations
@@ -304,7 +304,7 @@ rollout MafiaTools_4dsExport "" (   --module
     )
 
     fn CollectNodes = (
-        local util = ::MafiaTools_util
+        local util = ::Max4ds_Util
         local nodeTypes = #()
         local rootBones = #()
         -- local str = "$volume"

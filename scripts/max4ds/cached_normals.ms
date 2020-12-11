@@ -3,14 +3,13 @@ name:"Cached Normals"
 classID:#(0x580d250, 0x35f8095)
 replaceUI:true version:1 invisible:true
 (
-    parameters main rollout:params
+    parameters main rollout:rltParams
     (
         normals type:#point3Tab tabsizevariable:true
         normalFaces type:#point3Tab tabsizevariable:true
     )
 
-    rollout params "Parameters"
-    (
+    rollout rltParams "Parameters" (
         button btnEditNormals "View & Edit Normals"
 
         on btnEditNormals pressed do (
