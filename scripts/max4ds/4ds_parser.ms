@@ -716,7 +716,7 @@ rollout Max4ds_4dsParser "" ( --module
     
     struct TFacegroup (
         faceIds = #(),   -- array of 1-based ids
-        matId   -- 0 == no material, 1..N == material
+        matId   -- 1 == no material, 2..N == material
     )
     
     struct TLod (
@@ -767,7 +767,7 @@ rollout Max4ds_4dsParser "" ( --module
                         local faceId = prevTotal + j                       
                         append fcgrp.faceIds faceId
                     )
-                    fcgrp.matId = ReadU16 f
+                    fcgrp.matId = (ReadU16 f) + 1
 
                     append mlod.facegroups fcgrp    
                     prevTotal = prevTotal + grpNumFaces
@@ -1184,8 +1184,8 @@ rollout Max4ds_4dsParser "" ( --module
         position,  --float, screen offset
         unknown = 1.0, --float, only HD2 and Chameleon
         
-        -- u16, 0 == no_texture, 1..N == materials
-        -- zero is invalid here, crashes the game
+        -- u16, 1 == no_texture, 2..N == materials
+        -- one is invalid here, crashes the game
         matId  
     )
     
@@ -1197,7 +1197,7 @@ rollout Max4ds_4dsParser "" ( --module
             local glow = TGlow()
             glow.position = ReadFloatSafe f
             if version != #mafia do glow.unknown = ReadFloatSafe f
-            glow.matId = ReadU16 f
+            glow.matId = (ReadU16 f) + 1
 
             append glows glow
         )
@@ -1210,8 +1210,8 @@ rollout Max4ds_4dsParser "" ( --module
         for mglow in mglows do (
             WriteFloatSafe f mglow.position
             if version != #mafia do WriteFloatSafe f mglow.unknown
-            WriteU16 f mglow.matId
-            if mglow.matId == 0 do throw "TGlow.matId cannot be zero"
+            WriteU16 f (mglow.matId - 1)
+            if not (mglow.matId > 1) do throw "TGlow.matId must be > 1"
         )
     )
     

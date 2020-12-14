@@ -18,17 +18,10 @@ rollout Max4ds_ImpExp "" (  --module
     
     local rltImpExp
     
-    local events = ::Max4ds_Events
-    
     fn PostReset scope: = (
         scope.settings.useImportedFilename = false
         scope.settings.allow5ds = false
         scope.rltImpExp.cbAllow5ds.checked = false
-    )
-    
-    local onCompile = (
-        events.AddHandler #systemPostNew PostReset scope:::Max4ds_ImpExp
-        events.AddHandler #systemPostReset PostReset scope:::Max4ds_ImpExp
     )
     
     fn Toggle = (
@@ -286,3 +279,7 @@ rollout Max4ds_ImpExp "" (  --module
         )
     )
 )
+
+callbacks.removeScripts id:#Max4ds_ImpExp
+callbacks.addScript #systemPostNew "::Max4ds_ImpExp.PostReset scope:::Max4ds_ImpExp" id:#Max4ds_ImpExp
+callbacks.addScript #systemPostReset "::Max4ds_ImpExp.PostReset scope:::Max4ds_ImpExp" id:#Max4ds_ImpExp

@@ -72,49 +72,45 @@ rollout Max4ds_4dsExport "" (   --module
     )
 
     struct TFacegroupSet (
-        facegroups = #(),   --array of MFacegroup
-        facegroup_ids = #(),   --get facegroup id from matid
+        facegroups = #(),   --consecutive collection of Max4ds_4dsParser.TFacegroup
+        lookup = #(),   --sparse lookup table, at materialId offset stores facegroupId value
 
-        fn GetByMatId matid = (
-            matid = matid + 1
-            local grp_id = facegroup_ids[matid]
+        fn GetByMatId matid = (   --returns TFacegroup for matId, creates new facegroup if needed
+            local grpId = lookup[matid]
 
-            if grp_id == undefined then (
+            if grpId == undefined then (
                 local grp = parser.TFacegroup matid:matid
                 append facegroups grp
-                grp_id = facegroups.count
-                facegroup_ids[matid] = grp_id
+                grpId = facegroups.count
+                lookup[matid] = grpId
             )
-            facegroups[grp_id]
+            facegroups[grpId]
         )
     )
 
+    
     struct TMatSet (
-        mafia_materials = #(),
-        mat_map = #(),
+        materials = #(undefined),  --consecutive collection of materials
+        lookup = #(),   --sparse lookup table
 
-        fn AddToMafiaMaterials mat = (
+        fn Add mat = (   --adds material to the set, only if unique
             local handle = GetHandleByAnim mat
 
-            if mat_map[handle] == undefined then (
-                append mafia_materials mat
-                mat_map[handle] = mafia_materials.count
+            if lookup[handle] == undefined then (
+                append materials mat
+                lookup[handle] = materials.count
             )
         ),
 
-        fn GetMafiaMatId mat matid = (
-            local mid = 0
-            if isKindOf mat MultiMaterial then (
-                mat = mat[matid]
-            )
-
+        fn GetId mat = (
+            local id = 1
             if mat != undefined then (
                 local handle = getHandleByAnim mat
-                mid = mat_map[handle]
-                if mid == undefined then mid = 0
+                id = lookup[handle]
+                if id == undefined then id = 1
             )
 
-            mid
+            id
         )
     )
 
@@ -212,23 +208,24 @@ rollout Max4ds_4dsExport "" (   --module
                 for submat in mat.materialList where submat != undefined do (
 
                     if util.containsItem #(Standard, Physical_Material, Mat4ds) (classOf subMat) then (
-                        MAT_SET.AddToMafiaMaterials submat
+                        MAT_SET.Add submat
                     )
                 )
             )
             else (
                 if util.containsItem #(Standard, Physical_Material, Mat4ds) (classOf mat) then (
-                    MAT_SET.AddToMafiaMaterials mat
+                    MAT_SET.Add mat
                 )
             )
         )
-        MAT_SET.mafia_materials
+        MAT_SET.materials
     )
 
-    fn ExtractMaterials mafia_materials = (
+    fn ExtractMaterials materials = (
         local mmaterials = #()
 
-        for mat in mafia_materials do (
+        for i = 2 to materials.count do (
+            local mat = materials[i]
 
             if classof mat == Standard then (
                 mat = ConvertStandardMaterial mat
@@ -1298,13 +1295,22 @@ rollout Max4ds_4dsExport "" (   --module
         mlod.mesh = lodmesh
 
         local fcgrpSet = TFacegroupSet()
+        
+        local mat = lodnode.mat
 
-        for i = 1 to lodmesh.numfaces do (
-            local matid = getFaceMatID lodmesh i
-            local mafMatId = MAT_SET.GetMafiaMatId lodnode.mat matid
+        for faceId = 1 to lodmesh.numfaces do (
+            local matid = getFaceMatID lodmesh faceId
+            
+            local faceMat = 
+                if isKindOf mat MultiMaterial then (
+                    mat[matid]
+                )
+                else mat
+            
+            local mafMatId = MAT_SET.GetId faceMat
 
             local facegroup = fcgrpSet.GetByMatId mafMatId
-            append facegroup.faceIds i
+            append facegroup.faceIds faceId
         )
 
         mlod.facegroups = fcgrpSet.facegroups
@@ -1351,13 +1357,20 @@ rollout Max4ds_4dsExport "" (   --module
         local mglows = #()
         local basenode = mnode.basenode
         local count = basenode.matids.count
+        local mat = basenode.mat
         for i = 1 to count do (
             local matId = basenode.matids[i]
             local pos = basenode.positions[i]
+            
+            local faceMat = 
+                if isKindOf mat MultiMaterial then (
+                    mat[matid]
+                )
+                else mat
 
-            local mafMatId = MAT_SET.GetMafiaMatId basenode.mat matId
+            local mafMatId = MAT_SET.GetId faceMat
 
-            if mafMatId != 0 then (
+            if mafMatId > 1 then (
                 local mglow = parser.TGlow matId:mafMatId position:pos
                 append mglows mglow
             )
@@ -1694,16 +1707,67 @@ rollout Max4ds_4dsExport "" (   --module
         allow5ds = false,
         version = #Mafia
     )
+    
+    struct TSelection (
+        objects,
+        panel,
+        level,
+        modifier,
+        boneid,
+        
+        fn Save = (
+            local sel = TSelection()
+            sel.objects = getCurrentSelection()
+            sel.panel = getCommandPanelTaskMode()
+            
+            if sel.panel == #modify then (
+                sel.level = subObjectLevel
+                sel.modifier = modPanel.getCurrentObject()
+                
+                if sel.modifier != undefined and classof sel.modifier == Skin then (
+                    sel.boneid = skinOps.GetSelectedBone sel.modifier
+                )
+            )
+            
+            sel
+        ),
+        
+        fn Restore = (
+            local dontSelect = false
+            setCommandPanelTaskMode panel
+            if panel == #modify then (
+                if modifier != undefined then (
+                    modPanel.setCurrentObject modifier
+                    if level != undefined then (
+                        subObjectLevel = level
+                    )
+                    if boneid != undefined then (
+                        skinOps.SelectBone modifier boneid
+                    )
+                    dontSelect = true
+                )
+            )            
+            if dontSelect == false then (
+                if objects.count == 0 then (
+                    clearSelection()
+                )
+                else (
+                    select objects
+                )
+            )
+        )
+    )    
 
     fn Export4ds file settings: unitscale:1.0 progHandler: = (
         if settings == unsupplied then settings = TSettings()
+        if progHandler == unsupplied then fn progHandler prg status = ()
         
         USE_CACHED_NORMALS = settings.useCachedNormals
         USE_EDIT_NORMALS = settings.useEditNormals
 
         local f = fopen file "wb"
         if f == undefined then (
-            if progHandler != unsupplied do progHandler 0 "Error"
+            progHandler 0 "Error"
             messageBox "Error. Could not write to file."
         )
         else (
@@ -1711,41 +1775,28 @@ rollout Max4ds_4dsExport "" (   --module
 
             local st = timestamp()
             
-            if progHandler != unsupplied do progHandler 0 "Exporting..."
+            progHandler 0 "Exporting..."
             
-            --save selection
-            local savedSel = getCurrentSelection()
-            local savedPanel = getCommandPanelTaskMode()
-            
-            if savedPanel == #modify then (
-                local savedSubSel = subObjectLevel
-                local savedMod = modPanel.getCurrentObject()
-                
-                if savedMod != undefined and classof savedMod == Skin then (
-                    local savedBoneId = skinOps.GetSelectedBone savedMod
-                )
-            )
-            -----------------------
-            
+            local sel = TSelection.Save()            
             clearSelection()
             
             WARN_MORPH = false
             WARN_PORTAL = false
-            
-            local used_start = (heapsize - heapfree) / 1024.0
 
             local m4ds = parser.T4ds()
-            local mmmm = CollectMaterials()
+            local materials = CollectMaterials()
 
-            m4ds.materials = ExtractMaterials mmmm
+            m4ds.materials = ExtractMaterials materials
             local mnodeSet = CollectNodes()
             m4ds.objects = ExtractObjects mnodeSet unitscale settings.version
             m4ds.allow5ds = settings.allow5ds
 
+            local error = false
             try (
                 parser.Write4ds f m4ds settings.version
             )
             catch (
+                error = true
                 messageBox (getCurrentException()) icon:#critical
                 format "*** % ***\n" (getCurrentException())
                 if getCurrentExceptionStackTrace != undefined then (
@@ -1757,42 +1808,18 @@ rollout Max4ds_4dsExport "" (   --module
             )
             try (fclose f) catch ()
             
-            
-            --restore selection
-
-            local dontSelect = false
-            setCommandPanelTaskMode savedPanel
-            if savedPanel == #modify then (
-                if savedMod != undefined then (
-                    modPanel.setCurrentObject savedMod
-                    if savedSubSel != undefined then (
-                        subObjectLevel = savedSubSel
-                    )
-                    if savedBoneId != undefined then (
-                        skinOps.SelectBone savedMod savedBoneId
-                    )
-                    dontSelect = true
-                )
-            )            
-            if dontSelect == false then (
-                if savedSel.count == 0 then (
-                    clearSelection()
-                )
-                else (
-                    select savedSel
-                )
-            )
-            --------------------
-            
+            sel.Restore()            
 
             local dur = elapsed_since(st) / 1000.0
-
-            local used_end = (heapsize - heapfree) / 1024.0
-            format "memory used ~ % KiB\n" (used_end - used_start)
             
-            if progHandler != unsupplied do progHandler 100 ("Done in " + (dur as string) + " seconds")
+            if error then (
+                progHandler 0 "Error"
+            )
+            else (
+                progHandler 100 ("Done in " + (dur as string) + " seconds")
 
-            format "Exporting took % seconds\n" dur
+                format "Exporting took % seconds\n" dur
+            )
             
             if WARN_MORPH then (
                 messageBox "Morph channels 1, 11, 21 and so on should be empty." icon:#information

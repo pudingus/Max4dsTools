@@ -13,7 +13,6 @@ rollout Max4ds_4dsImport "" (   --module
         custAttributes.get nnode MafParams_def baseObject:false
     )
 
-
     --returns array of nodes
     fn CreateMesh mmesh name unitscale materials = (
         local nodes = #()
@@ -25,61 +24,57 @@ rollout Max4ds_4dsImport "" (   --module
             local lodId = 0
             for mlod in mmesh.lods do (
                 local msh = mlod.mesh
-                local normals = #()                
                 
-                for i = 1 to msh.numverts do (
+                --apply scale and extract normals to array
+                local normals = for i = 1 to msh.numverts collect (
                     local vert = getVert msh i
                     setVert msh i (vert * unitscale)
-                    append normals (getNormal msh i)
-                )                
+                    
+                    getNormal msh i
+                )
+                --------------------------------------
                 
+                -- materials = #(undefined, 4dsMat1, 4dsMat2, ...)
+                -- fcgrp.matId is 1-based  ^^
+                
+                                                
                 local lodNode = mesh mesh:msh
                 lodNode.wirecolor = color 0 0 0
 
+                --find used material ids
                 local usedMats = #{}
                 for fcgrp in mlod.facegroups do (
-                    if fcgrp.matId != 0 then (
-                        usedMats[fcgrp.matId] = true
-                    )
+                    usedMats[fcgrp.matId] = true
                 )
                 usedMats = usedMats as array
-
-                local indices = #()
-                if usedMats.count == 1 then (
-                    local matId = usedMats[1]
-                    if matId != 0 then (
-                        indices[matId] = 1
-                        lodnode.material = materials[matId]
-                    )
+                -------------------------
+                
+                --usedMats - stores unique indexes in increasing order for the 'materials' array
+                
+                if usedMats.count == 1 then (    --only 1 material is used in object, so no MultiMat is needed
+                    local globMatId = usedMats[1]
+                    lodnode.material = materials[globMatId]
                 )
-                else (
-                    local multimat = multimaterial numsubs:(usedMats.count + 1)
+                else if usedMats.count > 1 then (
+                    local multimat = multimaterial numsubs:usedMats.count
                     multimat.name = name
-                    multimat[multimat.numsubs] = undefined
-
-                    local i = 1
-                    for matId in usedMats do (
-                        multimat[i] = materials[matId]
-                        i += 1
-                    )
-
-                    local i = 1
-                    for matId in usedMats do (
-                        indices[matId] = i
-                        i += 1
+                    
+                    for localId = 1 to usedMats.count do (
+                        local globMatId = usedMats[localId]
+                        multimat[localId] = materials[globMatId]
                     )
 
                     lodnode.material = multimat
                 )
+                
+                local lookup = #()  -- sparse lookup table, at materialId offset stores per object material index
+                for i = 1 to usedMats.count do (
+                    local globMatId = usedMats[i]
+                    lookup[globMatId] = i
+                )
 
                 for fcgrp in mlod.facegroups do (
-                    local matId
-                    if fcgrp.matid == 0 then (
-                        matId = multimat.numsubs
-                    )
-                    else (
-                        matId = indices[fcgrp.matId]
-                    )
+                    local matId = lookup[fcgrp.matId]
 
                     for faceId in fcgrp.faceIds do (
                         setFaceMatID lodnode faceId matId
@@ -194,29 +189,39 @@ rollout Max4ds_4dsImport "" (   --module
         local nnode = Glow4ds()
         nnode.viewportSize = 0.1 * unitscale
 
+        --find used material ids
         local usedMats = #{}
-
         for mglow in mglows do (
             usedMats[mglow.matId] = true
         )
+        usedMats = usedMats as array
+        -------------------------
 
-        local multimat = multimaterial numsubs:(usedMats.numberSet + 1)
-        multimat.name = name
-        multimat[multimat.numsubs] = undefined
-        local index = 1
-        local indices = #()
-
-        for matId in usedMats do (
-            multimat[index] = materials[matId]
-            indices[matId] = index
-            index += 1
+        if usedMats.count == 1 then (
+            local globMatId = usedMats[1]
+            nnode.material = materials[globMatId]
         )
-
-        nnode.material = multimat
+        else if usedMats.count > 1 then (
+            local multimat = multimaterial numsubs:usedMats.count
+            multimat.name = name
+            
+            for i = 1 to usedMats.count do (
+                local globMatId = usedMats[i]
+                multimat[index] = materials[globMatId]
+            )
+    
+            nnode.material = multimat
+        )
+        
+        local lookup = #()  -- sparse lookup table, at materialId offset stores per object material index
+        for i = 1 to usedMats.count do (
+            local globMatId = usedMats[i]
+            lookup[globMatId] = i
+        )
 
         for mglow in mglows do (
             append nnode.positions mglow.position
-            append nnode.matIds indices[mglow.matId]
+            append nnode.matIds lookup[mglow.matId]
         )
 
         nnode
@@ -333,7 +338,7 @@ rollout Max4ds_4dsImport "" (   --module
     )
 
     fn CreateMaterials mmats filename = (
-        local materials = #()
+        local materials = #(undefined)
         
         for m = 1 to mmats.count do (
             local mmat = mmats[m]
@@ -760,6 +765,7 @@ rollout Max4ds_4dsImport "" (   --module
     )
     
     fn Import4ds file unitscale:1.0 progHandler: = (
+        if progHandler == unsupplied then fn progHandler prg status = ()
         -- switch away from modify panel, for performance
         local mode = getCommandPanelTaskMode()
         local savedMode
@@ -775,7 +781,7 @@ rollout Max4ds_4dsImport "" (   --module
         local showProgress = true
             
         local progress = 0
-        if progHandler != unsupplied do progHandler progress "Reading..."
+        progHandler progress "Reading..."
         
         local st = timestamp()        
         local fileStart = timestamp()
@@ -793,7 +799,7 @@ rollout Max4ds_4dsImport "" (   --module
         local fileDur = (elapsed_since fileStart) / 1000.0
 
         if m4ds == undefined then (
-            if progHandler != unsupplied do progHandler 0 "Error"
+            progHandler 0 "Error"
             messageBox "This file cannot be imported. Unknown version or format." icon:#critical
             undefined
         )
@@ -803,7 +809,7 @@ rollout Max4ds_4dsImport "" (   --module
                 
                 if showProgress do (
                     progress += 12            
-                    if progHandler != unsupplied do progHandler progress "Creating materials..."
+                    progHandler progress "Creating materials..."
                 )
                 
                 local materials = CreateMaterials m4ds.materials filename
@@ -811,7 +817,7 @@ rollout Max4ds_4dsImport "" (   --module
                 local matDur = (elapsed_since matStart) / 1000.0
                 if showProgress do (
                     progress += 16
-                    if progHandler != unsupplied do progHandler progress "Creating objects..."
+                    progHandler progress "Creating objects..."
                 )
                 
                 local objStart = timestamp()
@@ -826,7 +832,7 @@ rollout Max4ds_4dsImport "" (   --module
                 local objDur = (elapsed_since objStart) / 1000.0
                 if showProgress do (                 
                     progress += 60
-                    if progHandler != unsupplied do progHandler progress "Redrawing..."
+                    progHandler progress "Redrawing..."
                 )
             )
 
@@ -839,9 +845,7 @@ rollout Max4ds_4dsImport "" (   --module
             
 
             progress = 100
-            if progHandler != unsupplied do (
-                progHandler progress ("Done in " + (dur as string) + " seconds")
-            )            
+            progHandler progress ("Done in " + (dur as string) + " seconds")
             
             local stats = stringstream ""
             
