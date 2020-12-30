@@ -145,24 +145,23 @@ rollout Max4ds_4dsExport "" (   --module
     fn ConvertStandardMaterial mat = (
         local cm = Mat4ds()
 
+        cm.diffuseMap = mat.diffuseMap
         cm.diffuseMapEnable = mat.diffuseMapEnable
+        
+        cm.envMap = mat.reflectionMap
         cm.envMapEnable = mat.reflectionMapEnable
+        
+        cm.alphaMap = mat.opacityMap
         cm.alphaMapEnable = mat.opacityMapEnable
+        
         cm.twoSided = mat.twoSided
-
-        cm.ambient = mat.ambient
+        
         cm.diffuse = mat.diffuse
+        cm.ambient = mat.ambient
         cm.emission = mat.selfIllumColor
 
         cm.opacity = mat.opacity
         cm.envMapAmount = mat.reflectionMapAmount
-        cm.envMap = mat.reflectionMap
-        cm.diffuseMap = mat.diffuseMap
-        cm.alphaMap = mat.opacityMap
-
-        if cm.alphaMapEnable then (
-            cm.addEffect = true
-        )
 
         cm
     )
@@ -173,14 +172,11 @@ rollout Max4ds_4dsExport "" (   --module
         cm.diffuse = mat.base_color
         cm.emission = mat.emit_color
 
-        cm.diffuseMapEnable = mat.base_color_map_on
         cm.diffuseMap = mat.base_color_map
+        cm.diffuseMapEnable = mat.base_color_map_on
 
-        cm.alphaMapEnable = mat.cutout_map_on
         cm.alphaMap = mat.cutout_map
-        if cm.alphaMapEnable then (
-            cm.addEffect = true
-        )
+        cm.alphaMapEnable = mat.cutout_map_on
 
         cm.opacity = (1.0 - mat.transparency) * 100
 
@@ -1367,11 +1363,12 @@ rollout Max4ds_4dsExport "" (   --module
                     mat[matid]
                 )
                 else mat
+            local unk = basenode.unknowns[i]
 
             local mafMatId = MAT_SET.GetId faceMat
 
             if mafMatId > 1 then (
-                local mglow = parser.TGlow matId:mafMatId position:pos
+                local mglow = parser.TGlow matId:mafMatId position:pos unknown:unk
                 append mglows mglow
             )
 

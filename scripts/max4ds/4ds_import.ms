@@ -207,7 +207,7 @@ rollout Max4ds_4dsImport "" (   --module
             
             for i = 1 to usedMats.count do (
                 local globMatId = usedMats[i]
-                multimat[index] = materials[globMatId]
+                multimat[i] = materials[globMatId]
             )
     
             nnode.material = multimat
@@ -221,6 +221,7 @@ rollout Max4ds_4dsImport "" (   --module
 
         for mglow in mglows do (
             append nnode.positions mglow.position
+            append nnode.unknowns mglow.unknown
             append nnode.matIds lookup[mglow.matId]
         )
 
