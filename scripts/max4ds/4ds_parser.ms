@@ -131,10 +131,12 @@ rollout Max4ds_4dsParser "" ( --module
 
         if count > 255 then (
             count = 255
-            throw "String is over the maximum of 255 characters: " txt
+            throw "String is over the maximum of 255 characters:\n " txt
         )
         WriteU8 f count
         for i = 1 to count do (
+            local code = bit.charasint txt[i]
+            if code > 127 then throw "String contains non-ASCII characters: " txt
             WriteU8 f (bit.charasint txt[i])
         )
 
