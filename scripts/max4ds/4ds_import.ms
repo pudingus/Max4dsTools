@@ -343,7 +343,7 @@ rollout Max4ds_4dsImport "" (   --module
         
         for m = 1 to mmats.count do (
             local mmat = mmats[m]
-            --disables set handlers, they are re-enabled after instatiation (in Mat4ds 'postCreate')
+            --disables set handlers, they are re-enabled after instantiation (in Mat4ds 'postCreate')
             ::mat4ds_disable_set = true     
             local mat = Mat4ds()
             mat.name = "4dsMat"+(m as string)

@@ -5,14 +5,20 @@ rollout Max4ds_ParamEditor "" (  --module
     local containsItem = util.containsItem
     ---------
 
-    local gp
+    
+    --forwards
     local EnabledMode
     local DisabledMode
     local OpenSelection
     local OnDeselected
-    local visible = false
     local OnSelectionChanged
+    ------------
+    
+    --module variables
+    local gp
+    local visible = false
     local floater
+    ------------------
 
     rollout rltParams "4ds Object Parameters" (
         timer tmrDeselected interval:50 active:false
@@ -584,8 +590,11 @@ rollout Max4ds_ParamEditor "" (  --module
     
     fn Toggle = (
         local title = "4ds Object Parameters"
-    
-        if floater != undefined then (
+        
+        if floater == undefined then (
+            floater = newRolloutFloater title 190 490
+        )
+        else (
             if floater.open then (
                 closeRolloutFloater floater
             )
@@ -595,15 +604,12 @@ rollout Max4ds_ParamEditor "" (  --module
                 floater = newRolloutFloater title size[1] size[2] pos[1] pos[2]
             )
         )
-        else (
-            floater = newRolloutFloater title 190 490
-        )
     
         if floater.open then (
             addRollout rltParams floater
             addRollout rltObject floater
     
-            for c in rltObject.controls do c.visible = false
+            --for c in rltObject.controls do c.visible = false
     
             OnSelectionChanged scope:rltParams
         )
