@@ -25,12 +25,33 @@ rollout Max4ds_4dsImport "" (   --module
             for mlod in mmesh.lods do (
                 local msh = mlod.mesh
                 
-                --apply scale and extract normals to array
-                local normals = for i = 1 to msh.numverts collect (
-                    local vert = getVert msh i
-                    setVert msh i (vert * unitscale)
+                --apply scale
+                for vertId = 1 to msh.numVerts do (
+                    local vert = getVert msh vertId
+                    setVert msh vertId (vert * unitscale)
+                )
+                
+                if nspec != undefined then (
+                    nspec.SetNumNormals msh msh.numVerts
+                    for i = 1 to msh.numVerts do (
+                        nspec.SetNormal msh i (getNormal msh i)
+                        nspec.SetNormalExplicit msh i true
+                    )
                     
-                    getNormal msh i
+                    
+                    nspec.SetNumFaces msh msh.numFaces
+                    for i = 1 to msh.numFaces do (
+                        local face = getFace msh i
+                        for v = 1 to 3 do (
+                            nspec.SetNormalId msh i v face[v]
+                        )
+                    )
+                )
+                else (
+                    --extract normals to array
+                    local normals = for i = 1 to msh.numverts collect (
+                        getNormal msh i
+                    )
                 )
                 --------------------------------------
                 
@@ -98,14 +119,17 @@ rollout Max4ds_4dsImport "" (   --module
 
                 append nodes lodNode
 
-                local cmod = CachedNormals()
-                cmod.normals = normals
+                if nspec == undefined then (
+                    local cmod = CachedNormals()
+                    cmod.normals = normals
 
-                for i = 1 to lodnode.numfaces do (
-                    append cmod.normalFaces (getFace lodnode i)
+                    for i = 1 to lodnode.numfaces do (
+                        append cmod.normalFaces (getFace lodnode i)
+                    )
+
+                    addModifier lodnode cmod
                 )
 
-                addModifier lodnode cmod
 
                 lodId += 1
             )
@@ -618,7 +642,7 @@ rollout Max4ds_4dsImport "" (   --module
                         
                         BAD_TYPES[1] = "VISUAL_PROJECTOR"
                         
-                        format "% : projector\n" mobj.name
+                        --format "% : projector\n" mobj.name
                         
                         -- UNSUPPORTED
                     )
@@ -633,7 +657,7 @@ rollout Max4ds_4dsImport "" (   --module
                         
                         BAD_TYPES[2] = "VISUAL_EMITOR"
                         
-                        format "% : emitor\n" mobj.name
+                        --format "% : emitor\n" mobj.name
                         -- UNSUPPORTED
                     )
                     default: (
@@ -649,7 +673,7 @@ rollout Max4ds_4dsImport "" (   --module
                     
                     BAD_TYPES[3] = "FRAME_LIGHT"
                     
-                    format "% : light\n" mobj.name
+                    --format "% : light\n" mobj.name
                     
                     -- UNSUPPORTED
                 )
@@ -848,16 +872,18 @@ rollout Max4ds_4dsImport "" (   --module
             progress = 100
             progHandler progress ("Done in " + (dur as string) + " seconds")
             
-            local stats = stringstream ""
+            format "Done in % seconds\n" dur
             
-            format "Reading: % (%\%)\n" fileDur (fileDur / totalDur * 100) to:stats
-            format "Materials: % (%\%)\n" matDur (matDur / totalDur * 100) to:stats
-            format "Objects: % (%\%)\n" objDur (objDur / totalDur * 100) to:stats
-            format "Redrawing: % (%\%)\n" redrawDur (redrawDur / totalDur * 100) to:stats
-            format "Pendur: %\n" pendDur to:stats
-            format "Total: %\n" totalDur to:stats
-            format "Total + overhead: %\n" dur to:stats
-            format "%" (stats as string)
+            -- local stats = stringstream ""
+            
+            -- format "Reading: % (%\%)\n" fileDur (fileDur / totalDur * 100) to:stats
+            -- format "Materials: % (%\%)\n" matDur (matDur / totalDur * 100) to:stats
+            -- format "Objects: % (%\%)\n" objDur (objDur / totalDur * 100) to:stats
+            -- format "Redrawing: % (%\%)\n" redrawDur (redrawDur / totalDur * 100) to:stats
+            -- format "Pendur: %\n" pendDur to:stats
+            -- format "Total: %\n" totalDur to:stats
+            -- format "Total + overhead: %\n" dur to:stats
+            -- format "%" (stats as string)
             
             if savedMode != undefined do (
                 setCommandPanelTaskMode savedMode

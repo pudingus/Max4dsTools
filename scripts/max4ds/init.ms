@@ -46,6 +46,7 @@
     
     
     fn PreSave = (
+        --version of the scene, for potential future use
         setAppData rootNode 3298216 "1"
     )
     

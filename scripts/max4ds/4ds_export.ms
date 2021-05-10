@@ -8,9 +8,6 @@ rollout Max4ds_4dsExport "" (   --module
     --forward function declarations
     local GetNodeType
     -------------------------------
-
-    local USE_EDIT_NORMALS
-    local USE_CACHED_NORMALS    
   
     local MAT_SET
     
@@ -1161,10 +1158,10 @@ rollout Max4ds_4dsExport "" (   --module
         max modify mode
         modpanel.setcurrentobject normMod node:obj
 
-        for i = 1 to lodmesh.numfaces do (
+        for faceId = 1 to lodmesh.numfaces do (
             local rnormals = #()
             for v = 1 to 3 do (
-                local normId = normMod.getnormalid i v
+                local normId = normMod.getnormalid faceId v
                 rnormals[v] = normMod.getnormal normId
             )
             append faceVertNormals rnormals
@@ -1175,27 +1172,47 @@ rollout Max4ds_4dsExport "" (   --module
 
     fn ExtractSGroupNormals lodmesh = (
         local faceVertNormals = #()
-        for i = 1 to lodmesh.numfaces do (
-            local rnormals = meshop.getFaceRNormals lodmesh i
+        for faceId = 1 to lodmesh.numfaces do (
+            local rnormals = meshop.getFaceRNormals lodmesh faceId
             append faceVertNormals rnormals
         )
 
         faceVertNormals
     )
+    
+    fn ExtractSpecifiedNormals lodmesh = (
+        for faceId = 1 to lodmesh.numfaces collect (
+            for v = 1 to 3 collect (
+                local normId = nspec.GetNormalId lodmesh faceId v
+            
+                nspec.GetNormal lodmesh normId
+            )
+        )
+    )
 
     --extracts per face vertex normals from mesh into array
     fn ExtractNormals lodnode lodmesh = (
         local faceVertNormals = #()
-
-        local normMod
-        if USE_EDIT_NORMALS then normMod = util.GetModByClass lodnode Edit_Normals
-
-        if normMod != undefined then (
-            faceVertNormals = ExtractEditNormals normMod lodnode lodmesh
+        
+        local tryAlt = true
+        
+        if nspec != undefined then (
+            local numNormals = nspec.GetNumNormals lodmesh
+            if numNormals > 0 then (
+                faceVertNormals = ExtractSpecifiedNormals lodmesh
+                tryAlt = false
+            )
         )
         else (
-            local cmod
-            if USE_CACHED_NORMALS then cmod = util.GetModByClass lodnode CachedNormals
+            local normMod = util.GetModByClass lodnode Edit_Normals
+            if normMod != undefined then (
+                faceVertNormals = ExtractEditNormals normMod lodnode lodmesh
+                tryAlt = false
+            )
+        )
+        
+        if tryAlt then (
+            local cmod = util.GetModByClass lodnode CachedNormals
 
             if cmod != undefined then (
                 faceVertNormals = ExtractCachedNormals cmod
@@ -1758,9 +1775,6 @@ rollout Max4ds_4dsExport "" (   --module
     fn Export4ds file settings: unitscale:1.0 progHandler: = (
         if settings == unsupplied then settings = TSettings()
         if progHandler == unsupplied then fn progHandler prg status = ()
-        
-        USE_CACHED_NORMALS = settings.useCachedNormals
-        USE_EDIT_NORMALS = settings.useEditNormals
 
         local f = fopen file "wb"
         if f == undefined then (

@@ -10,12 +10,12 @@ replaceUI:true version:1 invisible:true
     )
 
     rollout rltParams "Parameters" (
-        button btnEditNormals "View & Edit Normals"
+        label lblInfo "Deprecated\n\n- Can be exported\n  only by the 4ds exporter\n- Not displayed in viewport\n  or in renders" height:80
+        button btnEditNormals "Convert to Edit Normals"
 
         on btnEditNormals pressed do (
-
             try (
-                undo "Edit cached normals" on (
+                undo "Convert cached normals" on (
                     local index = modPanel.getModifierIndex $ this
 
                     local norm = EditNormals()
@@ -53,9 +53,6 @@ replaceUI:true version:1 invisible:true
                 enableRefMsgs()
                 messageBox ("Error occured\n" + ex) icon:#critical
             )
-
-
-
         )
     )
 )

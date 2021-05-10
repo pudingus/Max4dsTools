@@ -1,13 +1,11 @@
 rollout Max4ds_ImpExp "" (  --module
-    
+
     local settings = (
         struct settings (
             importPath,
             exportPath,
             exportFilename,
             position,
-            editNorm,
-            cachedNorm,
             unitsSel = 4,
             useImportedFilename = false,
             allow5ds,
@@ -36,7 +34,7 @@ rollout Max4ds_ImpExp "" (  --module
             local pos = settings.position
             local style = #(#style_titlebar, #style_border, #style_sysmenu)
             local w = 200
-            local h = 420--395
+            local h = 380
             if pos != undefined then (
                 CreateDialog rltImpExp w h pos.x pos.y style:style
             )
@@ -92,8 +90,6 @@ rollout Max4ds_ImpExp "" (  --module
         group "Export" (            
             label       lblUnitSclE     "Scale factor:" align:#left across:2
             label       lblSclE         "" align:#right
-            checkbox    cbCachedNorm    "Cached normals" checked:true
-            checkbox    cbEditNorm      "Edit Normals modifier" checked:true
             checkbox    cbAllow5ds      "Has animation file" align:#left offset:[0,5]
             dropdownlist ddlVersion     "Version:" items:versionItems selection:settings.versionSel
             
@@ -206,6 +202,7 @@ rollout Max4ds_ImpExp "" (  --module
                     messageBox "Provide a filename."
                 )
                 else (
+                    clock.active = false
                     local ext = ".4ds"
                     if filename.count < ext.count then (
                         append filename ext
@@ -226,8 +223,6 @@ rollout Max4ds_ImpExp "" (  --module
                     )
                     local expSettings = 
                         exp.TSettings \
-                            useCachedNormals:cbCachedNorm.checked \
-                            useEditNormals:cbEditNorm.checked \
                             allow5ds:cbAllow5ds.checked \
                             version:version
                     
@@ -254,12 +249,6 @@ rollout Max4ds_ImpExp "" (  --module
             if settings.exportFilename != undefined then (
                 edtFilename.text = settings.exportFilename
             )
-            if settings.cachedNorm != undefined then (
-                cbCachedNorm.checked = settings.cachedNorm
-            )
-            if settings.editNorm != undefined then (
-                cbEditNorm.checked = settings.editNorm
-            )
             if settings.allow5ds != undefined then (
                 cbAllow5ds.checked = settings.allow5ds
             )
@@ -271,8 +260,6 @@ rollout Max4ds_ImpExp "" (  --module
             settings.exportPath = edtDirectory.text
             settings.exportFilename = edtFilename.text
             settings.position = GetDialogPos rltImpExp
-            settings.cachedNorm = cbCachedNorm.checked
-            settings.editNorm = cbEditNorm.checked
             settings.unitsSel = ddlUnits.selection	
             settings.allow5ds = cbAllow5ds.checked
             settings.versionSel = ddlVersion.selection
@@ -280,6 +267,7 @@ rollout Max4ds_ImpExp "" (  --module
     )
 )
 
+--why not to use events module?
 callbacks.removeScripts id:#Max4ds_ImpExp
 callbacks.addScript #systemPostNew "::Max4ds_ImpExp.PostReset scope:::Max4ds_ImpExp" id:#Max4ds_ImpExp
 callbacks.addScript #systemPostReset "::Max4ds_ImpExp.PostReset scope:::Max4ds_ImpExp" id:#Max4ds_ImpExp
