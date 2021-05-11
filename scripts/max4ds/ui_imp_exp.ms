@@ -1,4 +1,30 @@
+-- (
+--     local events = ::Max4ds_Events
+--     events.RemoveHandler #systemPostNew ::Max4ds_ImpExp.PostReset
+--     events.RemoveHandler #systemPostReset ::Max4ds_ImpExp.PostReset
+--     events.RemoveHandler #filePreSave ::Max4ds_ImpExp.PreSave
+-- )
+
+(
+    if ::Max4ds_ImpExp != undefined then (
+        DestroyDialog ::Max4ds_ImpExp.rltImpExp        
+    )
+)
+
 rollout Max4ds_ImpExp "" (  --module
+    
+    local akek = attributes akek
+    attribID:#(0x5fae4469, 0x55578fab)
+    (
+        parameters main
+        (
+            vversion type:#integer default:1            
+            vhasAnimFile type:#boolean default:false    
+            units type:#integer default:4
+            filename type:#string default:""
+        )
+    )
+    
 
     local settings = (
         struct settings (
@@ -20,6 +46,37 @@ rollout Max4ds_ImpExp "" (  --module
         scope.settings.useImportedFilename = false
         scope.settings.allow5ds = false
         scope.rltImpExp.cbAllow5ds.checked = false
+        
+        scope.rltImpExp.edtFilename.text = ""
+        scope.settings.exportFilename = ""
+    )
+    
+    fn PreSave scope: = (
+        custAttributes.add rootNode scope.akek
+        local attr = custAttributes.get rootNode scope.akek
+        
+        attr.vhasAnimFile = scope.rltImpExp.cbAllow5ds.checked
+        attr.vversion = scope.rltImpExp.ddlVersion.selection
+        attr.units = scope.rltImpExp.ddlUnits.selection
+        attr.filename = scope.rltImpExp.edtFilename.text
+    )
+    
+    fn PostOpen scope: = (
+        local attr = custAttributes.get rootNode scope.akek
+        
+        if attr != undefined then (
+            scope.rltImpExp.cbAllow5ds.checked = attr.vhasAnimFile
+            scope.rltImpExp.ddlVersion.selection = attr.vversion
+            scope.rltImpExp.ddlUnits.selection = attr.units
+            scope.rltImpExp.ddlUnits_select attr.units
+            scope.rltImpExp.edtFilename.text = attr.filename
+            
+            
+            scope.settings.allow5ds = attr.vhasAnimFile
+            scope.settings.versionSel = attr.vversion
+            scope.settings.unitsSel = attr.units
+            scope.settings.exportFilename = attr.filename
+        )
     )
     
     fn Toggle = (
@@ -144,6 +201,8 @@ rollout Max4ds_ImpExp "" (  --module
                     
                     clock.active = true
                     
+                    setfocus ::Max4ds_ImpExp.rltImpExp
+                    
                     if allow5ds != undefined then (                        
                         if del then (
                             cbAllow5ds.checked = allow5ds
@@ -228,6 +287,8 @@ rollout Max4ds_ImpExp "" (  --module
                     
                     exp.Export4ds filepath settings:expSettings unitscale:unitscl progHandler:OnProgress
                     clock.active = true
+                    
+                    setfocus ::Max4ds_ImpExp.rltImpExp
                 )
             )
             else (
@@ -264,10 +325,26 @@ rollout Max4ds_ImpExp "" (  --module
             settings.allow5ds = cbAllow5ds.checked
             settings.versionSel = ddlVersion.selection
         )
+        
+        on cbAllow5ds changed val do (
+            format "checked\n"
+        )
     )
 )
 
---why not to use events module?
+-- not using event.ms because handlers could not be removed in this case
 callbacks.removeScripts id:#Max4ds_ImpExp
 callbacks.addScript #systemPostNew "::Max4ds_ImpExp.PostReset scope:::Max4ds_ImpExp" id:#Max4ds_ImpExp
 callbacks.addScript #systemPostReset "::Max4ds_ImpExp.PostReset scope:::Max4ds_ImpExp" id:#Max4ds_ImpExp
+callbacks.addScript #filePreSave "::Max4ds_ImpExp.PreSave scope:::Max4ds_ImpExp" id:#Max4ds_ImpExp
+callbacks.addScript #filePostOpen "::Max4ds_ImpExp.PostOpen scope:::Max4ds_ImpExp" id:#Max4ds_ImpExp
+
+-- (
+--     local events = ::Max4ds_Events
+--     events.AddHandler #systemPostNew ::Max4ds_ImpExp.PostReset scope:::Max4ds_ImpExp
+--     events.AddHandler #systemPostReset ::Max4ds_ImpExp.PostReset scope:::Max4ds_ImpExp
+        
+--     events.addHandler #filePreSave ::Max4ds_ImpExp.PreSave scope:::Max4ds_ImpExp
+-- )
+
+::Max4ds_ImpExp.PostOpen scope:::Max4ds_ImpExp

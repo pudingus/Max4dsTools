@@ -3,6 +3,7 @@ callbacks.removeScripts id:#Max4ds_Events
 rollout Max4ds_Events "" (   --module    
     local eventIds = #()
     local eventNames = #()
+    
     local eventHandlers = #()   --array of array
     local eventScopes = #()    --array of array
   
@@ -71,8 +72,11 @@ rollout Max4ds_Events "" (   --module
     fn ListHandlers = (
         for eventId = 1 to eventHandlers.count do (
             format "%: " eventId
-            for handler in eventHandlers[eventId] do (
-                format "%, " handler
+            format "%, " eventNames[eventId]
+            
+            for i = 1 to eventHandlers[eventId].count do (
+                format "%, " eventHandlers[eventId][i]
+                format "%, " eventScopes[eventId][i]
             )
             format "\n"
         )
