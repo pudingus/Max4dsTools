@@ -7,7 +7,7 @@
 
 (
     if ::Max4ds_ImpExp != undefined then (
-        DestroyDialog ::Max4ds_ImpExp.rltImpExp        
+        DestroyDialog ::Max4ds_ImpExp.rltImpExp
     )
 )
 
@@ -18,9 +18,9 @@ rollout Max4ds_ImpExp "" (  --module
     (
         parameters main
         (
-            vversion type:#integer default:1            
-            vhasAnimFile type:#boolean default:false    
-            units type:#integer default:4
+            vversion type:#integer default:1
+            hasAnimFile type:#boolean default:false
+            units type:#integer default:5
             filename type:#string default:""
         )
     )
@@ -32,7 +32,7 @@ rollout Max4ds_ImpExp "" (  --module
             exportPath,
             exportFilename,
             position,
-            unitsSel = 4,
+            unitsSel = 5,
             useImportedFilename = false,
             allow5ds,
             versionSel = 1
@@ -55,7 +55,7 @@ rollout Max4ds_ImpExp "" (  --module
         custAttributes.add rootNode scope.akek
         local attr = custAttributes.get rootNode scope.akek
         
-        attr.vhasAnimFile = scope.rltImpExp.cbAllow5ds.checked
+        attr.hasAnimFile = scope.rltImpExp.cbAllow5ds.checked
         attr.vversion = scope.rltImpExp.ddlVersion.selection
         attr.units = scope.rltImpExp.ddlUnits.selection
         attr.filename = scope.rltImpExp.edtFilename.text
@@ -65,14 +65,14 @@ rollout Max4ds_ImpExp "" (  --module
         local attr = custAttributes.get rootNode scope.akek
         
         if attr != undefined then (
-            scope.rltImpExp.cbAllow5ds.checked = attr.vhasAnimFile
+            scope.rltImpExp.cbAllow5ds.checked = attr.hasAnimFile
             scope.rltImpExp.ddlVersion.selection = attr.vversion
             scope.rltImpExp.ddlUnits.selection = attr.units
             scope.rltImpExp.ddlUnits_select attr.units
             scope.rltImpExp.edtFilename.text = attr.filename
             
             
-            scope.settings.allow5ds = attr.vhasAnimFile
+            scope.settings.allow5ds = attr.hasAnimFile
             scope.settings.versionSel = attr.vversion
             scope.settings.unitsSel = attr.units
             scope.settings.exportFilename = attr.filename
@@ -103,27 +103,29 @@ rollout Max4ds_ImpExp "" (  --module
 
     rollout rltImpExp "4ds Import/Export" (
         local unitItems = #(
-            "Milimeters",
-            "Centimeters",
-            "Decimeters",
-            "Meters",
-            "Kilometers",
-            "Inches",
-            "Feet",
-            "Yards",
-            "Miles"
+            "Auto ()",      --1
+            "Millimeters",   --2
+            "Centimeters",  --3
+            "Decimeters",   --4
+            "Meters",       --5
+            "Kilometers",   --6
+            "Inches",       --7
+            "Feet",         --8
+            "Yards",        --9
+            "Miles"         --10
         )
 
         local unitMeterRatios = #(     --  n * (1/ratio) for import, n * ratio for export
-            0.001,
-            0.01,     --1cm = 0.01m
-            0.1,
-            1.0,
-            1000.0,   --1km = 1000m
-            0.0254,   --1in = 0.0254m
-            0.3048,
-            0.9144,
-            1609.344
+            -1,         --auto
+            0.001,      --mm
+            0.01,       --1cm = 0.01m
+            0.1,        --dm
+            1.0,        --m
+            1000.0,     --1km = 1000m
+            0.0254,     --1in = 0.0254m
+            0.3048,     --feet
+            0.9144,     --yards
+            1609.344    --miles
         )
         
         local versionItems = #(
@@ -159,9 +161,33 @@ rollout Max4ds_ImpExp "" (  --module
         progressBar prgProgress offset:[0,5]
         label       labelDone         "" 
 
+        fn GetSystemUnits = (
+            local sysType = units.SystemType
+            local sysScale = units.SystemScale
+            
+            local scale = case sysType of (
+                #inches:    0.0254
+                #feet:      0.3048
+                #miles:     1609.344
+                #Millimeters:   0.001
+                #centimeters:   0.01
+                #meters:        1.0
+                #kilometers:    1000.0
+            )
+            
+            scale * sysScale
+        )
+        
         fn ddlUnits_select sel = (
-            lblSclI.text = (1/unitMeterRatios[sel]) as string
-            lblSclE.text = unitMeterRatios[sel] as string
+            if sel == 1 then ( --auto
+                local scale = GetSystemUnits()
+            )
+            else (
+                local scale = unitMeterRatios[sel]
+            )
+            
+            lblSclI.text = (1/scale) as string
+            lblSclE.text = scale as string
         )
 
         on ddlUnits selected sel do ddlUnits_select sel
@@ -196,7 +222,13 @@ rollout Max4ds_ImpExp "" (  --module
                         gc()
                     )
                     local sel = ddlUnits.selection
-                    local unitscl = 1 / unitMeterRatios[sel]
+                    if sel == 1 then ( --auto
+                        local unitscl = 1 / GetSystemUnits()
+                    )
+                    else (
+                        local unitscl = 1 / unitMeterRatios[sel]
+                    )
+                
                     local allow5ds = imp.Import4ds file unitscale:unitscl progHandler:OnProgress
                     
                     clock.active = true
@@ -267,14 +299,19 @@ rollout Max4ds_ImpExp "" (  --module
                         append filename ext
                     )
                     else (
-                        local sub = substring filename (filename.count-3) 4                        
-                        if toLower sub != ext then append filename ext                        
+                        local sub = substring filename (filename.count-3) 4
+                        if toLower sub != ext then append filename ext
                     )
                     
                     local filepath = pathConfig.appendPath dir filename
                     local sel = ddlUnits.selection
-                    local unitscl = unitMeterRatios[sel]
-                    local versionSel = 
+                    if sel == 1 then ( --auto
+                        local unitscl = GetSystemUnits()
+                    )
+                    else (
+                        local unitscl = unitMeterRatios[sel]
+                    )
+                    
                     local version = case ddlVersion.selection of (
                         1: #mafia
                         2: #hd2
@@ -299,6 +336,29 @@ rollout Max4ds_ImpExp "" (  --module
             labelDone.text = ""
             clock.active = false
         )
+        
+        fn OnUnitsChange scope: = (
+            format "units change \n"
+                        
+            local scale = scope.GetSystemUnits()
+            
+            local id = findItem scope.unitMeterRatios scale
+            
+            if id > 0 then (
+                scope.unitItems[1] = "Auto (" + scope.unitItems[id] + ")"
+            )
+            else (
+                scope.unitItems[1] = "Auto (" + (scale as string) + ")"
+            )
+            
+            scope.ddlUnits.items = scope.unitItems
+            
+            if scope.ddlUnits.selection == 1 then ( --auto
+                scope.lblSclI.text = (1/scale) as string
+                scope.lblSclE.text = scale as string
+            )
+            
+        )
 
         on rltImpExp open do (
             if settings.exportPath != undefined then (
@@ -314,9 +374,29 @@ rollout Max4ds_ImpExp "" (  --module
                 cbAllow5ds.checked = settings.allow5ds
             )
             ddlUnits_select settings.unitsSel
+            
+            
+            local scale = GetSystemUnits()
+            
+            local id = findItem unitMeterRatios scale
+            
+            if id > 0 then (
+                unitItems[1] = "Auto (" + unitItems[id] + ")"
+            )
+            else (
+                unitItems[1] = "Auto (" + (scale as string) + ")"
+            )
+            
+            ddlUnits.items = unitItems
+            
+            local events = ::Max4ds_Events
+            events.AddHandler #unitsChange OnUnitsChange scope:rltImpExp
         )
 
         on rltImpExp close do (
+            local events = ::Max4ds_Events
+            events.RemoveHandler #unitsChange OnUnitsChange
+            
             --print "close"
             settings.exportPath = edtDirectory.text
             settings.exportFilename = edtFilename.text
