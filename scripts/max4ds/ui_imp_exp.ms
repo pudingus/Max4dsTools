@@ -13,14 +13,13 @@
 
 rollout Max4ds_ImpExp "" (  --module
     
-    local akek = attributes akek
+    local impExpAttr = attributes impExpAttr
     attribID:#(0x5fae4469, 0x55578fab)
     (
-        parameters main
-        (
+        parameters main (
             vversion type:#integer default:1
             hasAnimFile type:#boolean default:false
-            units type:#integer default:5
+            units type:#integer default:1
             filename type:#string default:""
         )
     )
@@ -29,10 +28,10 @@ rollout Max4ds_ImpExp "" (  --module
     local settings = (
         struct settings (
             importPath,
-            exportPath,
-            exportFilename,
+            exportPath = "",
+            exportFilename = "",
             position,
-            unitsSel = 5,
+            unitsSel = 1,
             useImportedFilename = false,
             allow5ds,
             versionSel = 1
@@ -52,30 +51,40 @@ rollout Max4ds_ImpExp "" (  --module
     )
     
     fn PreSave scope: = (
-        custAttributes.add rootNode scope.akek
-        local attr = custAttributes.get rootNode scope.akek
+        custAttributes.add rootNode scope.impExpAttr
+        local attr = custAttributes.get rootNode scope.impExpAttr
         
-        attr.hasAnimFile = scope.rltImpExp.cbAllow5ds.checked
-        attr.vversion = scope.rltImpExp.ddlVersion.selection
-        attr.units = scope.rltImpExp.ddlUnits.selection
-        attr.filename = scope.rltImpExp.edtFilename.text
+        if scope.rltImpExp.isDisplayed then (
+            attr.hasAnimFile = scope.rltImpExp.cbAllow5ds.checked
+            attr.vversion = scope.rltImpExp.ddlVersion.selection
+            attr.units = scope.rltImpExp.ddlUnits.selection
+            attr.filename = scope.rltImpExp.edtFilename.text
+        )
+        else (
+            attr.hasAnimFile = scope.settings.allow5ds
+            attr.vversion = scope.settings.versionSel       
+            attr.units = scope.settings.unitsSel
+            attr.filename = scope.settings.exportFilename
+        )        
     )
     
     fn PostOpen scope: = (
-        local attr = custAttributes.get rootNode scope.akek
+        local attr = custAttributes.get rootNode scope.impExpAttr
         
         if attr != undefined then (
-            scope.rltImpExp.cbAllow5ds.checked = attr.hasAnimFile
-            scope.rltImpExp.ddlVersion.selection = attr.vversion
-            scope.rltImpExp.ddlUnits.selection = attr.units
-            scope.rltImpExp.ddlUnits_select attr.units
-            scope.rltImpExp.edtFilename.text = attr.filename
-            
-            
-            scope.settings.allow5ds = attr.hasAnimFile
-            scope.settings.versionSel = attr.vversion
-            scope.settings.unitsSel = attr.units
-            scope.settings.exportFilename = attr.filename
+            if scope.rltImpExp.isDisplayed then (
+                scope.rltImpExp.cbAllow5ds.checked = attr.hasAnimFile
+                scope.rltImpExp.ddlVersion.selection = attr.vversion
+                scope.rltImpExp.ddlUnits.selection = attr.units
+                scope.rltImpExp.ddlUnits_select attr.units
+                scope.rltImpExp.edtFilename.text = attr.filename
+            )
+            else (
+                scope.settings.allow5ds = attr.hasAnimFile
+                scope.settings.versionSel = attr.vversion
+                scope.settings.unitsSel = attr.units
+                scope.settings.exportFilename = attr.filename
+            )
         )
     )
     
@@ -152,8 +161,8 @@ rollout Max4ds_ImpExp "" (  --module
             checkbox    cbAllow5ds      "Has animation file" align:#left offset:[0,5]
             dropdownlist ddlVersion     "Version:" items:versionItems selection:settings.versionSel
             
-            edittext    edtDirectory    "Directory:"   align:#left offset:[0,5]  text:""labelOnTop:true
-            edittext    edtFilename     "Filename:"      align:#left  text:"" labelOnTop:true
+            edittext    edtDirectory    "Directory:" align:#left offset:[0,5]  text:settings.exportPath labelOnTop:true
+            edittext    edtFilename     "Filename:" align:#left  text:settings.exportFilename labelOnTop:true
             button      btnBrowse       "Browse..." align:#left width:70 across:2 
             button      btnExport       "Export" align:#right width:70
         )
@@ -169,7 +178,7 @@ rollout Max4ds_ImpExp "" (  --module
                 #inches:    0.0254
                 #feet:      0.3048
                 #miles:     1609.344
-                #Millimeters:   0.001
+                #millimeters:   0.001
                 #centimeters:   0.01
                 #meters:        1.0
                 #kilometers:    1000.0
@@ -322,6 +331,9 @@ rollout Max4ds_ImpExp "" (  --module
                             allow5ds:cbAllow5ds.checked \
                             version:version
                     
+                    local maxver = (maxVersion())[1]
+                    if maxVer >= 20000 do UpdateSceneMaterialLib()
+                    
                     exp.Export4ds filepath settings:expSettings unitscale:unitscl progHandler:OnProgress
                     clock.active = true
                     
@@ -332,6 +344,7 @@ rollout Max4ds_ImpExp "" (  --module
                 messageBox "Specified directory doesn't exist."
             )
         )
+        
         on clock tick do (
             labelDone.text = ""
             clock.active = false
@@ -357,19 +370,10 @@ rollout Max4ds_ImpExp "" (  --module
                 scope.lblSclI.text = (1/scale) as string
                 scope.lblSclE.text = scale as string
             )
-            
         )
 
         on rltImpExp open do (
-            if settings.exportPath != undefined then (
-                edtDirectory.text = settings.exportPath
-            )
-            if settings.exportFilename != undefined then (
-                edtFilename.text = settings.exportFilename
-            )
-            if settings.exportFilename != undefined then (
-                edtFilename.text = settings.exportFilename
-            )
+            
             if settings.allow5ds != undefined then (
                 cbAllow5ds.checked = settings.allow5ds
             )
@@ -388,6 +392,8 @@ rollout Max4ds_ImpExp "" (  --module
             )
             
             ddlUnits.items = unitItems
+            
+            ddlUnits.enabled = ddlUnits.enabled
             
             local events = ::Max4ds_Events
             events.AddHandler #unitsChange OnUnitsChange scope:rltImpExp
