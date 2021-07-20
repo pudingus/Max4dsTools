@@ -10,8 +10,15 @@ replaceUI:true version:1 invisible:true
     )
 
     rollout rltParams "Parameters" (
-        label lblInfo "Deprecated\n\n- Can be exported\n  only by the 4ds exporter\n- Not displayed in viewport\n  or in renders" height:80
+        label lblDeprecated "Deprecated" height:20
+        label lblInfo "- Can be exported\n  only by the 4ds exporter\n- Not displayed in viewport\n  or in renders" height:60
         button btnEditNormals "Convert to Edit Normals"
+        
+        on rltParams open do (
+            if nspec == undefined then (
+                lblDeprecated.visible = false
+            )
+        )
 
         on btnEditNormals pressed do (
             try (
