@@ -33,7 +33,7 @@ rollout Max4ds_ImpExp "" (  --module
             position,
             unitsSel = 1,
             useImportedFilename = false,
-            allow5ds,
+            allow5ds = false,
             versionSel = 1
         )
         settings()

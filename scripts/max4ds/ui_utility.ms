@@ -10,6 +10,7 @@ utility Max4dsTools "Max 4ds Tools"
     button      btnFindWeights    "Find weight conflicts..." align:#left
     button      btnConvertSkeleton "Convert old skeleton..." align:#left
     hyperLink   hprHelp           "Help" address:"https://github.com/pudingus/Max4dsTools/wiki" offset:[0,10] align:#center color:[3, 173, 252] hoverColor:[3, 173, 252] visitedColor:[3, 173, 252]
+    hyperLink   hprHome           "Homepage" address:"https://github.com/pudingus/Max4dsTools" offset:[0,0] align:#center color:[3, 173, 252] hoverColor:[3, 173, 252] visitedColor:[3, 173, 252]
 
     label       lblAuthor         "by pudingus" offset:[0,3]
     label       lblVersion        "version"
