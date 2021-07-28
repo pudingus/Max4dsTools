@@ -81,11 +81,11 @@ remap:#(
         on diffuse set val do (
             if ::mat4ds_disable_set != true do (
                 delegate.diffuse = val
-            )            
+            )
         )
         on diffuse get val do (
             --format "diffuse get \n"
-            delegate.diffuse     --this is here so that multimaterial can update the color          
+            delegate.diffuse     --this is here so that multimaterial can update the color
         )
         on emission set val do (
             if ::mat4ds_disable_set != true do (
@@ -362,87 +362,94 @@ remap:#(
         )
     )
 
-
-
-    rollout rltParams "4ds Material Parameters" width:348 height:603
+    rollout rltParams "4ds Material Parameters" width:352 height:600
     (
-    	label 'lblAmbient' "Ambient" pos:[16,8] width:48 height:16 align:#left
-    	colorPicker 'cpAmbient' "" pos:[64,8] width:40 height:20 align:#left
-    	label 'lblEmissive' "Emissive" pos:[128,8] width:48 height:16 align:#left
-    	colorPicker 'cpEmissive' "" pos:[184,8] width:40 height:20 align:#left
-    	label 'lblDiffuse' "Diffuse" pos:[16,32] width:48 height:16 align:#left
-    	colorPicker 'cpDiffuse' "" pos:[64,32] width:40 height:20 align:#left
-    	label 'lblSpecular' "Specular" pos:[128,32] width:56 height:16 toolTip:"Not supported in Mafia" align:#left
-    	colorPicker 'cpSpecular' "" pos:[184,30] width:40 height:20 toolTip:"Not supported in Mafia" align:#left
-    	label 'lblGlossiness' "Glossiness" pos:[128,56] width:48 height:16 toolTip:"Not supported in Mafia" align:#left
-    	label 'lblOpacity' "Opacity" pos:[16,56] width:48 height:16 align:#left
-    	spinner 'spnOpacity' "" pos:[64,56] width:40 height:16 type:#integer align:#left
-    	spinner 'spnGlossiness' "" pos:[184,56] width:40 height:16 type:#integer toolTip:"Not supported in Mafia" align:#left
-    	checkbox 'chkDiffuseMapEnable' "Enable" pos:[16,112] width:56 height:16 align:#left
-    	mapButton 'btnDiffuseMap' "Diffuse map" pos:[128,109] width:206 height:22 align:#left
-    	checkbox 'chkMipMapping' "Mip mapping" pos:[128,168] width:83 height:16 align:#left
-    	checkbox 'chkColored' "Colored" pos:[16,168] width:61 height:16 toolTip:"Tint the diffuse and env map with 'Ambient' and 'Diffuse' color" align:#left
-    	checkbox 'chkTwoSided' "2-Sided" pos:[240,168] width:60 height:16 align:#left
-    	checkbox 'chkTileU' "Tile U" pos:[16,144] width:48 height:16 align:#left
-    	checkbox 'chkTileV' "Tile V" pos:[128,144] width:48 height:16 align:#left
-    	checkbox 'chkUnknown5' "Unknown 5" pos:[16,192] width:77 height:16 align:#left
-    	checkbox 'chkUnknown6' "Unknown 6" pos:[128,192] width:77 height:16 align:#left
-    	checkbox 'chkUnknown7' "Unknown 7" pos:[240,192] width:77 height:16 align:#left
-    	checkbox 'chkEnvMapEnable' "Enable" pos:[16,256] width:56 height:16 align:#left
-    	label 'lblAmount' "Amount" pos:[16,336] width:40 height:16 align:#left
-    	spinner 'spnEnvMapAmount' "" pos:[56,336] width:40 height:16 type:#integer align:#left
-    	mapButton 'btnEnvMap' "Environment map" pos:[128,253] width:206 height:22 align:#left
-        label 'lblTile' "Tile" pos:[136,336] width:16 height:16 tooltip:"Has effect only in Mafia" align:#left
-    	spinner 'spnEnvTile' "" pos:[157,336] width:40 height:16 range:[0,255,0] type:#integer tooltip:"Has effect only in Mafia" align:#left
-    	dropdownList 'ddlEnvMode' "Blending Mode" pos:[16,288] width:184 height:40 items:#("[broken] ", "Normal [adjustable]", "Normal [full strength, no tint]", "Multiply", "Overlay", "Add", "Mode 7", "Mode 8") align:#left
-    	dropdownList 'ddlEnvType' "Type" pos:[208,288] width:128 height:40 items:#("X projection", "Y projection", "Mirror X", "Mirror Y", "Mirror XY", "Type 6", "Type 7", "Type 8") align:#left
-    	checkbox 'chkAlphaMapEnable' "Enable" pos:[16,392] width:56 height:16 align:#left
-    	mapButton 'btnAlphaMap' "Alpha map" pos:[128,388] width:206 height:22 align:#left
-    	checkbox 'chkImageAlpha' "Image alpha" pos:[16,416] width:83 height:16 toolTip:"Use the alpha channel from diffuse map for transparency" align:#left
-    	checkbox 'chkColorKey' "Color key" pos:[16,440] width:69 height:16 toolTip:"Use the first color in the palette (for 8bit BMPs)\nor black (for 24bit BMPs or TGAs)\nfor transparency" align:#left
-    	button 'btnGenPreview' "Update preview" pos:[128,440] width:92 height:22 align:#left
-    	checkbox 'chkAdditiveMixing' "Additive mixing" pos:[16,464] width:96 height:16 align:#left
-    	GroupBox 'grpDiffuse' "Diffuse Map" pos:[8,88] width:336 height:135 align:#left
-    	GroupBox 'grpEnv' "Environment Map" pos:[8,232] width:336 height:128 align:#left
-    	GroupBox 'grpAlpha' "Alpha Map" pos:[8,368] width:336 height:120 align:#left
-    	GroupBox 'grpAnim' "Animation" pos:[8,496] width:336 height:96 align:#left
-    	checkbox 'chkAnimatedDiffuse' "Animated diffuse" pos:[16,520] width:104 height:16 align:#left
-    	checkbox 'chkAnimatedAlpha' "Animated alpha" pos:[128,520] width:96 height:16 aligh:#left align:#left
-    	label 'lblFrameCount' "Frames" pos:[18,544] width:54 height:16 toolTip:"Total number of frames" align:#left
-    	label 'lblFrameDelay' "Delay (ms)" pos:[18,568] width:54 height:16 toolTip:"Delay between frames in milliseconds" align:#left
-    	spinner 'spnFrameCount' "" pos:[72,544] width:48 height:16 range:[0,100,0] type:#integer toolTip:"Total number of frames" align:#left
-    	spinner 'spnFrameDelay' "" pos:[72,568] width:48 height:16 range:[0,3.6e+06,0] type:#integer toolTip:"Delay between frames in milliseconds" align:#left
+        label lblAmbient "Ambient" pos:[16,8] width:48 height:16
+        colorPicker cpAmbient "" pos:[64,8] width:40 height:20
+        label lblEmissive "Emissive" pos:[128,8] width:48 height:16
+        colorPicker cpEmissive "" pos:[184,8] width:40 height:20
+        label lblDiffuse "Diffuse" pos:[16,32] width:48 height:16
+        colorPicker cpDiffuse "" pos:[64,32] width:40 height:20
+        label lblSpecular "Specular" pos:[128,32] width:56 height:16 toolTip:"Not supported in Mafia"
+        colorPicker cpSpecular "" pos:[184,30] width:40 height:20 toolTip:"Not supported in Mafia"
+        label lblGlossiness "Glossiness" pos:[128,56] width:48 height:16 toolTip:"Not supported in Mafia"
+        label lblOpacity "Opacity" pos:[16,56] width:48 height:16
+        spinner spnOpacity "" pos:[64,56] width:40 height:16 type:#integer
+        spinner spnGlossiness "" pos:[184,56] width:40 height:16 type:#integer toolTip:"Not supported in Mafia"
+        checkbox chkDiffuseMapEnable "Enable" pos:[16,112] width:56 height:16
+        mapButton btnDiffuseMap "Diffuse map" pos:[128,109] width:184 height:22
+        checkbox chkMipMapping "Mip mapping" pos:[128,168] width:83 height:16
+        checkbox chkColored "Colored" pos:[16,168] width:61 height:16 toolTip:"Tint the diffuse and env map with 'Ambient' and 'Diffuse' color"
+        checkbox chkTwoSided "2-Sided" pos:[240,168] width:60 height:16
+        checkbox chkTileU "Tile U" pos:[16,144] width:48 height:16
+        checkbox chkTileV "Tile V" pos:[128,144] width:48 height:16
+        checkbox chkUnknown5 "Unknown 5" pos:[16,192] width:77 height:16
+        checkbox chkUnknown6 "Unknown 6" pos:[128,192] width:77 height:16
+        checkbox chkUnknown7 "Unknown 7" pos:[240,192] width:77 height:16
+        checkbox chkEnvMapEnable "Enable" pos:[16,256] width:56 height:16
+        label lblAmount "Amount" pos:[16,336] width:40 height:16
+        spinner spnEnvMapAmount "" pos:[56,336] width:40 height:16 type:#integer
+        mapButton btnEnvMap "Environment map" pos:[128,253] width:184 height:22
+        label lblTile "Tile" pos:[112,336] width:16 height:16 toolTip:"Has effect only in Mafia"
+        spinner spnEnvTile "" pos:[133,336] width:40 height:16 range:[0,255,0] type:#integer toolTip:"Has effect only in Mafia"
+        dropdownList ddlEnvMode "Blending Mode" pos:[16,288] width:160 height:40 items:#("[broken] ", "Blend Factor Alpha", "Blend Current Alpha", "Multiply", "Multiply 2x", "Add", "Mode 6", "Mode 7")
+        dropdownList ddlEnvType "Type" pos:[184,288] width:128 height:40 items:#("Sphere Mapping", "Sphere Mapping (flip)", "Detail 1", "Detail 2", "Detail 3", "Type 5", "Type 6", "Type 7")
+        checkbox chkAlphaMapEnable "Enable" pos:[16,392] width:56 height:16
+        mapButton btnAlphaMap "Alpha map" pos:[128,388] width:184 height:22
+        checkbox chkImageAlpha "Image alpha" pos:[16,416] width:83 height:16 toolTip:"Use the alpha channel from diffuse map for transparency"
+        checkbox chkColorKey "Color key" pos:[16,440] width:69 height:16 toolTip:"Use the first color in the palette (for 8bit BMPs)\nor black (for 24bit BMPs or TGAs)\nfor transparency"
+        button btnGenPreview "Update preview" pos:[128,440] width:92 height:22
+        checkbox chkAdditiveMixing "Additive mixing" pos:[16,464] width:96 height:16
+        GroupBox grpDiffuse "Diffuse Map" pos:[8,88] width:312 height:135
+        GroupBox grpEnv "Environment Map" pos:[8,232] width:312 height:128
+        GroupBox grpAlpha "Alpha Map" pos:[8,368] width:312 height:120
+        GroupBox grpAnim "Animation" pos:[8,496] width:312 height:96
+        checkbox chkAnimatedDiffuse "Animated diffuse" pos:[16,520] width:104 height:16
+        checkbox chkAnimatedAlpha "Animated alpha" pos:[128,520] width:96 height:16 aligh:#left
+        label lblFrameCount "Frames" pos:[18,544] width:54 height:16 toolTip:"Total number of frames"
+        label lblFrameDelay "Delay (ms)" pos:[18,568] width:54 height:16 toolTip:"Delay between frames in milliseconds"
+        spinner spnFrameCount "" pos:[72,544] width:48 height:16 range:[0,100,0] type:#integer toolTip:"Total number of frames"
+        spinner spnFrameDelay "" pos:[72,568] width:48 height:16 range:[0,3.6e+06,0] type:#integer toolTip:"Delay between frames in milliseconds"
 
-    	on rltParams open do
-    	(
+        
+        on rltParams open do
+        (
+            grpDiffuse.width = rltParams.width - 16
+            grpEnv.width = rltParams.width - 16
+            grpAlpha.width = rltParams.width - 16
+            grpAnim.width = rltParams.width - 16            
+            btnDiffuseMap.width = rltParams.width - btnDiffuseMap.pos.x - 16            
+            btnEnvMap.width = rltParams.width - btnEnvMap.pos.x - 16
+            btnAlphaMap.width = rltParams.width - btnAlphaMap.pos.x - 16
+            ddlEnvType.width = rltParams.width - ddlEnvType.pos.x - 16
+            
             ::mat4ds_disable_set = undefined
             --format "on open\n"
-    	    btnGenPreview.enabled = chkColorKey.checked
-    	    
-    	    lblFrameCount.enabled = animatedDiffuse
-    	    spnFrameCount.enabled = animatedDiffuse
-    	    lblFrameDelay.enabled = animatedDiffuse
+            btnGenPreview.enabled = chkColorKey.checked
+            
+            lblFrameCount.enabled = animatedDiffuse
+            spnFrameCount.enabled = animatedDiffuse
+            lblFrameDelay.enabled = animatedDiffuse
             spnFrameDelay.enabled = animatedDiffuse
             
             chkAnimatedAlpha.enabled = animatedDiffuse
-    	    
-    	    btnAlphaMap.enabled = not (imageAlpha or colorKey or additiveMixing)
-    	    
-    	    lblAmount.enabled = envMode == 1 or envMode == 2
-    	    spnEnvMapAmount.enabled = envMode == 1 or envMode == 2
+            
+            btnAlphaMap.enabled = not (imageAlpha or colorKey or additiveMixing)
+            
+            lblAmount.enabled = envMode == 1 or envMode == 2
+            spnEnvMapAmount.enabled = envMode == 1 or envMode == 2
         )
-        
-    	on btnGenPreview pressed do
-    	(
-    	    if 'Diffuse Map' != undefined then (
-    	        GeneratePreview 'Diffuse Map'
-    	        delegate.opacityMap = preview1
-    	    )
-    	)
+        on btnGenPreview pressed do
+        (
+            if 'Diffuse Map' != undefined then (
+                GeneratePreview 'Diffuse Map'
+                delegate.opacityMap = preview1
+            )
+        )
     )
 
     on update do (
-        --format "material update, version: %\n" version        
+        --format "material update, version: %\n" version
         --showProperties this
 
         if version == 1 then (
