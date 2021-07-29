@@ -153,3 +153,10 @@ fn elapsed_since time = (
     if now < time then now += 86400000 --timing over midnight
     (now - time)
 )
+
+(        
+    local t = multimaterial()
+    t.numsubs = 15
+    for i = 1 to 15 do t[i] = undefined
+    ::max4ds_multimat_base = t
+)

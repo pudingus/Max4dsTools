@@ -39,7 +39,7 @@ category:"4ds Tools"
     
         on tmrCooldown tick do (    --cooldown for material notifications
             tmrCooldown.active = false
-            print "cool story bro"
+            --print "cool story bro"
             local glowId = lstGlows.selection
             if glowId != 0 then (
                 ddlMats.items = BuildMatItems $.mat

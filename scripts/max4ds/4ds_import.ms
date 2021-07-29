@@ -77,7 +77,8 @@ rollout Max4ds_4dsImport "" (   --module
                     lodnode.material = materials[globMatId]
                 )
                 else if usedMats.count > 1 then (
-                    local multimat = multimaterial numsubs:usedMats.count
+                    local multimat = copy ::max4ds_multimat_base
+                    multimat.numsubs = usedMats.count
                     multimat.name = name
                     
                     for localId = 1 to usedMats.count do (
@@ -226,7 +227,8 @@ rollout Max4ds_4dsImport "" (   --module
             nnode.material = materials[globMatId]
         )
         else if usedMats.count > 1 then (
-            local multimat = multimaterial numsubs:usedMats.count
+            local multimat = copy ::max4ds_multimat_base
+            multimat.numsubs = usedMats.count
             multimat.name = name
             
             for i = 1 to usedMats.count do (
@@ -841,7 +843,7 @@ rollout Max4ds_4dsImport "" (   --module
                 
                 local matDur = (elapsed_since matStart) / 1000.0
                 if showProgress do (
-                    progress += 16
+                    progress += 30
                     progHandler progress "Creating objects..."
                 )
                 
@@ -856,7 +858,7 @@ rollout Max4ds_4dsImport "" (   --module
                 
                 local objDur = (elapsed_since objStart) / 1000.0
                 if showProgress do (                 
-                    progress += 60
+                    progress += 44
                     progHandler progress "Redrawing..."
                 )
             )

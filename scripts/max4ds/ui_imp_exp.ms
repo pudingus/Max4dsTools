@@ -412,9 +412,9 @@ rollout Max4ds_ImpExp "" (  --module
             settings.versionSel = ddlVersion.selection
         )
         
-        on cbAllow5ds changed val do (
-            format "checked\n"
-        )
+        -- on cbAllow5ds changed val do (
+        --     format "checked\n"
+        -- )
     )
 )
 
