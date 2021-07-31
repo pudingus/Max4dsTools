@@ -139,7 +139,9 @@ category:"4ds Tools"
                 
                 if map != undefined and classof map == Bitmaptexture then (
                     --try (bmp = map.bitmap) catch()  --texture map could have no filename set
-                    local scl = GetUIScaleFactor()
+                    local maxver = (maxVersion())[1]
+                    if maxVer >= 19000 then local scl = GetUIScaleFactor()
+                    else local scl = 1
                     bmp = renderMap map size:[40*scl,40*scl] filter:true
                 )
             )

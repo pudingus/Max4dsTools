@@ -2,8 +2,8 @@
     local set_heapsize = 64 * 1024 * 1024  --64 MiB
     if heapsize < set_heapsize then heapsize = set_heapsize
    
-    global Max4ds_version = "v0.8.0-preview"
-    global Max4ds_scriptsPath = getFilenamePath (getThisScriptFilename())
+    global Max4ds_version = "v0.8.0"
+    --global Max4ds_scriptsPath = getFilenamePath (getThisScriptFilename())
     
     fn DisableScript file = (
         if doesFileExist file then (
@@ -13,6 +13,7 @@
         )
     )
     
+    --disable old 0.4.x scripts
     local name = "startup_mafia_4ds.ms"
     local file = (getdir #userStartupScripts) + "\\" + name
     local file2 = (getdir #startupScripts) + "\\" + name
