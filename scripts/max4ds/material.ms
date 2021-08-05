@@ -417,11 +417,15 @@ remap:#(
             grpDiffuse.width = rltParams.width - 16
             grpEnv.width = rltParams.width - 16
             grpAlpha.width = rltParams.width - 16
-            grpAnim.width = rltParams.width - 16            
-            btnDiffuseMap.width = rltParams.width - btnDiffuseMap.pos.x - 16            
-            btnEnvMap.width = rltParams.width - btnEnvMap.pos.x - 16
-            btnAlphaMap.width = rltParams.width - btnAlphaMap.pos.x - 16
-            ddlEnvType.width = rltParams.width - ddlEnvType.pos.x - 16
+            grpAnim.width = rltParams.width - 16    
+            
+            local maxver = (maxVersion())[1]
+            if maxVer >= 21000 do (
+                btnDiffuseMap.width = rltParams.width - btnDiffuseMap.pos.x - 16            
+                btnEnvMap.width = rltParams.width - btnEnvMap.pos.x - 16
+                btnAlphaMap.width = rltParams.width - btnAlphaMap.pos.x - 16
+                ddlEnvType.width = rltParams.width - ddlEnvType.pos.x - 16
+            )
             
             ::mat4ds_disable_set = undefined
             --format "on open\n"
