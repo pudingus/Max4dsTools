@@ -28,8 +28,8 @@
   </ImportGroup>
   <PropertyGroup>
     <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
-    <OutDir Condition="'$(Platform)'=='x64'">$(ProjectDir)\bin\2018\$(Configuration)_$(Platform)\</OutDir>
-    <IntDir>$(ProjectDir)\obj\2018\$(Configuration)_$(Platform)\</IntDir>
+    <OutDir>$(ProjectDir)\bin\$(Configuration)_$(Platform)\2018\</OutDir>
+    <IntDir>$(ProjectDir)\obj\$(Configuration)_$(Platform)\2018\</IntDir>
     <TargetName>nspec</TargetName>
     <TargetExt>.gup</TargetExt>
   </PropertyGroup>
@@ -48,11 +48,8 @@
       <AdditionalLibraryDirectories>$(MaxSdkLib);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>bmm.lib;core.lib;geom.lib;gfx.lib;mesh.lib;maxutil.lib;maxscrpt.lib;gup.lib;paramblk2.lib;;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>nspec.def</ModuleDefinitionFile>
+      <GenerateDebugInformation Condition="'$(Configuration)'=='Release'">false</GenerateDebugInformation>
     </Link>
-    <PreBuildEvent>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </Command>
-    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="nspec.cpp" />
