@@ -104,19 +104,32 @@ class FP_Basic : public IFP_Basic
 {
 public:
     int GetNumNormals(Mesh& mesh) {
+        if (&mesh == nullptr) throw MAXException(L"mesh is nullptr");
+
+        mesh.SpecifyNormals();
         MeshNormalSpec* nspec = mesh.GetSpecifiedNormals();	
+        if (nspec == nullptr) return 0;
 
         return nspec->GetNumNormals();
     }
 
     int GetNumFaces(Mesh& mesh) {
+        if (&mesh == nullptr) throw MAXException(L"mesh is nullptr");
+
+        mesh.SpecifyNormals();
         MeshNormalSpec* nspec = mesh.GetSpecifiedNormals();
+        if (nspec == nullptr) return 0;
 
         return nspec->GetNumFaces();
     }
 
     Point3& GetNormal(Mesh& mesh, int normID) {
+        if (&mesh == nullptr) throw MAXException(L"mesh is nullptr");
+
+        mesh.SpecifyNormals();
         MeshNormalSpec* nspec = mesh.GetSpecifiedNormals();	
+        if (nspec == nullptr) throw MAXException(L"nspec is nullptr");
+
         int numNormals = nspec->GetNumNormals();
         if (normID > numNormals || normID < 1) throw MAXException(L"normID out of valid range");
 
@@ -127,7 +140,12 @@ public:
 
 
     int GetNormalId(Mesh& mesh, int face, int corner) {
+        if (&mesh == nullptr) throw MAXException(L"mesh is nullptr");
+
+        mesh.SpecifyNormals();
         MeshNormalSpec* nspec = mesh.GetSpecifiedNormals();
+        if (nspec == nullptr) throw MAXException(L"nspec is nullptr");
+
         int numFaces = nspec->GetNumFaces();
         if (face > numFaces || face < 1) throw MAXException(L"face out of valid range");
         if (corner > 3 || corner < 1) throw MAXException(L"corner out of valid range");
@@ -136,26 +154,32 @@ public:
     }
 
     bool SetNumNormals(Mesh& mesh, int numNormals) {
+        if (&mesh == nullptr) throw MAXException(L"mesh is nullptr");
         if (numNormals < 0) throw MAXException(L"numNormals out of valid range");
 
         mesh.SpecifyNormals();    //needed in 'Set...' functions or Max crashes, when setting it on new TriMeshes
         MeshNormalSpec* nspec = mesh.GetSpecifiedNormals();
+        if (nspec == nullptr) throw MAXException(L"nspec is nullptr");
 
         return nspec->SetNumNormals(numNormals);
     }
 
     bool SetNumFaces(Mesh& mesh, int numFaces) {
+        if (&mesh == nullptr) throw MAXException(L"mesh is nullptr");
         if (numFaces < 0) throw MAXException(L"numFaces out of valid range");
 
         mesh.SpecifyNormals();
         MeshNormalSpec* nspec = mesh.GetSpecifiedNormals();
+        if (nspec == nullptr) throw MAXException(L"nspec is nullptr");
 
         return nspec->SetNumFaces(numFaces);
     }
 
     void SetNormal(Mesh& mesh, int normID, Point3& normal) {
+        if (&mesh == nullptr) throw MAXException(L"mesh is nullptr");
         mesh.SpecifyNormals();
         MeshNormalSpec* nspec = mesh.GetSpecifiedNormals();
+        if (nspec == nullptr) throw MAXException(L"nspec is nullptr");
         int numNormals = nspec->GetNumNormals();
         if (normID > numNormals || normID < 1) throw MAXException(L"normID out of valid range");
 
@@ -163,8 +187,10 @@ public:
     }
 
     void SetNormalId(Mesh& mesh, int face, int corner, int normID) {
+        if (&mesh == nullptr) throw MAXException(L"mesh is nullptr");
         mesh.SpecifyNormals();
         MeshNormalSpec* nspec = mesh.GetSpecifiedNormals();
+        if (nspec == nullptr) throw MAXException(L"nspec is nullptr");
         int numFaces = nspec->GetNumFaces();
         if (face > numFaces || face < 1) throw MAXException(L"face out of valid range");
         if (corner > 3 || corner < 1) throw MAXException(L"corner out of valid range");
@@ -175,8 +201,10 @@ public:
     }
 
     void SetNormalExplicit(Mesh& mesh, int normID, bool value) {
+        if (&mesh == nullptr) throw MAXException(L"mesh is nullptr");
         mesh.SpecifyNormals();
         MeshNormalSpec* nspec = mesh.GetSpecifiedNormals();    
+        if (nspec == nullptr) throw MAXException(L"nspec is nullptr");
         int numNormals = nspec->GetNumNormals();
         if (normID > numNormals || normID < 1) throw MAXException(L"normID out of valid range");
 
@@ -184,7 +212,10 @@ public:
     }
 
     bool GetNormalExplicit(Mesh& mesh, int normID) {
-        MeshNormalSpec* nspec = mesh.GetSpecifiedNormals();    
+        if (&mesh == nullptr) throw MAXException(L"mesh is nullptr");
+        mesh.SpecifyNormals();
+        MeshNormalSpec* nspec = mesh.GetSpecifiedNormals();   
+        if (nspec == nullptr) throw MAXException(L"nspec is nullptr");
         int numNormals = nspec->GetNumNormals();
         if (normID > numNormals || normID < 1) throw MAXException(L"normID out of valid range");
 
