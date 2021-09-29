@@ -136,8 +136,8 @@ rollout Max4ds_4dsParser "" ( --module
         WriteU8 f count
         for i = 1 to count do (
             local code = bit.charasint txt[i]
-            if code > 127 then throw "String contains non-ASCII characters: " txt
-            WriteU8 f (bit.charasint txt[i])
+            if code > 255 then throw "String contains non-ASCII characters: " txt
+            WriteU8 f code
         )
 
         count
