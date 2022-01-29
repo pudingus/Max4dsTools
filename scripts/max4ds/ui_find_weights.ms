@@ -369,7 +369,13 @@ rollout Max4ds_FindWeights "" ( --module
                 )
                 
 
-                local verts = skinOps.getSelectedVertices skinMod
+                local maxver = (maxVersion())[1]
+                if maxver >= 22000 then (
+                    local verts = skinOps.getSelectedVertices skinMod
+                )
+                else (
+                    local verts = grp.verts
+                )
                 
                 for vertId in verts do (
                     util.TransferWeight skinMod vertId oldid newId
@@ -399,7 +405,13 @@ rollout Max4ds_FindWeights "" ( --module
                     newId = grp.upBoneIds[grp.upBoneIds.count]
                 )
                 
-                local verts = skinOps.getSelectedVertices skinMod
+                local maxver = (maxVersion())[1]
+                if maxver >= 22000 then (
+                    local verts = skinOps.getSelectedVertices skinMod
+                )
+                else (
+                    local verts = grp.verts
+                )
 
                 for vertId in verts do (
                     util.TransferWeight skinMod vertId oldid newId
