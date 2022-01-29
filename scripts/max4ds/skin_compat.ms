@@ -89,6 +89,32 @@
         skinOps.SelectBone xdata.skinMod xdata.listIds[boneId]
     )
     --------------------------
+
+    fn replaceVertexWeights_2015 xdata vertId boneId weight  = (
+        local numbones = skinOps.GetNumberBones xdata.skinMod
+
+        local count = 1
+        if classof boneId == Array then count = boneId.count
+        else (
+            boneId = #(boneId)
+            weight = #(weight)
+        )
+
+        local boneIds_all = #()
+        local weights_all = #()
+        for i = 1 to numBones do (
+            append boneIds_all i
+            append weights_all 0.0
+        )
+
+        for i = 1 to count do (
+            local id = boneId[i]
+            boneIds_all[id] = id
+            weights_all[id] = weight[i]
+        )
+
+        skinOps.SetVertexWeights xdata.skinMod vertId boneIds_all weights_all
+    )
 	
     
     ::skin_makeCache = makeCache
@@ -112,6 +138,9 @@
         ::skin_getBoneName = getBoneName_2012
         ::skin_getVertexWeightBoneId = getVertexWeightBoneId_2012
         ::skin_selectBone = selectBone_2012
+    )
+    else if maxver == 17000 then (  --2015
+        ::skin_replaceVertexWeights = replaceVertexWeights_2015
     )
     
 
