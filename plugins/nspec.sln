@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.31019.35
+# Visual Studio Version 17
+VisualStudioVersion = 17.1.32319.34
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "nspec_2022", "nspec\nspec_2022.vcxproj", "{E614241F-075D-4EAD-B95F-2D40B9A7C168}"
 EndProject
@@ -16,6 +16,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "nspec_2015", "nspec\nspec_2015.vcxproj", "{0113A92C-713C-463B-AD6F-8092BB750C45}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "nspec_2014", "nspec\nspec_2014.vcxproj", "{F3DB68C2-EC68-45E0-BC6F-41D1C0039A94}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "nspec_2023", "nspec\nspec_2023.vcxproj", "{DD41347B-D5A8-4709-B984-19F68E295C1D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -66,6 +68,12 @@ Global
 		{F3DB68C2-EC68-45E0-BC6F-41D1C0039A94}.Hybrid|x64.Build.0 = Hybrid|x64
 		{F3DB68C2-EC68-45E0-BC6F-41D1C0039A94}.Release|x64.ActiveCfg = Release|x64
 		{F3DB68C2-EC68-45E0-BC6F-41D1C0039A94}.Release|x64.Build.0 = Release|x64
+		{DD41347B-D5A8-4709-B984-19F68E295C1D}.Debug|x64.ActiveCfg = Debug|x64
+		{DD41347B-D5A8-4709-B984-19F68E295C1D}.Debug|x64.Build.0 = Debug|x64
+		{DD41347B-D5A8-4709-B984-19F68E295C1D}.Hybrid|x64.ActiveCfg = Hybrid|x64
+		{DD41347B-D5A8-4709-B984-19F68E295C1D}.Hybrid|x64.Build.0 = Hybrid|x64
+		{DD41347B-D5A8-4709-B984-19F68E295C1D}.Release|x64.ActiveCfg = Release|x64
+		{DD41347B-D5A8-4709-B984-19F68E295C1D}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

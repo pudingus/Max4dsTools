@@ -2,7 +2,7 @@
     local set_heapsize = 64 * 1024 * 1024  --64 MiB
     if heapsize < set_heapsize then heapsize = set_heapsize
    
-    global Max4ds_version = "v0.8.3"
+    global Max4ds_version = "v0.8.4"
     --global Max4ds_scriptsPath = getFilenamePath (getThisScriptFilename())
     
     fn DisableScript file = (
